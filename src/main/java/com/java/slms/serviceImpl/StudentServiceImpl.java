@@ -6,11 +6,13 @@ import com.java.slms.exception.AlreadyExistException;
 import com.java.slms.model.Student;
 import com.java.slms.repository.StudentRepository;
 import com.java.slms.service.StudentService;
+import com.java.slms.util.StudentStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
+import java.util.Date;
 import java.util.List;
 
 @RequiredArgsConstructor
@@ -31,7 +33,7 @@ public class StudentServiceImpl implements StudentService
             log.error("Student already exists with PAN: {}", studentDto.getPanNumber());
             throw new AlreadyExistException("Student already exists with PAN: " + studentDto.getPanNumber());
         }
-
+        studentDto.setStatus(StudentStatus.ACTIVE);
         Student savedStudent = studentRepository.save(modelMapper.map(studentDto, Student.class));
         log.info("Student created with PAN: {}", studentDto.getPanNumber());
         return modelMapper.map(savedStudent, StudentDto.class);
@@ -80,4 +82,31 @@ public class StudentServiceImpl implements StudentService
         log.info("Student updated successfully with PAN: {}", pan);
         return modelMapper.map(updatedStudent, StudentDto.class);
     }
+
+    @Override
+    public StudentDto deleteStudent(String pan)
+    {
+        Student fetchedStudent = studentRepository.findById(pan)
+                .orElseThrow(() ->
+                {
+                    log.error("Student with PAN number '{}' was not found.", pan);
+                    return new ResourceNotFoundException("Student with PAN number '" + pan + "' was not found.");
+                });
+
+        // Check if the student's status is already INACTIVE
+        if (fetchedStudent.getStatus() == StudentStatus.INACTIVE)
+        {
+            log.info("Student with PAN '{}' is already INACTIVE. No update needed.", pan);
+            return modelMapper.map(fetchedStudent, StudentDto.class);
+        }
+
+        log.info("Student Deleted successfully with PAN: {}", pan);
+
+        fetchedStudent.setStatus(StudentStatus.INACTIVE);
+        fetchedStudent.setDeletedAt(new Date());
+
+        return modelMapper.map(studentRepository.save(fetchedStudent), StudentDto.class);
+    }
+
+
 }

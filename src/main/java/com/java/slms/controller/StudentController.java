@@ -60,14 +60,23 @@ public class StudentController
             @RequestBody StudentDto studentDto
     )
     {
-        StudentDto updatedStudent = studentService.updateStudent(panNumber, studentDto);
         ApiResponse<StudentDto> response = ApiResponse.<StudentDto>builder()
-                .data(updatedStudent)
+                .data(studentService.updateStudent(panNumber, studentDto))
                 .message("Student updated successfully")
                 .status(HttpStatus.OK.value())
                 .build();
         return ResponseEntity.ok(response);
     }
 
+    @PatchMapping("/delete/{panNumber}")
+    public ResponseEntity<ApiResponse<StudentDto>> updateStudentToDelete(@PathVariable String panNumber)
+    {
+        ApiResponse<StudentDto> response = ApiResponse.<StudentDto>builder()
+                .data(studentService.deleteStudent(panNumber))
+                .message("Student Deleted successfully")
+                .status(HttpStatus.OK.value())
+                .build();
+        return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
 
 }

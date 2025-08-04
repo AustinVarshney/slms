@@ -1,6 +1,6 @@
 # MySQL Configuration
 db.host=localhost
 db.port=3306
-db.name=mydatabase
+db.name=slms
 db.username=root
 db.password=root

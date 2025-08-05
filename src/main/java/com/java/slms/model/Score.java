@@ -6,28 +6,25 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 @EqualsAndHashCode(callSuper = true)
 @Entity
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Subject extends BaseEntity
+public class Score extends BaseEntity
 {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    private Double marks;
+    private String grade;
 
-    @Column(nullable = false, unique = true)
-    private String subjectName;
+    @ManyToOne
+    private Student student;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "class_id")
-    private ClassEntity classEntity;
+    @ManyToOne
+    private Subject subject;
 
-//    @OneToMany(mappedBy = "exam")
-//    private List<Score> scores;
-
-
+    @ManyToOne
+    private Exam exam;
 }

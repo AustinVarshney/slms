@@ -1,6 +1,7 @@
 package com.java.slms.controller;
 
 import com.java.slms.dto.StudentDto;
+import com.java.slms.dto.StudentForAttendance;
 import com.java.slms.payload.ApiResponse;
 import com.java.slms.service.StudentService;
 import lombok.RequiredArgsConstructor;
@@ -77,6 +78,33 @@ public class StudentController
                 .status(HttpStatus.OK.value())
                 .build();
         return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
+
+
+    @GetMapping("/present-today")
+    public ResponseEntity<ApiResponse<List<StudentForAttendance>>> getPresentToday()
+    {
+        List<StudentForAttendance> list = studentService.getStudentsPresentToday();
+        return ResponseEntity.ok(
+                ApiResponse.<List<StudentForAttendance>>builder()
+                        .data(list)
+                        .message("Students present today: " + list.size())
+                        .status(HttpStatus.OK.value())
+                        .build()
+        );
+    }
+
+    @GetMapping("/present-today/{className}")
+    public ResponseEntity<ApiResponse<List<StudentForAttendance>>> getPresentTodayByClass(@PathVariable String className)
+    {
+        List<StudentForAttendance> list = studentService.getStudentsPresentTodayByClass(className);
+        return ResponseEntity.ok(
+                ApiResponse.<List<StudentForAttendance>>builder()
+                        .data(list)
+                        .message("Students present today in class " + className + ": " + list.size())
+                        .status(HttpStatus.OK.value())
+                        .build()
+        );
     }
 
 }

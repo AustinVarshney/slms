@@ -8,6 +8,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/attendance")
@@ -16,7 +18,8 @@ public class AttendanceController
     private final AttendanceService attendanceService;
 
     @PostMapping("/{panNumber}")
-    public ResponseEntity<ApiResponse<?>> markAttendance(@PathVariable String panNumber, @RequestParam boolean isPresent) {
+    public ResponseEntity<ApiResponse<?>> markAttendance(@PathVariable String panNumber, @RequestParam boolean isPresent)
+    {
         attendanceService.markAttendance(panNumber, isPresent);
 
         ApiResponse<?> response = ApiResponse.builder()

@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
+import java.util.Date;
 import java.util.List;
 
 @EqualsAndHashCode(callSuper = true)
@@ -13,21 +14,17 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Subject extends BaseEntity
+public class Exam extends BaseEntity
 {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @Column(nullable = false, unique = true)
-    private String subjectName;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "class_id")
-    private ClassEntity classEntity;
+    private String name;  // e.g., "Midterm", "Final Exam"
+    private Date examDate;
 
 //    @OneToMany(mappedBy = "exam")
 //    private List<Score> scores;
 
-
+    @ManyToOne
+    private ClassEntity classEntity;
 }

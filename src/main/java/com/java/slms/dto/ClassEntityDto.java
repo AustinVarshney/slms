@@ -1,5 +1,6 @@
 package com.java.slms.dto;
 
+import com.java.slms.model.Exam;
 import com.java.slms.model.Student;
 import jakarta.persistence.OneToMany;
 import lombok.AllArgsConstructor;
@@ -18,4 +19,5 @@ public class ClassEntityDto
     private int totalStudents;
     private List<StudentDto> students;
     private List<SubjectDto> subjects;
+    private List<ExamDto> exams;
 }

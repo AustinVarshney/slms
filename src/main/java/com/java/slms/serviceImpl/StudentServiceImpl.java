@@ -1,6 +1,7 @@
 package com.java.slms.serviceImpl;
 
 import com.java.slms.dto.StudentDto;
+import com.java.slms.dto.StudentForAttendance;
 import com.java.slms.exception.ResourceNotFoundException;
 import com.java.slms.exception.AlreadyExistException;
 import com.java.slms.model.ClassEntity;
@@ -124,5 +125,27 @@ public class StudentServiceImpl implements StudentService
         return modelMapper.map(studentRepository.save(fetchedStudent), StudentDto.class);
     }
 
+    @Override
+    public List<StudentForAttendance> getStudentsPresentToday()
+    {
+        List<Student> students = studentRepository.findStudentsPresentToday();
+        return students.stream()
+                .map(student -> modelMapper.map(student, StudentForAttendance.class))
+                .toList();
+    }
 
+    @Override
+    public List<StudentForAttendance> getStudentsPresentTodayByClass(String className)
+    {
+        boolean exists = classEntityRepository.existsByNameIgnoreCase(className);
+        if (!exists)
+        {
+            throw new ResourceNotFoundException("Class not found with name: " + className);
+        }
+
+        List<Student> students = studentRepository.findStudentsPresentTodayByClassName(className);
+        return students.stream()
+                .map(student -> modelMapper.map(student, StudentForAttendance.class))
+                .toList();
+    }
 }

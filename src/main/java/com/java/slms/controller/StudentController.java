@@ -55,7 +55,7 @@ public class StudentController
     }
 
     @PatchMapping("/{panNumber}")
-    public ResponseEntity<ApiResponse<StudentDto>> updateStudentPartially(
+    public ResponseEntity<ApiResponse<StudentDto>> updateStudent(
             @PathVariable String panNumber,
             @RequestBody StudentDto studentDto
     )

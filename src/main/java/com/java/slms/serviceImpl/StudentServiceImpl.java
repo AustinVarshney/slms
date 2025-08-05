@@ -3,7 +3,9 @@ package com.java.slms.serviceImpl;
 import com.java.slms.dto.StudentDto;
 import com.java.slms.exception.ResourceNotFoundException;
 import com.java.slms.exception.AlreadyExistException;
+import com.java.slms.model.ClassEntity;
 import com.java.slms.model.Student;
+import com.java.slms.repository.ClassEntityRepository;
 import com.java.slms.repository.StudentRepository;
 import com.java.slms.service.StudentService;
 import com.java.slms.util.StudentStatus;
@@ -22,19 +24,33 @@ public class StudentServiceImpl implements StudentService
 {
     private final ModelMapper modelMapper;
     private final StudentRepository studentRepository;
+    private final ClassEntityRepository classEntityRepository;
 
     @Override
     public StudentDto createStudent(StudentDto studentDto)
     {
         log.info("Attempting to create student with PAN: {}", studentDto.getPanNumber());
 
+        // Check if student already exists
         if (studentRepository.existsById(studentDto.getPanNumber()))
         {
             log.error("Student already exists with PAN: {}", studentDto.getPanNumber());
             throw new AlreadyExistException("Student already exists with PAN: " + studentDto.getPanNumber());
         }
-        studentDto.setStatus(StudentStatus.ACTIVE);
-        Student savedStudent = studentRepository.save(modelMapper.map(studentDto, Student.class));
+
+        // Check if class exists
+        if (!classEntityRepository.existsByNameIgnoreCase(studentDto.getClassName()))
+        {
+            throw new ResourceNotFoundException("Class not found with name: " + studentDto.getClassName());
+        }
+
+        ClassEntity classEntity = classEntityRepository.findByClassNameIgnoreCase(studentDto.getClassName());
+        // Map and assign class
+        Student student = modelMapper.map(studentDto, Student.class);
+        student.setStatus(StudentStatus.ACTIVE);
+        student.setCurrentClass(classEntity);
+
+        Student savedStudent = studentRepository.save(student);
         log.info("Student created with PAN: {}", studentDto.getPanNumber());
         return modelMapper.map(savedStudent, StudentDto.class);
     }

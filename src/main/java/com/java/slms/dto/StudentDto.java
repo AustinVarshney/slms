@@ -19,6 +19,7 @@ public class StudentDto
     private String photo;
     private StudentStatus status;
     private List<AttendanceDto> attendanceRecords;
+    private String className;
     private Date createdAt;
     private Date deletedAt;
     private Date updatedAt;

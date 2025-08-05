@@ -28,4 +28,7 @@ public class Student extends BaseEntity
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL)
     private List<Attendance> attendanceRecords;
 
+    @ManyToOne
+    private ClassEntity currentClass;
+
 }

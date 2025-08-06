@@ -11,12 +11,14 @@ public interface SubjectService
 
     List<SubjectDto> getAllSubjects();
 
-    SubjectDto getSubjectByName(String name);
+    SubjectDto getSubjectById(Long id);
 
-    void deleteSubject(String name);
+    void deleteSubject(Long subjectId, Long classId);
 
-    SubjectDto updateSubject(String name, SubjectDto subjectDto);
+    SubjectDto updateSubjectById(Long subjectId, SubjectDto subjectDto);
 
     List<SubjectDto> addSubjectsByClass(SubjectsBulkDto bulkDto);
+
+    List<SubjectDto> getSubjectsByClassId(Long classId);
 
 }

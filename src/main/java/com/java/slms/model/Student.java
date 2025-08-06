@@ -25,10 +25,14 @@ public class Student extends BaseEntity
     @Enumerated(EnumType.STRING)
     private StudentStatus status;
 
-    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Attendance> attendanceRecords;
 
+    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Score> scores;
+
     @ManyToOne
+    @JoinColumn(name = "class_id")
     private ClassEntity currentClass;
 
 }

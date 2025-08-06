@@ -40,7 +40,7 @@ public class SubjectController
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 ApiResponse.<List<SubjectDto>>builder()
                         .data(created)
-                        .message("Subjects created for class: " + bulkDto.getClassName())
+                        .message("Subjects created for class: " + bulkDto.getClassId())
                         .status(HttpStatus.CREATED.value())
                         .build()
         );
@@ -59,10 +59,10 @@ public class SubjectController
         );
     }
 
-    @GetMapping("/{name}")
-    public ResponseEntity<ApiResponse<SubjectDto>> getSubjectByName(@PathVariable String name)
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<SubjectDto>> getSubjectByName(@PathVariable Long id)
     {
-        SubjectDto dto = subjectService.getSubjectByName(name);
+        SubjectDto dto = subjectService.getSubjectById(id);
         return ResponseEntity.ok(
                 ApiResponse.<SubjectDto>builder()
                         .data(dto)
@@ -72,28 +72,24 @@ public class SubjectController
         );
     }
 
-    @GetMapping("/class/{className}")
-    public ResponseEntity<ApiResponse<List<SubjectDto>>> getSubjectsByClass(@PathVariable String className)
+    @GetMapping("/class/{classId}")
+    public ResponseEntity<ApiResponse<List<SubjectDto>>> getSubjectsByClassId(@PathVariable Long classId)
     {
-        List<SubjectDto> allSubjects = subjectService.getAllSubjects();
-        List<SubjectDto> filtered = allSubjects.stream()
-                .filter(s -> s.getClassName().equalsIgnoreCase(className))
-                .toList();
+        List<SubjectDto> subjectDtos = subjectService.getSubjectsByClassId(classId);
 
         return ResponseEntity.ok(
                 ApiResponse.<List<SubjectDto>>builder()
-                        .data(filtered)
-                        .message("Subjects for class " + className + ": " + filtered.size())
+                        .data(subjectDtos)
+                        .message("Subjects for class ID " + classId + ": " + subjectDtos.size())
                         .status(HttpStatus.OK.value())
                         .build()
         );
     }
 
-    @PatchMapping("/{name}")
-    public ResponseEntity<ApiResponse<SubjectDto>> updateSubject(@PathVariable String name,
-                                                                 @RequestBody SubjectDto subjectDto)
+    @PatchMapping("/{subjectId}")
+    public ResponseEntity<ApiResponse<SubjectDto>> updateSubject(@PathVariable Long subjectId, @RequestBody SubjectDto subjectDto)
     {
-        SubjectDto updated = subjectService.updateSubject(name, subjectDto);
+        SubjectDto updated = subjectService.updateSubjectById(subjectId, subjectDto);
         return ResponseEntity.ok(
                 ApiResponse.<SubjectDto>builder()
                         .data(updated)
@@ -103,10 +99,10 @@ public class SubjectController
         );
     }
 
-    @DeleteMapping("/delete/{name}")
-    public ResponseEntity<ApiResponse<String>> deleteSubject(@PathVariable String name)
+    @DeleteMapping("/subject/{subjectId}/class/{classId}")
+    public ResponseEntity<ApiResponse<String>> deleteSubject(@PathVariable Long subjectId, @PathVariable Long classId)
     {
-        subjectService.deleteSubject(name);
+        subjectService.deleteSubject(subjectId, classId);
         return ResponseEntity.ok(
                 ApiResponse.<String>builder()
                         .data(null)

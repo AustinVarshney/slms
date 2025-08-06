@@ -44,22 +44,23 @@ public class ExamController
         );
     }
 
-    @GetMapping("/class/{className}")
-    public ResponseEntity<ApiResponse<List<ExamDto>>> getExamsByClassName(@PathVariable String className)
+    @GetMapping("/class/{classId}")
+    public ResponseEntity<ApiResponse<List<ExamDto>>> getExamsByClassName(@PathVariable Long classId)
     {
-        List<ExamDto> list = examService.getExamsByClassName(className);
+        List<ExamDto> list = examService.getExamsByClassId(classId);
         return ResponseEntity.ok(
                 ApiResponse.<List<ExamDto>>builder()
                         .data(list)
-                        .message("Exams for class: " + className)
+                        .message("Exams for class: " + classId)
                         .status(HttpStatus.OK.value())
                         .build()
         );
     }
 
-    @DeleteMapping("/delete/{name}")
-    public ResponseEntity<ApiResponse<Void>> deleteExam(@PathVariable String name) {
-        examService.deleteExam(name);
+    @DeleteMapping("/{examId}/class/{classId}")
+    public ResponseEntity<ApiResponse<Void>> deleteExam(@PathVariable Long examId, @PathVariable Long classId)
+    {
+        examService.deleteExamByClass(examId, classId);
         return ResponseEntity.ok(
                 ApiResponse.<Void>builder()
                         .data(null)

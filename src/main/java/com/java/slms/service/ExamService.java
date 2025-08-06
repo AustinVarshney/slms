@@ -12,9 +12,9 @@ public interface ExamService
 
     ExamDto getExamByName(String name);
 
-    List<ExamDto> getExamsByClassName(String className);
+    List<ExamDto> getExamsByClassId(Long classId);
 
     ExamDto updateExam(String name, ExamDto examDto);
 
-    void deleteExam(String name);
+    void deleteExamByClass(Long examId, Long classId);
 }

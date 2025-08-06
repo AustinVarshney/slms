@@ -67,39 +67,25 @@ public class ClassEntityServiceImpl implements ClassEntityService
     }
 
     @Override
-    public ClassEntityDto getClassByName(String name)
+    public ClassEntityDto getClassByClassId(Long id)
     {
-        ClassEntity classEntity = classEntityRepository.findByClassNameIgnoreCase(name);
-        if (classEntity == null)
-        {
-            throw new ResourceNotFoundException("Class not found with name: " + name);
-        }
-
+        ClassEntity classEntity = classEntityRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Class not found with ID: " + id));
         ClassEntityDto dto = modelMapper.map(classEntity, ClassEntityDto.class);
         dto.setTotalStudents(classEntity.getStudents() != null ? classEntity.getStudents().size() : 0);
         return dto;
     }
 
-    @Override
-    public void deleteClass(String name)
+    public void deleteClassById(Long id)
     {
-        ClassEntity classEntity = classEntityRepository.findByClassNameIgnoreCase(name);
-        if (classEntity == null)
-        {
-            throw new ResourceNotFoundException("Class not found with name: " + name);
-        }
-
+        ClassEntity classEntity = classEntityRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Class not found with ID: " + id));
         classEntityRepository.delete(classEntity);
     }
 
     @Override
-    public ClassEntityDto updateClassName(String name, ClassEntityDto classEntityDto)
+    public ClassEntityDto updateClassNameById(Long id, ClassEntityDto classEntityDto)
     {
-        ClassEntity existingClass = classEntityRepository.findByClassNameIgnoreCase(name);
-        if (existingClass == null)
-        {
-            throw new ResourceNotFoundException("Class not found with name: " + name);
-        }
+        ClassEntity existingClass = classEntityRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Class not found with ID: " + id)
+        );
 
         // Check for duplicate name
         ClassEntity duplicateClass = classEntityRepository.findByClassNameIgnoreCase(classEntityDto.getClassName());

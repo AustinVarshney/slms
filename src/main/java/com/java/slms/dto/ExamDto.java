@@ -17,6 +17,6 @@ public class ExamDto
 
     @JsonFormat(pattern = "dd-MM-yyyy")
     private Date examDate;
-
+    private Long classId;
     private String className;
 }

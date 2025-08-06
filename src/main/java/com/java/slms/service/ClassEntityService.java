@@ -12,9 +12,9 @@ public interface ClassEntityService
 
     List<ClassEntityDto> getClassWithSections();
 
-    ClassEntityDto getClassByName(String name);
+    ClassEntityDto getClassByClassId(Long id);
 
-    void deleteClass(String name);
+    void deleteClassById(Long id);
 
-    ClassEntityDto updateClassName(String name, ClassEntityDto classEntityDto);
+    ClassEntityDto updateClassNameById(Long id, ClassEntityDto classEntityDto);
 }

@@ -19,15 +19,14 @@ public class Subject extends BaseEntity
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String subjectName;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "class_id")
     private ClassEntity classEntity;
 
-//    @OneToMany(mappedBy = "exam")
-//    private List<Score> scores;
-
+    @OneToMany(mappedBy = "subject", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Score> scores;
 
 }

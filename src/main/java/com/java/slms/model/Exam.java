@@ -22,9 +22,10 @@ public class Exam extends BaseEntity
     private String name;  // e.g., "Midterm", "Final Exam"
     private Date examDate;
 
-//    @OneToMany(mappedBy = "exam")
-//    private List<Score> scores;
-
     @ManyToOne
+    @JoinColumn(name = "class_id")
     private ClassEntity classEntity;
+
+    @OneToMany(mappedBy = "exam", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Score> scores;
 }

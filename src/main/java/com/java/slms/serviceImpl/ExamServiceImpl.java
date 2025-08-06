@@ -26,16 +26,15 @@ public class ExamServiceImpl implements ExamService
     @Override
     public ExamDto createExam(ExamDto examDto)
     {
-        if (examRepository.existsByNameIgnoreCase(examDto.getName()))
+        // Check if the exam already exists for the class using classId
+        if (examRepository.existsByNameIgnoreCaseAndClassEntity_Id(examDto.getName(), examDto.getClassId()))
         {
-            throw new AlreadyExistException("Exam already exists with name: " + examDto.getName());
+            throw new AlreadyExistException("Exam '" + examDto.getName() + "' already exists for class with ID: " + examDto.getClassId() + ".");
         }
 
-        ClassEntity classEntity = classEntityRepository.findByClassNameIgnoreCase(examDto.getClassName());
-        if (classEntity == null)
-        {
-            throw new ResourceNotFoundException("Class not found with name: " + examDto.getClassName());
-        }
+        // Fetch the ClassEntity by classId
+        ClassEntity classEntity = classEntityRepository.findById(examDto.getClassId())
+                .orElseThrow(() -> new ResourceNotFoundException("Class not found with ID: " + examDto.getClassId()));
 
         Exam exam = modelMapper.map(examDto, Exam.class);
         exam.setClassEntity(classEntity);
@@ -64,14 +63,15 @@ public class ExamServiceImpl implements ExamService
     }
 
     @Override
-    public List<ExamDto> getExamsByClassName(String className)
+    public List<ExamDto> getExamsByClassId(Long classId)
     {
-        if (!classEntityRepository.existsByNameIgnoreCase(className))
+        if (!classEntityRepository.existsById(classId))
         {
-            throw new ResourceNotFoundException("Class not found with name: " + className);
+            throw new ResourceNotFoundException("Class not found with ID: " + classId);
         }
 
-        return examRepository.findByClassEntity_ClassNameIgnoreCase(className)
+        // Find exams associated with this classId
+        return examRepository.findByClassEntity_Id(classId)
                 .stream()
                 .map(exam ->
                 {
@@ -89,14 +89,26 @@ public class ExamServiceImpl implements ExamService
     }
 
     @Override
-    public void deleteExam(String name)
+    public void deleteExamByClass(Long examId, Long classId)
     {
-        Exam exam = examRepository.findByNameIgnoreCase(name);
+        if (!classEntityRepository.existsById(classId))
+        {
+            throw new ResourceNotFoundException("Class not found with ID: " + classId);
+        }
+
+        if (!examRepository.existsById(examId))
+        {
+            throw new ResourceNotFoundException("Exam not found with ID: " + examId);
+        }
+
+        Exam exam = examRepository.findByIdAndClassEntityId(examId, classId);
         if (exam == null)
         {
-            throw new ResourceNotFoundException("Exam not found with name: " + name);
+            throw new ResourceNotFoundException("Exam with ID: " + examId +
+                    " not found for class with ID: " + classId);
         }
 
         examRepository.delete(exam);
     }
+
 }

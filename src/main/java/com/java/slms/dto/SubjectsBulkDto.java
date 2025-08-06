@@ -7,6 +7,6 @@ import java.util.List;
 @Data
 public class SubjectsBulkDto
 {
-    private String className;
+    private Long classId;
     private List<String> subjectNames;
 }

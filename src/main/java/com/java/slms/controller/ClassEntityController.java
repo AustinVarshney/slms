@@ -53,9 +53,9 @@ public class ClassEntityController {
 //        return ResponseEntity.ok(response);
 //    }
 
-    @GetMapping("/{name}")
-    public ResponseEntity<ApiResponse<ClassEntityDto>> getClassByName(@PathVariable String name) {
-        ClassEntityDto classDto = classEntityService.getClassByName(name);
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<ClassEntityDto>> getClassByName(@PathVariable Long id) {
+        ClassEntityDto classDto = classEntityService.getClassByClassId(id);
         ApiResponse<ClassEntityDto> response = ApiResponse.<ClassEntityDto>builder()
                 .data(classDto)
                 .message("Class fetched successfully")
@@ -65,12 +65,12 @@ public class ClassEntityController {
         return ResponseEntity.ok(response);
     }
 
-    @PatchMapping("/{name}")
+    @PatchMapping("/{id}")
     public ResponseEntity<ApiResponse<ClassEntityDto>> updateClassName(
-            @PathVariable String name,
+            @PathVariable Long id,
             @RequestBody ClassEntityDto classEntityDto
     ) {
-        ClassEntityDto updatedClass = classEntityService.updateClassName(name, classEntityDto);
+        ClassEntityDto updatedClass = classEntityService.updateClassNameById(id, classEntityDto);
         ApiResponse<ClassEntityDto> response = ApiResponse.<ClassEntityDto>builder()
                 .data(updatedClass)
                 .message("Class name updated successfully")
@@ -80,11 +80,11 @@ public class ClassEntityController {
         return ResponseEntity.ok(response);
     }
 
-    @DeleteMapping("/{name}")
-    public ResponseEntity<ApiResponse<String>> deleteClass(@PathVariable String name) {
-        classEntityService.deleteClass(name);
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<String>> deleteClass(@PathVariable Long id) {
+        classEntityService.deleteClassById(id);
         ApiResponse<String> response = ApiResponse.<String>builder()
-                .data(name)
+                .data(null)
                 .message("Class deleted successfully")
                 .status(HttpStatus.OK.value())
                 .build();

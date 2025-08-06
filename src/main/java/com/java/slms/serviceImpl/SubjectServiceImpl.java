@@ -25,18 +25,14 @@ public class SubjectServiceImpl implements SubjectService
     private final ClassEntityRepository classEntityRepository;
     private final ModelMapper modelMapper;
 
-    @Override
     public SubjectDto addSubject(SubjectDto subjectDto)
     {
-        if (subjectRepository.existsBySubjectNameIgnoreCase(subjectDto.getSubjectName()))
-        {
-            throw new AlreadyExistException("Subject already exists: " + subjectDto.getSubjectName());
-        }
+        ClassEntity classEntity = classEntityRepository.findById(subjectDto.getClassId())
+                .orElseThrow(() -> new ResourceNotFoundException("Class not found with ID: " + subjectDto.getClassId()));
 
-        ClassEntity classEntity = classEntityRepository.findByClassNameIgnoreCase(subjectDto.getClassName());
-        if (classEntity == null)
+        if (subjectRepository.existsBySubjectNameIgnoreCaseAndClassEntity_Id(subjectDto.getSubjectName(), subjectDto.getClassId()))
         {
-            throw new ResourceNotFoundException("Class not found: " + subjectDto.getClassName());
+            throw new AlreadyExistException("Subject '" + subjectDto.getSubjectName() + "' already exists in class with ID '" + subjectDto.getClassId() + "'.");
         }
 
         Subject subject = new Subject();
@@ -45,7 +41,7 @@ public class SubjectServiceImpl implements SubjectService
 
         Subject saved = subjectRepository.save(subject);
         SubjectDto savedDto = modelMapper.map(saved, SubjectDto.class);
-        savedDto.setClassName(classEntity.getClassName());
+        savedDto.setClassId(classEntity.getId());
 
         return savedDto;
     }
@@ -65,54 +61,58 @@ public class SubjectServiceImpl implements SubjectService
     }
 
     @Override
-    public SubjectDto getSubjectByName(String name)
+    public SubjectDto getSubjectById(Long id)
     {
-        Subject subject = subjectRepository.findBySubjectNameIgnoreCase(name);
-        if (subject == null)
-        {
-            throw new ResourceNotFoundException("Subject not found: " + name);
-        }
+        Subject subject = subjectRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Subject with ID '" + id + "' not found."));
+
         SubjectDto dto = modelMapper.map(subject, SubjectDto.class);
-        dto.setClassName(subject.getClassEntity().getClassName());
+
+        dto.setClassId(subject.getClassEntity().getId());
+
         return dto;
     }
 
     @Override
-    public void deleteSubject(String name)
+    public void deleteSubject(Long subjectId, Long classId)
     {
-        Subject subject = subjectRepository.findBySubjectNameIgnoreCase(name);
-        if (subject == null)
+        if (!classEntityRepository.existsById(classId))
         {
-            throw new ResourceNotFoundException("Subject not found: " + name);
+            throw new ResourceNotFoundException("Class with ID '" + classId + "' not found.");
         }
+
+        Subject subject = subjectRepository.findById(subjectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Subject with ID '" + subjectId + "' not found."));
+
+        // Check if the subject belongs to the given class
+        if (!subject.getClassEntity().getId().equals(classId))
+        {
+            throw new ResourceNotFoundException("Subject with ID '" + subjectId + "' does not belong to class with ID '" + classId + "'.");
+        }
+
         subjectRepository.delete(subject);
     }
 
     @Override
-    public SubjectDto updateSubject(String name, SubjectDto subjectDto)
+    public SubjectDto updateSubjectById(Long subjectId, SubjectDto subjectDto)
     {
-        Subject existing = subjectRepository.findBySubjectNameIgnoreCase(name);
-        if (existing == null)
-        {
-            throw new ResourceNotFoundException("Subject not found: " + name);
-        }
+        Subject existing = subjectRepository.findById(subjectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Subject not found with ID: " + subjectId));
 
-        if (!existing.getSubjectName().equalsIgnoreCase(subjectDto.getSubjectName())
-                && subjectRepository.existsBySubjectNameIgnoreCase(subjectDto.getSubjectName()))
-        {
-            throw new AlreadyExistException("Subject already exists with name: " + subjectDto.getSubjectName());
-        }
+        ClassEntity classEntity = classEntityRepository.findById(subjectDto.getClassId())
+                .orElseThrow(() -> new ResourceNotFoundException("Class not found with ID: " + subjectDto.getClassId()));
 
-        ClassEntity classEntity = classEntityRepository.findByClassNameIgnoreCase(subjectDto.getClassName());
-        if (classEntity == null)
+        boolean subjectExists = subjectRepository.existsBySubjectNameIgnoreCaseAndClassEntity_Id(subjectDto.getSubjectName(), subjectDto.getClassId());
+        if (!existing.getSubjectName().equalsIgnoreCase(subjectDto.getSubjectName()) && subjectExists)
         {
-            throw new ResourceNotFoundException("Class not found: " + subjectDto.getClassName());
+            throw new AlreadyExistException("Subject '" + subjectDto.getSubjectName() + "' already exists in class with ID: " + subjectDto.getClassId());
         }
 
         existing.setSubjectName(subjectDto.getSubjectName());
         existing.setClassEntity(classEntity);
 
         Subject updated = subjectRepository.save(existing);
+
         SubjectDto updatedDto = modelMapper.map(updated, SubjectDto.class);
         updatedDto.setClassName(classEntity.getClassName());
 
@@ -122,16 +122,14 @@ public class SubjectServiceImpl implements SubjectService
     @Override
     public List<SubjectDto> addSubjectsByClass(SubjectsBulkDto bulkDto)
     {
-        ClassEntity classEntity = classEntityRepository.findByClassNameIgnoreCase(bulkDto.getClassName());
-        if (classEntity == null)
-        {
-            throw new ResourceNotFoundException("Class not found: " + bulkDto.getClassName());
-        }
+        ClassEntity classEntity = classEntityRepository.findById(bulkDto.getClassId())
+                .orElseThrow(() -> new ResourceNotFoundException("Class not found with ID: " + bulkDto.getClassId()));
 
         List<SubjectDto> createdSubjects = new ArrayList<>();
+
         for (String subjectName : bulkDto.getSubjectNames())
         {
-            if (subjectRepository.existsBySubjectNameIgnoreCase(subjectName))
+            if (subjectRepository.existsBySubjectNameIgnoreCaseAndClassEntity_Id(subjectName, bulkDto.getClassId()))
             {
                 // Skip existing subject or you can throw exception
                 continue;
@@ -142,10 +140,28 @@ public class SubjectServiceImpl implements SubjectService
             subject.setClassEntity(classEntity);
 
             Subject saved = subjectRepository.save(subject);
+
             SubjectDto dto = modelMapper.map(saved, SubjectDto.class);
             dto.setClassName(classEntity.getClassName());
+
             createdSubjects.add(dto);
         }
+
         return createdSubjects;
+    }
+
+    public List<SubjectDto> getSubjectsByClassId(Long classId)
+    {
+        List<Subject> subjects = subjectRepository.findByClassEntity_Id(classId);
+
+        if (subjects.isEmpty())
+        {
+            throw new ResourceNotFoundException("No subjects found for class ID: " + classId);
+        }
+
+        // Convert the list of Subject entities to SubjectDto
+        return subjects.stream()
+                .map(subject -> modelMapper.map(subject, SubjectDto.class))
+                .toList();
     }
 }

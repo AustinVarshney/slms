@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.Date;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -16,7 +17,7 @@ public class AttendanceDto
     private Long id;
     @JsonFormat(pattern = "dd-MM-yyyy HH:mm:ss")
     private LocalDateTime date;
-    private boolean present;
+    private List<StudentAttendance> studentAttendances;
     private Date createdAt;
     private Date updatedAt;
 }

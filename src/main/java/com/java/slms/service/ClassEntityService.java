@@ -17,4 +17,5 @@ public interface ClassEntityService
     void deleteClassById(Long id);
 
     ClassEntityDto updateClassNameById(Long id, ClassEntityDto classEntityDto);
+
 }

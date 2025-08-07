@@ -28,4 +28,16 @@ public class GlobalExceptionHandler
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
+    @ExceptionHandler(WrongArgumentException.class)
+    public ResponseEntity<ApiResponse<?>> handleWrongArgument(WrongArgumentException ex)
+    {
+        ApiResponse<?> response = ApiResponse.builder()
+                .data(null)
+                .message(ex.getMessage())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .build();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+
 }

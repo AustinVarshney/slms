@@ -8,5 +8,5 @@ import java.util.List;
 public class SubjectsBulkDto
 {
     private Long classId;
-    private List<String> subjectNames;
+    private List<SpecificSubject> subjects;
 }

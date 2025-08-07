@@ -1,7 +1,7 @@
 package com.java.slms.controller;
 
 import com.java.slms.dto.StudentDto;
-import com.java.slms.dto.StudentForAttendance;
+import com.java.slms.dto.StudentAttendance;
 import com.java.slms.payload.ApiResponse;
 import com.java.slms.service.StudentService;
 import lombok.RequiredArgsConstructor;
@@ -82,11 +82,11 @@ public class StudentController
 
 
     @GetMapping("/present-today")
-    public ResponseEntity<ApiResponse<List<StudentForAttendance>>> getPresentToday()
+    public ResponseEntity<ApiResponse<List<StudentAttendance>>> getPresentToday()
     {
-        List<StudentForAttendance> list = studentService.getStudentsPresentToday();
+        List<StudentAttendance> list = studentService.getStudentsPresentToday();
         return ResponseEntity.ok(
-                ApiResponse.<List<StudentForAttendance>>builder()
+                ApiResponse.<List<StudentAttendance>>builder()
                         .data(list)
                         .message("Students present today: " + list.size())
                         .status(HttpStatus.OK.value())
@@ -95,13 +95,13 @@ public class StudentController
     }
 
     @GetMapping("/present-today/{className}")
-    public ResponseEntity<ApiResponse<List<StudentForAttendance>>> getPresentTodayByClass(@PathVariable String className)
+    public ResponseEntity<ApiResponse<List<StudentAttendance>>> getPresentTodayByClass(@PathVariable Long classId)
     {
-        List<StudentForAttendance> list = studentService.getStudentsPresentTodayByClass(className);
+        List<StudentAttendance> list = studentService.getStudentsPresentTodayByClass(classId);
         return ResponseEntity.ok(
-                ApiResponse.<List<StudentForAttendance>>builder()
+                ApiResponse.<List<StudentAttendance>>builder()
                         .data(list)
-                        .message("Students present today in class " + className + ": " + list.size())
+                        .message("Students present today in class " + classId + ": " + list.size())
                         .status(HttpStatus.OK.value())
                         .build()
         );

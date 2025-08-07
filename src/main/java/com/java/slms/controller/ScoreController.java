@@ -2,6 +2,7 @@ package com.java.slms.controller;
 
 import com.java.slms.dto.ScoreRequestDTO;
 import com.java.slms.dto.ScoreResponseDTO;
+import com.java.slms.dto.StudentScore;
 import com.java.slms.payload.ApiResponse;
 import com.java.slms.service.ScoreService;
 import lombok.RequiredArgsConstructor;
@@ -20,11 +21,11 @@ public class ScoreController
     private final ScoreService scoreService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<ScoreResponseDTO>> createScore(@RequestBody ScoreRequestDTO scoreDto)
+    public ResponseEntity<ApiResponse<List<ScoreResponseDTO>>> createScoresOfStudents(@RequestBody ScoreRequestDTO scoreDto)
     {
-        ScoreResponseDTO saved = scoreService.createScore(scoreDto);
+        List<ScoreResponseDTO> saved = scoreService.createScoresOfStudents(scoreDto);
         return ResponseEntity.status(HttpStatus.CREATED).body(
-                ApiResponse.<ScoreResponseDTO>builder()
+                ApiResponse.<List<ScoreResponseDTO>>builder()
                         .data(saved)
                         .message("Score created")
                         .status(HttpStatus.CREATED.value())
@@ -32,8 +33,9 @@ public class ScoreController
         );
     }
 
+
     @GetMapping("/pan/{panNumber}")
-    public ResponseEntity<ApiResponse<List<ScoreResponseDTO>>> createScore(@PathVariable String panNumber)
+    public ResponseEntity<ApiResponse<List<ScoreResponseDTO>>> getScoresByStudentPan(@PathVariable String panNumber)
     {
         List<ScoreResponseDTO> scores = scoreService.getScoresByStudentPan(panNumber);
         return ResponseEntity.status(HttpStatus.CREATED).body(
@@ -46,9 +48,10 @@ public class ScoreController
     }
 
     @GetMapping("/exam/{examId}/class/{classId}")
-    public ResponseEntity<ApiResponse<List<ScoreResponseDTO>>> getScoresByExamNameAndClassName(
+    public ResponseEntity<ApiResponse<List<ScoreResponseDTO>>> getScoresByExamIdAndClassId(
             @PathVariable Long examId,
-            @PathVariable Long classId) {
+            @PathVariable Long classId)
+    {
 
         List<ScoreResponseDTO> scores = scoreService.getScoresByExamIdAndClassId(examId, classId);
 
@@ -61,5 +64,42 @@ public class ScoreController
         );
     }
 
+    @PatchMapping("/exam/{examId}/class/{classId}/subject/{subjectId}/pan/{panNumber}")
+    public ResponseEntity<ApiResponse<ScoreResponseDTO>> updateScoreByExamIdClassIdSubjectIdAndPanNumber(
+            @PathVariable Long examId,
+            @PathVariable Long classId,
+            @PathVariable Long subjectId,
+            @PathVariable String panNumber,
+            @RequestBody StudentScore studentScore
+    )
+    {
+
+        ScoreResponseDTO scores = scoreService.updateScoreByExamIdClassIdSubjectIdAndPanNumber(examId, classId, subjectId, panNumber, studentScore);
+
+        return ResponseEntity.ok(
+                ApiResponse.<ScoreResponseDTO>builder()
+                        .data(scores)
+                        .message("Scores fetched by Exam, Class, Subject, and PAN")
+                        .status(HttpStatus.OK.value())
+                        .build()
+        );
+    }
+
+    @DeleteMapping("/exam/{examId}/class/{classId}/subject/{subjectId}/pan/{panNumber}")
+    public ResponseEntity<ApiResponse<Void>> deleteScore(
+            @PathVariable Long examId,
+            @PathVariable Long classId,
+            @PathVariable Long subjectId,
+            @PathVariable String panNumber) {
+
+        scoreService.deleteScoreByExamIdClassIdSubjectIdAndPanNumber(examId, classId, subjectId, panNumber);
+
+        return ResponseEntity.ok(
+                ApiResponse.<Void>builder()
+                        .message("Score deleted successfully")
+                        .status(HttpStatus.OK.value())
+                        .build()
+        );
+    }
 
 }

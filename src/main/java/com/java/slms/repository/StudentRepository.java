@@ -27,7 +27,7 @@ public interface StudentRepository extends JpaRepository<Student, String>
             SELECT a.student FROM Attendance a 
             WHERE a.present = true 
             AND DATE(a.date) = CURRENT_DATE 
-            AND LOWER(a.student.currentClass.className) = LOWER(:className)
+            AND a.student.currentClass.id = :classId
             """)
-    List<Student> findStudentsPresentTodayByClassName(String className);
+    List<Student> findStudentsPresentTodayByClassName(@Param("classId") Long classId);
 }

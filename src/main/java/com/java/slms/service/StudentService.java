@@ -1,7 +1,7 @@
 package com.java.slms.service;
 
 import com.java.slms.dto.StudentDto;
-import com.java.slms.dto.StudentForAttendance;
+import com.java.slms.dto.StudentAttendance;
 
 import java.util.List;
 
@@ -17,7 +17,7 @@ public interface StudentService
 
     StudentDto deleteStudent(String pan);
 
-    List<StudentForAttendance> getStudentsPresentToday();
+    List<StudentAttendance> getStudentsPresentToday();
 
-    List<StudentForAttendance> getStudentsPresentTodayByClass(String className);
+    List<StudentAttendance> getStudentsPresentTodayByClass(Long classId);
 }

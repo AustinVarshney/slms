@@ -1,13 +1,12 @@
 package com.java.slms.model;
 
-import com.java.slms.util.StudentStatus;
+import com.java.slms.util.Statuses;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
 import java.util.List;
 
 @EqualsAndHashCode(callSuper = true)
@@ -23,7 +22,7 @@ public class Student extends BaseEntity
     private String name;
     private String photo;
     @Enumerated(EnumType.STRING)
-    private StudentStatus status;
+    private Statuses status;
 
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Attendance> attendanceRecords;

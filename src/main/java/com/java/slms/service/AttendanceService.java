@@ -1,10 +1,14 @@
 package com.java.slms.service;
 
+import com.java.slms.dto.AttendanceDto;
 import com.java.slms.dto.StudentDto;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public interface AttendanceService
 {
-    void markAttendance(String studentPanNumber, boolean isPresent);
+    AttendanceDto markAttendance(AttendanceDto attendanceDto);
+
+    AttendanceDto updateAttendanceForAdmin(AttendanceDto attendanceDto, LocalDate attendanceDate);
 }

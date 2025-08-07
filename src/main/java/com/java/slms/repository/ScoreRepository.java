@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface ScoreRepository extends JpaRepository<Score, Long>
 {
@@ -28,8 +29,11 @@ public interface ScoreRepository extends JpaRepository<Score, Long>
     boolean existsByStudentPanNumberAndSubjectNameAndExamName(@Param("panNumber") String panNumber, @Param("subjectName") String subjectName, @Param("examName") String examName);
 
     boolean existsByStudentPanNumberAndSubjectIdAndExamId(String studentPanNumber, Long subjectId, Long examId);
+
     // Fetch scores by exam ID and class ID
     List<Score> findByExam_IdAndStudent_CurrentClass_Id(Long examId, Long classId);
 
+    @Query("SELECT s FROM Score s " + "JOIN s.student st " + "JOIN s.subject sub " + "JOIN sub.classEntity c " + "JOIN s.exam e " + "WHERE st.panNumber = :panNumber " + "AND sub.id = :subjectId " + "AND e.id = :examId " + "AND c.id = :classId")
+    Optional<Score> findByStudentPanNumberAndClassIdAndSubjectIdAndExamId(@Param("panNumber") String panNumber, @Param("classId") Long classId, @Param("subjectId") Long subjectId, @Param("examId") Long examId);
 
 }

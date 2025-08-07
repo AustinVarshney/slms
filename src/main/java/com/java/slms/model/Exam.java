@@ -21,6 +21,8 @@ public class Exam extends BaseEntity
     private Long id;
     private String name;  // e.g., "Midterm", "Final Exam"
     private Date examDate;
+    private Double maximumMarks;
+    private Double passingMarks;
 
     @ManyToOne
     @JoinColumn(name = "class_id")

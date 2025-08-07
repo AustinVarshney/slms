@@ -4,13 +4,16 @@ import com.java.slms.dto.ClassEntityDto;
 import com.java.slms.exception.AlreadyExistException;
 import com.java.slms.exception.ResourceNotFoundException;
 import com.java.slms.model.ClassEntity;
+import com.java.slms.model.Teacher;
 import com.java.slms.repository.ClassEntityRepository;
+import com.java.slms.repository.TeacherRepository;
 import com.java.slms.service.ClassEntityService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -20,6 +23,7 @@ public class ClassEntityServiceImpl implements ClassEntityService
 {
     private final ClassEntityRepository classEntityRepository;
     private final ModelMapper modelMapper;
+    private final TeacherRepository teacherRepository;
 
     @Override
     public ClassEntityDto addClass(ClassEntityDto classEntityDto)
@@ -101,5 +105,6 @@ public class ClassEntityServiceImpl implements ClassEntityService
         dto.setTotalStudents(updatedClass.getStudents() != null ? updatedClass.getStudents().size() : 0);
         return dto;
     }
+
 
 }

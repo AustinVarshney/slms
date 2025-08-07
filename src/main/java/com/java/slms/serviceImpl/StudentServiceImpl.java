@@ -1,7 +1,7 @@
 package com.java.slms.serviceImpl;
 
 import com.java.slms.dto.StudentDto;
-import com.java.slms.dto.StudentForAttendance;
+import com.java.slms.dto.StudentAttendance;
 import com.java.slms.exception.ResourceNotFoundException;
 import com.java.slms.exception.AlreadyExistException;
 import com.java.slms.model.ClassEntity;
@@ -9,7 +9,7 @@ import com.java.slms.model.Student;
 import com.java.slms.repository.ClassEntityRepository;
 import com.java.slms.repository.StudentRepository;
 import com.java.slms.service.StudentService;
-import com.java.slms.util.StudentStatus;
+import com.java.slms.util.Statuses;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -40,15 +40,16 @@ public class StudentServiceImpl implements StudentService
         }
 
         // Check if class exists
-        if (!classEntityRepository.existsByNameIgnoreCase(studentDto.getClassName()))
+        if (!classEntityRepository.existsById(studentDto.getClassId()))
         {
             throw new ResourceNotFoundException("Class not found with name: " + studentDto.getClassName());
         }
 
-        ClassEntity classEntity = classEntityRepository.findByClassNameIgnoreCase(studentDto.getClassName());
+        ClassEntity classEntity = classEntityRepository.findById(studentDto.getClassId()).orElseThrow(() -> new ResourceNotFoundException("Class not found with ID: " + studentDto.getClassId()));
+
         // Map and assign class
         Student student = modelMapper.map(studentDto, Student.class);
-        student.setStatus(StudentStatus.ACTIVE);
+        student.setStatus(Statuses.ACTIVE);
         student.setCurrentClass(classEntity);
 
         Student savedStudent = studentRepository.save(student);
@@ -111,7 +112,7 @@ public class StudentServiceImpl implements StudentService
                 });
 
         // Check if the student's status is already INACTIVE
-        if (fetchedStudent.getStatus() == StudentStatus.INACTIVE)
+        if (fetchedStudent.getStatus() == Statuses.INACTIVE)
         {
             log.info("Student with PAN '{}' is already INACTIVE. No update needed.", pan);
             return modelMapper.map(fetchedStudent, StudentDto.class);
@@ -119,33 +120,29 @@ public class StudentServiceImpl implements StudentService
 
         log.info("Student Deleted successfully with PAN: {}", pan);
 
-        fetchedStudent.setStatus(StudentStatus.INACTIVE);
+        fetchedStudent.setStatus(Statuses.INACTIVE);
         fetchedStudent.setDeletedAt(new Date());
 
         return modelMapper.map(studentRepository.save(fetchedStudent), StudentDto.class);
     }
 
     @Override
-    public List<StudentForAttendance> getStudentsPresentToday()
+    public List<StudentAttendance> getStudentsPresentToday()
     {
         List<Student> students = studentRepository.findStudentsPresentToday();
         return students.stream()
-                .map(student -> modelMapper.map(student, StudentForAttendance.class))
+                .map(student -> modelMapper.map(student, StudentAttendance.class))
                 .toList();
     }
 
     @Override
-    public List<StudentForAttendance> getStudentsPresentTodayByClass(String className)
+    public List<StudentAttendance> getStudentsPresentTodayByClass(Long classId)
     {
-        boolean exists = classEntityRepository.existsByNameIgnoreCase(className);
-        if (!exists)
-        {
-            throw new ResourceNotFoundException("Class not found with name: " + className);
-        }
+        ClassEntity classEntity = classEntityRepository.findById(classId).orElseThrow(() -> new ResourceNotFoundException("Class not found with ID: " + classId));
 
-        List<Student> students = studentRepository.findStudentsPresentTodayByClassName(className);
+        List<Student> students = studentRepository.findStudentsPresentTodayByClassName(classId);
         return students.stream()
-                .map(student -> modelMapper.map(student, StudentForAttendance.class))
+                .map(student -> modelMapper.map(student, StudentAttendance.class))
                 .toList();
     }
 }

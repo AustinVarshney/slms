@@ -20,9 +20,6 @@ public class ClassEntity extends BaseEntity
     private Long id;
     private String className;
 
-//    @ManyToOne
-//    private Teacher teacher;
-
     @OneToMany(mappedBy = "currentClass", fetch = FetchType.LAZY, orphanRemoval = true)
     private List<Student> students;
 

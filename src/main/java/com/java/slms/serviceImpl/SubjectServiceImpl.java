@@ -1,15 +1,20 @@
 package com.java.slms.serviceImpl;
 
+import com.java.slms.dto.SpecificSubject;
 import com.java.slms.dto.SubjectDto;
 import com.java.slms.dto.SubjectsBulkDto;
 import com.java.slms.exception.AlreadyExistException;
 import com.java.slms.exception.ResourceNotFoundException;
+import com.java.slms.exception.WrongArgumentException;
 import com.java.slms.model.ClassEntity;
 import com.java.slms.model.Subject;
+import com.java.slms.model.Teacher;
 import com.java.slms.repository.ClassEntityRepository;
 import com.java.slms.repository.SubjectRepository;
+import com.java.slms.repository.TeacherRepository;
 import com.java.slms.service.SubjectService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
@@ -18,12 +23,14 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class SubjectServiceImpl implements SubjectService
 {
 
     private final SubjectRepository subjectRepository;
     private final ClassEntityRepository classEntityRepository;
     private final ModelMapper modelMapper;
+    private final TeacherRepository teacherRepository;
 
     public SubjectDto addSubject(SubjectDto subjectDto)
     {
@@ -35,13 +42,28 @@ public class SubjectServiceImpl implements SubjectService
             throw new AlreadyExistException("Subject '" + subjectDto.getSubjectName() + "' already exists in class with ID '" + subjectDto.getClassId() + "'.");
         }
 
+        // Find Teacher by teacherId
+        Teacher teacher = null;
+        if (subjectDto.getTeacherId() != null)
+        {
+            teacher = teacherRepository.findById(subjectDto.getTeacherId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Teacher not found with ID: " + subjectDto.getTeacherId()));
+        }
+        else
+        {
+            throw new WrongArgumentException("Teacher ID must be provided for a subject.");
+        }
+
         Subject subject = new Subject();
         subject.setSubjectName(subjectDto.getSubjectName());
         subject.setClassEntity(classEntity);
+        subject.setTeacher(teacher);
 
         Subject saved = subjectRepository.save(subject);
+
         SubjectDto savedDto = modelMapper.map(saved, SubjectDto.class);
         savedDto.setClassId(classEntity.getId());
+        savedDto.setTeacherId(teacher.getId());
 
         return savedDto;
     }
@@ -93,7 +115,6 @@ public class SubjectServiceImpl implements SubjectService
         subjectRepository.delete(subject);
     }
 
-    @Override
     public SubjectDto updateSubjectById(Long subjectId, SubjectDto subjectDto)
     {
         Subject existing = subjectRepository.findById(subjectId)
@@ -102,19 +123,33 @@ public class SubjectServiceImpl implements SubjectService
         ClassEntity classEntity = classEntityRepository.findById(subjectDto.getClassId())
                 .orElseThrow(() -> new ResourceNotFoundException("Class not found with ID: " + subjectDto.getClassId()));
 
+        // Check for duplicate subject name in the same class (except for current subject)
         boolean subjectExists = subjectRepository.existsBySubjectNameIgnoreCaseAndClassEntity_Id(subjectDto.getSubjectName(), subjectDto.getClassId());
         if (!existing.getSubjectName().equalsIgnoreCase(subjectDto.getSubjectName()) && subjectExists)
         {
             throw new AlreadyExistException("Subject '" + subjectDto.getSubjectName() + "' already exists in class with ID: " + subjectDto.getClassId());
         }
 
+        Teacher teacher = null;
+        if (subjectDto.getTeacherId() != null)
+        {
+            teacher = teacherRepository.findById(subjectDto.getTeacherId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Teacher not found with ID: " + subjectDto.getTeacherId()));
+        }
+        else
+        {
+            throw new WrongArgumentException("Teacher ID must be provided for a subject.");
+        }
+
         existing.setSubjectName(subjectDto.getSubjectName());
         existing.setClassEntity(classEntity);
+        existing.setTeacher(teacher); // Update teacher
 
         Subject updated = subjectRepository.save(existing);
 
         SubjectDto updatedDto = modelMapper.map(updated, SubjectDto.class);
         updatedDto.setClassName(classEntity.getClassName());
+        updatedDto.setTeacherId(teacher.getId());
 
         return updatedDto;
     }
@@ -125,29 +160,44 @@ public class SubjectServiceImpl implements SubjectService
         ClassEntity classEntity = classEntityRepository.findById(bulkDto.getClassId())
                 .orElseThrow(() -> new ResourceNotFoundException("Class not found with ID: " + bulkDto.getClassId()));
 
-        List<SubjectDto> createdSubjects = new ArrayList<>();
+        List<Subject> newSubjects = new ArrayList<>();
+        List<String> skippedSubjects = new ArrayList<>();
 
-        for (String subjectName : bulkDto.getSubjectNames())
+        for (SpecificSubject subject1 : bulkDto.getSubjects())
         {
-            if (subjectRepository.existsBySubjectNameIgnoreCaseAndClassEntity_Id(subjectName, bulkDto.getClassId()))
+            if (subjectRepository.existsBySubjectNameIgnoreCaseAndClassEntity_Id(subject1.getSubjectName().trim(), bulkDto.getClassId()))
             {
-                // Skip existing subject or you can throw exception
+                skippedSubjects.add(subject1.getSubjectName());
                 continue;
             }
 
             Subject subject = new Subject();
-            subject.setSubjectName(subjectName);
+            subject.setSubjectName(subject1.getSubjectName().trim());
             subject.setClassEntity(classEntity);
 
-            Subject saved = subjectRepository.save(subject);
+//             optional: assign a teacher if your DTO supports teacherId
+            Teacher teacher = teacherRepository.findById(subject1.getTeacherId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Teacher not found with ID: " + subject1.getTeacherId()));
 
-            SubjectDto dto = modelMapper.map(saved, SubjectDto.class);
-            dto.setClassName(classEntity.getClassName());
-
-            createdSubjects.add(dto);
+            subject.setTeacher(teacher);
+            newSubjects.add(subject);
         }
 
-        return createdSubjects;
+        List<Subject> savedSubjects = subjectRepository.saveAll(newSubjects);
+
+        if (!skippedSubjects.isEmpty())
+        {
+            // Log or handle skipped subjects
+            log.warn("Skipped duplicate subjects: {}", skippedSubjects);
+        }
+
+        return savedSubjects.stream()
+                .map(subject ->
+                {
+                    SubjectDto dto = modelMapper.map(subject, SubjectDto.class);
+                    dto.setClassName(classEntity.getClassName());
+                    return dto;
+                }).toList();
     }
 
     public List<SubjectDto> getSubjectsByClassId(Long classId)

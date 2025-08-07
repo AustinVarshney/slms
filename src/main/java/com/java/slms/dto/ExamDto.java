@@ -19,4 +19,6 @@ public class ExamDto
     private Date examDate;
     private Long classId;
     private String className;
+    private Double maximumMarks;
+    private Double passingMarks;
 }

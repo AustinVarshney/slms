@@ -29,6 +29,12 @@ public class ClassEntity extends BaseEntity
     @OneToMany(mappedBy = "classEntity", fetch = FetchType.LAZY, orphanRemoval = true)
     private List<Exam> exams;
 
+    @OneToMany(mappedBy = "classEntity", fetch = FetchType.LAZY, orphanRemoval = true)
+    private List<FeeStructure> feeStructures;
+
+    @OneToMany(mappedBy = "classEntity", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TimeTable> timetables;
+
 //    @OneToMany(mappedBy = "classEntity")
 //    private List<FeeStructure> feeStructures;
 }

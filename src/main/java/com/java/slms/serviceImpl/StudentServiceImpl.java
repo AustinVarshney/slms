@@ -42,7 +42,7 @@ public class StudentServiceImpl implements StudentService
         // Check if class exists
         if (!classEntityRepository.existsById(studentDto.getClassId()))
         {
-            throw new ResourceNotFoundException("Class not found with name: " + studentDto.getClassName());
+            throw new ResourceNotFoundException("Class not found with id: " + studentDto.getClassId());
         }
 
         ClassEntity classEntity = classEntityRepository.findById(studentDto.getClassId()).orElseThrow(() -> new ResourceNotFoundException("Class not found with ID: " + studentDto.getClassId()));

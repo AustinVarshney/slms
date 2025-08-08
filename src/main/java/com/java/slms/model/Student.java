@@ -30,6 +30,9 @@ public class Student extends BaseEntity
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Score> scores;
 
+    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Fee> fees;
+
     @ManyToOne
     @JoinColumn(name = "class_id")
     private ClassEntity currentClass;

@@ -30,4 +30,6 @@ public interface StudentRepository extends JpaRepository<Student, String>
             AND a.student.currentClass.id = :classId
             """)
     List<Student> findStudentsPresentTodayByClassName(@Param("classId") Long classId);
+
+    List<Student> findByCurrentClass_Id(Long classId);
 }

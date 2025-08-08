@@ -1,0 +1,40 @@
+package com.java.slms.model;
+
+import com.java.slms.util.DayOfWeek;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalTime;
+
+@EqualsAndHashCode(callSuper = true)
+@Entity
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class TimeTable extends BaseEntity
+{
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Enumerated(EnumType.STRING)
+    private DayOfWeek day; // MONDAY, TUESDAY, etc.
+
+    private LocalTime startTime;
+    private LocalTime endTime;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "subject_id", nullable = false)
+    private Subject subject;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "teacher_id", nullable = false)
+    private Teacher teacher;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "class_id", nullable = false)
+    private ClassEntity classEntity;
+}

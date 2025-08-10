@@ -4,12 +4,13 @@ import com.java.slms.dto.StudentDto;
 import com.java.slms.dto.StudentAttendance;
 import com.java.slms.exception.ResourceNotFoundException;
 import com.java.slms.exception.AlreadyExistException;
+import com.java.slms.exception.WrongArgumentException;
 import com.java.slms.model.ClassEntity;
 import com.java.slms.model.Student;
 import com.java.slms.repository.ClassEntityRepository;
 import com.java.slms.repository.StudentRepository;
 import com.java.slms.service.StudentService;
-import com.java.slms.util.Statuses;
+import com.java.slms.util.StudentStatuses;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -49,7 +50,7 @@ public class StudentServiceImpl implements StudentService
 
         // Map and assign class
         Student student = modelMapper.map(studentDto, Student.class);
-        student.setStatus(Statuses.ACTIVE);
+        student.setStatus(StudentStatuses.ACTIVE);
         student.setCurrentClass(classEntity);
 
         Student savedStudent = studentRepository.save(student);
@@ -62,6 +63,15 @@ public class StudentServiceImpl implements StudentService
     {
         log.info("Fetching all students");
         List<Student> students = studentRepository.findAll();
+        return students.stream().map(student -> modelMapper.map(student, StudentDto.class)).toList();
+    }
+
+    @Override
+    public List<StudentDto> getStudentByStatus(StudentStatuses status)
+    {
+        log.info("Fetching students with the status : {}", status);
+
+        List<Student> students = studentRepository.findByStatus(status);
         return students.stream().map(student -> modelMapper.map(student, StudentDto.class)).toList();
     }
 
@@ -81,6 +91,7 @@ public class StudentServiceImpl implements StudentService
         return modelMapper.map(fetchedStudent, StudentDto.class);
     }
 
+
     @Override
     public StudentDto updateStudent(String pan, StudentDto studentDto)
     {
@@ -95,6 +106,7 @@ public class StudentServiceImpl implements StudentService
 
         modelMapper.map(studentDto, fetchedStudent);
         fetchedStudent.setPanNumber(pan);
+        fetchedStudent.setStatus(StudentStatuses.ACTIVE);
         Student updatedStudent = studentRepository.save(fetchedStudent);
 
         log.info("Student updated successfully with PAN: {}", pan);
@@ -112,7 +124,7 @@ public class StudentServiceImpl implements StudentService
                 });
 
         // Check if the student's status is already INACTIVE
-        if (fetchedStudent.getStatus() == Statuses.INACTIVE)
+        if (fetchedStudent.getStatus() == StudentStatuses.INACTIVE)
         {
             log.info("Student with PAN '{}' is already INACTIVE. No update needed.", pan);
             return modelMapper.map(fetchedStudent, StudentDto.class);
@@ -120,7 +132,7 @@ public class StudentServiceImpl implements StudentService
 
         log.info("Student Deleted successfully with PAN: {}", pan);
 
-        fetchedStudent.setStatus(Statuses.INACTIVE);
+        fetchedStudent.setStatus(StudentStatuses.INACTIVE);
         fetchedStudent.setDeletedAt(new Date());
 
         return modelMapper.map(studentRepository.save(fetchedStudent), StudentDto.class);

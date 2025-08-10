@@ -1,6 +1,6 @@
 package com.java.slms.dto;
 
-import com.java.slms.util.Statuses;
+import com.java.slms.util.StudentStatuses;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -16,7 +16,7 @@ public class StudentDto
     private String panNumber;
     private String name;
     private String photo;
-    private Statuses status;
+    private StudentStatuses status;
     private List<AttendanceDto> attendanceRecords;
     private String className;
     private Long classId;

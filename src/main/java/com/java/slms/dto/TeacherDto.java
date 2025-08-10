@@ -1,8 +1,5 @@
 package com.java.slms.dto;
 
-import com.java.slms.util.Statuses;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import lombok.Data;
 
 import java.util.Date;

@@ -10,12 +10,11 @@ import com.java.slms.repository.ClassEntityRepository;
 import com.java.slms.repository.SubjectRepository;
 import com.java.slms.repository.TeacherRepository;
 import com.java.slms.service.TeacherService;
-import com.java.slms.util.Statuses;
+import com.java.slms.util.StudentStatuses;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -68,7 +67,7 @@ public class TeacherServiceImpl implements TeacherService
         {
             try
             {
-                existingTeacher.setStatus(Statuses.valueOf(teacherDto.getStatus().toUpperCase()));
+                existingTeacher.setStatus(StudentStatuses.valueOf(teacherDto.getStatus().toUpperCase()));
             } catch (IllegalArgumentException e)
             {
                 throw new WrongArgumentException("Invalid status value: " + teacherDto.getStatus());

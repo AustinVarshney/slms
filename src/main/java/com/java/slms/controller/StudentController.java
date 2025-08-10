@@ -2,13 +2,16 @@ package com.java.slms.controller;
 
 import com.java.slms.dto.StudentDto;
 import com.java.slms.dto.StudentAttendance;
+import com.java.slms.exception.WrongArgumentException;
 import com.java.slms.payload.ApiResponse;
 import com.java.slms.service.StudentService;
+import com.java.slms.util.StudentStatuses;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
 import java.util.List;
 
 @RestController
@@ -43,6 +46,26 @@ public class StudentController
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
+    @GetMapping("/status")
+    public ResponseEntity<ApiResponse<List<StudentDto>>> getStudentByStatus(@RequestParam String status)
+    {
+        if (!isValidStatus(status))
+        {
+            throw new WrongArgumentException("Invalid status value: " + status);
+        }
+
+        StudentStatuses statusEnum = StudentStatuses.valueOf(status.toUpperCase());
+
+        List<StudentDto> students = studentService.getStudentByStatus(statusEnum);
+
+        ApiResponse<List<StudentDto>> response = ApiResponse.<List<StudentDto>>builder()
+                .data(students)
+                .message("Total Students - " + students.size())
+                .status(HttpStatus.OK.value())
+                .build();
+        return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
+
     @GetMapping("/{panNumber}")
     public ResponseEntity<ApiResponse<StudentDto>> getStudentByPAN(@PathVariable String panNumber)
     {
@@ -55,7 +78,7 @@ public class StudentController
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
-    @PatchMapping("/{panNumber}")
+    @PutMapping("/{panNumber}")
     public ResponseEntity<ApiResponse<StudentDto>> updateStudent(
             @PathVariable String panNumber,
             @RequestBody StudentDto studentDto
@@ -105,6 +128,12 @@ public class StudentController
                         .status(HttpStatus.OK.value())
                         .build()
         );
+    }
+
+    private boolean isValidStatus(String status)
+    {
+        return Arrays.stream(StudentStatuses.values())
+                .anyMatch(s -> s.name().equalsIgnoreCase(status));
     }
 
 }

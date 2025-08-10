@@ -1,6 +1,6 @@
 package com.java.slms.model;
 
-import com.java.slms.util.Statuses;
+import com.java.slms.util.StudentStatuses;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -22,7 +22,7 @@ public class Student extends BaseEntity
     private String name;
     private String photo;
     @Enumerated(EnumType.STRING)
-    private Statuses status;
+    private StudentStatuses status;
 
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Attendance> attendanceRecords;

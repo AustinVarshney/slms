@@ -8,6 +8,7 @@ import com.java.slms.exception.ResourceNotFoundException;
 import com.java.slms.model.*;
 import com.java.slms.repository.*;
 import com.java.slms.service.ScoreService;
+import com.java.slms.util.CommonUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -34,11 +35,7 @@ public class ScoreServiceImpl implements ScoreService
     public List<ScoreResponseDTO> createScoresOfStudents(ScoreRequestDTO scoreDto)
     {
         // Validate class
-        ClassEntity classEntity = classEntityRepository.findById(scoreDto.getClassId()).orElseThrow(() ->
-        {
-            log.error("Class with ID '{}' not found.", scoreDto.getClassId());
-            return new ResourceNotFoundException("Class not found with ID: " + scoreDto.getClassId());
-        });
+        ClassEntity classEntity = CommonUtil.fetchClassEntityByClassId(classEntityRepository, scoreDto.getClassId());
 
         // Validate subject
         Subject subject = subjectRepository.findById(scoreDto.getSubjectId()).orElseThrow(() ->
@@ -71,11 +68,7 @@ public class ScoreServiceImpl implements ScoreService
             String panNumber = studentScore.getStudentPanNumber();
 
             // Validate student
-            Student student = studentRepository.findById(panNumber).orElseThrow(() ->
-            {
-                log.error("Student with PAN '{}' not found.", panNumber);
-                return new ResourceNotFoundException("Student with PAN '" + panNumber + "' not found.");
-            });
+            Student student = CommonUtil.fetchStudentByPan(studentRepository, studentScore.getStudentPanNumber());
 
             // Check enrollment
             boolean isEnrolled = studentRepository.existsByClassNameAndPanNumberIgnoreCase(classEntity.getClassName(), panNumber);
@@ -128,11 +121,7 @@ public class ScoreServiceImpl implements ScoreService
     public List<ScoreResponseDTO> getScoresByStudentPan(String panNumber)
     {
 
-        Student fetchedStudent = studentRepository.findById(panNumber).orElseThrow(() ->
-        {
-            log.error("Student with PAN number '{}' was not found.", panNumber);
-            return new ResourceNotFoundException("Student with PAN number '" + panNumber + "' was not found.");
-        });
+        Student fetchedStudent = CommonUtil.fetchStudentByPan(studentRepository, panNumber);
 
         List<Score> scores = scoreRepository.findByStudentPanNumber(panNumber);
 
@@ -157,7 +146,7 @@ public class ScoreServiceImpl implements ScoreService
         // Fetch the exam and class to ensure they exist
         Exam exam = examRepository.findById(examId).orElseThrow(() -> new ResourceNotFoundException("Exam not found with ID: " + examId));
 
-        ClassEntity classEntity = classEntityRepository.findById(classId).orElseThrow(() -> new ResourceNotFoundException("Class not found with ID: " + classId));
+        ClassEntity classEntity = CommonUtil.fetchClassEntityByClassId(classEntityRepository, classId);
 
         // Fetch the scores based on exam and class
         List<Score> scores = scoreRepository.findByExam_IdAndStudent_CurrentClass_Id(examId, classId);
@@ -184,11 +173,7 @@ public class ScoreServiceImpl implements ScoreService
     {
 
         // Validate ClassEntity existence
-        ClassEntity classEntity = classEntityRepository.findById(classId).orElseThrow(() ->
-        {
-            log.error("Class with ID '{}' not found.", classId);
-            return new ResourceNotFoundException("Class not found with ID: " + classId);
-        });
+        ClassEntity classEntity = CommonUtil.fetchClassEntityByClassId(classEntityRepository, classId);
 
         // Validate Subject existence and class relation
         Subject subject = subjectRepository.findById(subjectId).orElseThrow(() ->
@@ -215,11 +200,7 @@ public class ScoreServiceImpl implements ScoreService
         }
 
         // Validate Student existence
-        Student student = studentRepository.findById(panNumber).orElseThrow(() ->
-        {
-            log.error("Student with PAN '{}' not found.", panNumber);
-            return new ResourceNotFoundException("Student with PAN '" + panNumber + "' not found.");
-        });
+        Student student = CommonUtil.fetchStudentByPan(studentRepository, panNumber);
 
         // Verify student's enrollment in class
         boolean isEnrolled = studentRepository.existsByClassNameAndPanNumberIgnoreCase(classEntity.getClassName(), panNumber);
@@ -273,12 +254,7 @@ public class ScoreServiceImpl implements ScoreService
     {
 
         // Validate ClassEntity existence
-        ClassEntity classEntity = classEntityRepository.findById(classId)
-                .orElseThrow(() ->
-                {
-                    log.error("Class with ID '{}' not found.", classId);
-                    return new ResourceNotFoundException("Class not found with ID: " + classId);
-                });
+        ClassEntity classEntity = CommonUtil.fetchClassEntityByClassId(classEntityRepository, classId);
 
         // Validate Subject existence and class relation
         Subject subject = subjectRepository.findById(subjectId)
@@ -309,12 +285,7 @@ public class ScoreServiceImpl implements ScoreService
         }
 
         // Validate Student existence
-        Student student = studentRepository.findById(panNumber)
-                .orElseThrow(() ->
-                {
-                    log.error("Student with PAN '{}' not found.", panNumber);
-                    return new ResourceNotFoundException("Student with PAN '" + panNumber + "' not found.");
-                });
+        Student student = CommonUtil.fetchStudentByPan(studentRepository, panNumber);
 
         // Verify student's enrollment in class
         boolean isEnrolled = studentRepository.existsByClassNameAndPanNumberIgnoreCase(classEntity.getClassName(), panNumber);

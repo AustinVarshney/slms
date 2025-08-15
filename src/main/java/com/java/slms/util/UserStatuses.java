@@ -1,6 +1,6 @@
 package com.java.slms.util;
 
-public enum StudentStatuses
+public enum UserStatuses
 {
     NEW,
     ACTIVE,

@@ -6,6 +6,7 @@ import com.java.slms.service.ClassEntityService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -13,12 +14,14 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/classes")
-public class ClassEntityController {
-
+public class ClassEntityController
+{
     private final ClassEntityService classEntityService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<ClassEntityDto>> addClass(@RequestBody ClassEntityDto classEntityDto) {
+    @PreAuthorize("hasAnyRole('ROLE_SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<ClassEntityDto>> addClass(@RequestBody ClassEntityDto classEntityDto)
+    {
         ClassEntityDto createdClass = classEntityService.addClass(classEntityDto);
         ApiResponse<ClassEntityDto> response = ApiResponse.<ClassEntityDto>builder()
                 .data(createdClass)
@@ -30,7 +33,9 @@ public class ClassEntityController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<ClassEntityDto>>> getAllClasses() {
+    @PreAuthorize("hasAnyRole('ROLE_SUPER_ADMIN', 'ROLE_ADMIN')")
+    public ResponseEntity<ApiResponse<List<ClassEntityDto>>> getAllClasses()
+    {
         List<ClassEntityDto> classes = classEntityService.getAllClass();
         ApiResponse<List<ClassEntityDto>> response = ApiResponse.<List<ClassEntityDto>>builder()
                 .data(classes)
@@ -54,7 +59,9 @@ public class ClassEntityController {
 //    }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<ClassEntityDto>> getClassByName(@PathVariable Long id) {
+    @PreAuthorize("hasAnyRole('ROLE_SUPER_ADMIN', 'ROLE_ADMIN')")
+    public ResponseEntity<ApiResponse<ClassEntityDto>> getClassByName(@PathVariable Long id)
+    {
         ClassEntityDto classDto = classEntityService.getClassByClassId(id);
         ApiResponse<ClassEntityDto> response = ApiResponse.<ClassEntityDto>builder()
                 .data(classDto)
@@ -66,10 +73,12 @@ public class ClassEntityController {
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ROLE_SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<ClassEntityDto>> updateClassName(
             @PathVariable Long id,
             @RequestBody ClassEntityDto classEntityDto
-    ) {
+    )
+    {
         ClassEntityDto updatedClass = classEntityService.updateClassNameById(id, classEntityDto);
         ApiResponse<ClassEntityDto> response = ApiResponse.<ClassEntityDto>builder()
                 .data(updatedClass)
@@ -81,7 +90,9 @@ public class ClassEntityController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<String>> deleteClass(@PathVariable Long id) {
+    @PreAuthorize("hasAnyRole('ROLE_SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<String>> deleteClass(@PathVariable Long id)
+    {
         classEntityService.deleteClassById(id);
         ApiResponse<String> response = ApiResponse.<String>builder()
                 .data(null)

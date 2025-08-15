@@ -1,21 +1,20 @@
 package com.java.slms.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.Date;
-import java.util.List;
-import java.util.Set;
 
 @Data
-public class StaffRegisterRequest {
-    private Long id;
+@AllArgsConstructor
+@NoArgsConstructor
+public class UserRegistrationRequest
+{
     private String name;
     private String email;
     private String qualification;
-    private Set<String> roles;
-    private String password;
-    private String department;
-    private String status;
+    private Long userId;
     private Date createdAt;
     private Date deletedAt;
     private Date updatedAt;

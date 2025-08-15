@@ -14,6 +14,8 @@ public interface TeacherService
 
     TeacherDto updateTeacher(Long id, TeacherDto teacherDto);
 
-    void deleteTeacher(Long id);
+    List<TeacherDto> getActiveTeachers();
+
+    void deleteTeacher(Long id); // hard delete
 
 }

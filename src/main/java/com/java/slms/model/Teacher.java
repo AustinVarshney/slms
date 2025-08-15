@@ -1,6 +1,5 @@
 package com.java.slms.model;
 
-import com.java.slms.util.StudentStatuses;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -24,13 +23,14 @@ public class Teacher extends BaseEntity
     private String email;
     private String qualification;
 
-    @Enumerated(EnumType.STRING)
-    private StudentStatuses status;
-
 //    @ManyToMany(mappedBy = "teachers", fetch = FetchType.LAZY)
 //    private List<ClassEntity> classes;
 
     @OneToMany(mappedBy = "teacher", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Subject> subjects;
+
+    @OneToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
 }

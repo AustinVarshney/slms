@@ -7,6 +7,7 @@ import com.java.slms.service.SubjectService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,6 +16,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/subjects")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('ROLE_SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_TEACHER')")
 public class SubjectController
 {
 
@@ -60,7 +62,8 @@ public class SubjectController
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<SubjectDto>> getSubjectByName(@PathVariable Long id)
+    @PreAuthorize("hasAnyRole('ROLE_SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_STUDENT')")
+    public ResponseEntity<ApiResponse<SubjectDto>> getSubjectById(@PathVariable Long id)
     {
         SubjectDto dto = subjectService.getSubjectById(id);
         return ResponseEntity.ok(
@@ -73,6 +76,7 @@ public class SubjectController
     }
 
     @GetMapping("/class/{classId}")
+    @PreAuthorize("hasAnyRole('ROLE_SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_STUDENT')")
     public ResponseEntity<ApiResponse<List<SubjectDto>>> getSubjectsByClassId(@PathVariable Long classId)
     {
         List<SubjectDto> subjectDtos = subjectService.getSubjectsByClassId(classId);

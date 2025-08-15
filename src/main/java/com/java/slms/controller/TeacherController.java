@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,13 +16,16 @@ import java.util.List;
 @RequestMapping("/api/teachers")
 @RequiredArgsConstructor
 @Slf4j
+@PreAuthorize("hasAnyRole('ROLE_SUPER_ADMIN', 'ROLE_ADMIN')")
 public class TeacherController
 {
+
     private final TeacherService teacherService;
 
     @PostMapping
     public ResponseEntity<ApiResponse<TeacherDto>> createTeacher(@RequestBody TeacherDto teacherDto)
     {
+        log.info("Creating teacher...");
         TeacherDto createdTeacher = teacherService.createTeacher(teacherDto);
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 ApiResponse.<TeacherDto>builder()
@@ -35,6 +39,7 @@ public class TeacherController
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<TeacherDto>> getTeacherById(@PathVariable Long id)
     {
+        log.info("Fetching teacher with ID: {}", id);
         TeacherDto teacher = teacherService.getTeacherById(id);
         return ResponseEntity.ok(
                 ApiResponse.<TeacherDto>builder()
@@ -48,6 +53,7 @@ public class TeacherController
     @GetMapping
     public ResponseEntity<ApiResponse<List<TeacherDto>>> getAllTeachers()
     {
+        log.info("Fetching all teachers...");
         List<TeacherDto> teachers = teacherService.getAllTeachers();
         return ResponseEntity.ok(
                 ApiResponse.<List<TeacherDto>>builder()
@@ -58,11 +64,27 @@ public class TeacherController
         );
     }
 
+    @GetMapping("/active")
+    @PreAuthorize("hasAnyRole('ROLE_SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_TEACHER')")
+    public ResponseEntity<ApiResponse<List<TeacherDto>>> getActiveTeachers()
+    {
+        log.info("Fetching all active teachers...");
+        List<TeacherDto> teachers = teacherService.getActiveTeachers();
+        return ResponseEntity.ok(
+                ApiResponse.<List<TeacherDto>>builder()
+                        .data(teachers)
+                        .message("Active teachers retrieved successfully")
+                        .status(HttpStatus.OK.value())
+                        .build()
+        );
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<TeacherDto>> updateTeacher(
             @PathVariable Long id,
             @RequestBody TeacherDto teacherDto)
     {
+        log.info("Updating teacher with ID: {}", id);
         TeacherDto updatedTeacher = teacherService.updateTeacher(id, teacherDto);
         return ResponseEntity.ok(
                 ApiResponse.<TeacherDto>builder()
@@ -76,6 +98,7 @@ public class TeacherController
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteTeacher(@PathVariable Long id)
     {
+        log.info("Hard deleting teacher with ID: {}", id);
         teacherService.deleteTeacher(id);
         return ResponseEntity.ok(
                 ApiResponse.<Void>builder()
@@ -84,50 +107,4 @@ public class TeacherController
                         .build()
         );
     }
-
-//    /**
-//     * Register a teacher to one or more subjects.
-//     * <p>
-//     * URL: POST /api/teachers/{teacherId}/subjects
-//     * Body: List of subject IDs (JSON array)
-//     */
-//    @PostMapping("/{teacherId}/subjects")
-//    public ResponseEntity<ApiResponse<Void>> registerTeacherToSubjects(
-//            @PathVariable Long teacherId,
-//            @RequestBody List<Long> subjectIds)
-//    {
-//
-//        teacherService.registerTeacherToSubjects(teacherId, subjectIds);
-//
-//        return ResponseEntity.ok(
-//                ApiResponse.<Void>builder()
-//                        .message("Teacher registered to subjects successfully")
-//                        .status(HttpStatus.OK.value())
-//                        .build()
-//        );
-//    }
-//
-//    /**
-//     * Register a teacher to classes based on subjects they are registered for.
-//     * <p>
-//     * URL: POST /api/teachers/{teacherId}/classes/register-by-subjects
-//     * Body: List of subject IDs (JSON array)
-//     */
-//    @PostMapping("/{teacherId}/classes/register-by-subjects")
-//    public ResponseEntity<ApiResponse<Void>> registerTeacherToClassesBasedOnSubjects(
-//            @PathVariable Long teacherId,
-//            @RequestBody List<Long> subjectIds)
-//    {
-//
-//        teacherService.registerTeacherToClassesBasedOnSubjects(teacherId, subjectIds);
-//
-//        return ResponseEntity.ok(
-//                ApiResponse.<Void>builder()
-//                        .message("Teacher registered to classes based on subjects successfully")
-//                        .status(HttpStatus.OK.value())
-//                        .build()
-//        );
-//    }
-
-
 }

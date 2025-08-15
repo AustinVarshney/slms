@@ -18,6 +18,7 @@ public class FeeStaff extends BaseEntity
     private Long id;
 
     private String name;
+    private String email;
 
     private String department;
 

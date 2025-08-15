@@ -15,6 +15,8 @@ public class TeacherDto
     private String qualification;
     private Long userId;
     private List<Long> classId;
+    private List<String> className;
+    private List<String> subjectName;
     private List<Long> subjectId;
     private UserStatuses status;
     private Date createdAt;

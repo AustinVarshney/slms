@@ -14,6 +14,7 @@ public class Admin extends BaseEntity
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    private String email;
     private String name;
     private String qualification;
 

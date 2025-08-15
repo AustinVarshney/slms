@@ -18,4 +18,6 @@ public interface TeacherService
 
     void deleteTeacher(Long id); // hard delete
 
+    TeacherDto getTeacherByEmail(String email);
+
 }

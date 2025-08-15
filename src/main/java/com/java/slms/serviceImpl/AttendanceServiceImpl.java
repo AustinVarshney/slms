@@ -1,10 +1,12 @@
 package com.java.slms.serviceImpl;
 
 import com.java.slms.dto.AttendanceDto;
+import com.java.slms.dto.AttendenceResponse;
 import com.java.slms.dto.StudentAttendance;
 import com.java.slms.dto.StudentDto;
 import com.java.slms.exception.AlreadyExistException;
 import com.java.slms.exception.ResourceNotFoundException;
+import com.java.slms.exception.WrongArgumentException;
 import com.java.slms.model.Attendance;
 import com.java.slms.model.Student;
 import com.java.slms.repository.AttendanceRepository;
@@ -31,7 +33,7 @@ public class AttendanceServiceImpl implements AttendanceService
     private final AttendanceRepository attendanceRepository;
 
     @Override
-    public AttendanceDto markAttendance(AttendanceDto attendanceDto)
+    public AttendanceDto markTodaysAttendance(AttendanceDto attendanceDto)
     {
         LocalDate todayStart = LocalDate.now();
         LocalDateTime dayStart = todayStart.atStartOfDay();
@@ -40,7 +42,7 @@ public class AttendanceServiceImpl implements AttendanceService
         List<StudentAttendance> inputAttendances = attendanceDto.getStudentAttendances();
         if (inputAttendances == null || inputAttendances.isEmpty())
         {
-            throw new IllegalArgumentException("No student attendances provided");
+            throw new WrongArgumentException("No student attendances provided");
         }
 
         List<StudentAttendance> savedAttendanceList = new ArrayList<>();
@@ -101,13 +103,13 @@ public class AttendanceServiceImpl implements AttendanceService
 
         if (attendanceDate.isBefore(earliestAllowedDate) || attendanceDate.isAfter(today))
         {
-            throw new IllegalArgumentException("Attendance date must be within the last five days including today.");
+            throw new WrongArgumentException("Attendance date must be within the last five days including today.");
         }
 
         List<StudentAttendance> inputAttendances = attendanceDto.getStudentAttendances();
         if (inputAttendances == null || inputAttendances.isEmpty())
         {
-            throw new IllegalArgumentException("No student attendance records provided.");
+            throw new WrongArgumentException("No student attendance records provided.");
         }
 
         LocalDateTime startDateTime = attendanceDate.atStartOfDay();
@@ -159,6 +161,15 @@ public class AttendanceServiceImpl implements AttendanceService
         responseDto.setStudentAttendances(updatedAttendances);
 
         return responseDto;
+    }
+
+    @Override
+    public List<AttendenceResponse> getAllAttendanceByPan(String panNumber)
+    {
+        List<Attendance> attendances = attendanceRepository.findByStudent_PanNumberOrderByDateDesc(panNumber);
+        return attendances.stream()
+                .map(att -> modelMapper.map(att, AttendenceResponse.class))
+                .toList();
     }
 
 

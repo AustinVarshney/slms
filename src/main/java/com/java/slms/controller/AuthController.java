@@ -109,13 +109,13 @@ public class AuthController
                 }
                 case ROLE_ADMIN ->
                 {
-                    UserRegistrationRequest adminReq = modelMapper.map(req, UserRegistrationRequest.class);
+                    UserRequest adminReq = modelMapper.map(req, UserRequest.class);
                     adminReq.setUserId(user.getId());
                     adminService.createAdmin(adminReq);
                 }
                 case ROLE_FEE_STAFF ->
                 {
-                    UserRegistrationRequest feeStaffReq = modelMapper.map(req, UserRegistrationRequest.class);
+                    UserRequest feeStaffReq = modelMapper.map(req, UserRequest.class);
                     feeStaffReq.setUserId(user.getId());
                     feeStaffService.createFeeStaff(feeStaffReq);
                 }

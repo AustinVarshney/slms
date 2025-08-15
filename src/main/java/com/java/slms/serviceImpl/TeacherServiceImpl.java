@@ -109,26 +109,48 @@ public class TeacherServiceImpl implements TeacherService
 
     }
 
+    @Override
+    public TeacherDto getTeacherByEmail(String email)
+    {
+        log.info("Fetching teacher with email: {}", email);
+        Teacher teacher = teacherRepository.findByEmailIgnoreCase(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Teacher not found with email: " + email));
+
+        return convertToDto(teacher);
+    }
+
     private TeacherDto convertToDto(Teacher teacher)
     {
         TeacherDto dto = modelMapper.map(teacher, TeacherDto.class);
 
-        // 1. Populate subjectIds
-        List<Long> subjectIds = Optional.ofNullable(teacher.getSubjects())
-                .orElse(new ArrayList<>())
-                .stream().map(Subject::getId)
+        // 1. Populate subjectIds and subjectNames
+        List<Subject> subjects = Optional.ofNullable(teacher.getSubjects()).orElse(new ArrayList<>());
+
+        List<Long> subjectIds = subjects.stream()
+                .map(Subject::getId)
                 .collect(Collectors.toList());
         dto.setSubjectId(subjectIds);
 
-        // 2. Populate classIds from related subjects
-        Set<Long> classIds = teacher.getSubjects() != null
-                ? teacher.getSubjects().stream()
+        List<String> subjectNames = subjects.stream()
+                .map(Subject::getSubjectName)
+                .collect(Collectors.toList());
+        dto.setSubjectName(subjectNames);
+
+        // 2. Populate classIds and classNames from related subjects
+        Set<ClassEntity> classes = subjects.stream()
                 .map(Subject::getClassEntity)
                 .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        List<Long> classIds = classes.stream()
                 .map(ClassEntity::getId)
-                .collect(Collectors.toSet())
-                : Collections.emptySet();
-        dto.setClassId(new ArrayList<>(classIds));
+                .collect(Collectors.toList());
+        dto.setClassId(classIds);
+
+        List<String> classNames = classes.stream()
+                .map(ClassEntity::getClassName)  // assuming getClassName() returns class name
+                .collect(Collectors.toList());
+        dto.setClassName(classNames);
 
         // 3. Status based on user
         userRepository.findByEmailIgnoreCase(teacher.getEmail()).ifPresent(user ->
@@ -143,4 +165,5 @@ public class TeacherServiceImpl implements TeacherService
 
         return dto;
     }
+
 }

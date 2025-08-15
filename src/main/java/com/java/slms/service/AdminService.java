@@ -1,14 +1,20 @@
 package com.java.slms.service;
 
-import com.java.slms.dto.UserRegistrationRequest;
+import com.java.slms.dto.UserRequest;
 
 import java.util.List;
 
 public interface AdminService
 {
-    UserRegistrationRequest createAdmin(UserRegistrationRequest req);
+    UserRequest createAdmin(UserRequest adminDto);
 
-    UserRegistrationRequest getAdmin(Long id);
+    UserRequest getAdminById(Long id);
 
-    List<UserRegistrationRequest> getAllAdmins();
+    List<UserRequest> getAllAdmins();
+
+    List<UserRequest> getActiveAdmins();
+
+    UserRequest updateAdmin(Long id, UserRequest adminDto);
+
+    void deleteAdmin(Long id);
 }

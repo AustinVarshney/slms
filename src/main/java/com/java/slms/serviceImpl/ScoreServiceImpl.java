@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +33,7 @@ public class ScoreServiceImpl implements ScoreService
     private final ModelMapper modelMapper;
 
     @Override
+    @Transactional
     public List<ScoreResponseDTO> createScoresOfStudents(ScoreRequestDTO scoreDto)
     {
         // Validate class
@@ -93,7 +95,7 @@ public class ScoreServiceImpl implements ScoreService
             if (marks != null && marks > exam.getMaximumMarks())
             {
                 log.error("Marks '{}' exceed maximum allowed '{}' for exam '{}'", marks, exam.getMaximumMarks(), exam.getName());
-                throw new IllegalArgumentException("Marks '" + marks + "' exceed maximum allowed '" + exam.getMaximumMarks() + "' for exam '" + exam.getName() + "'");
+                throw new ResourceNotFoundException("Marks '" + marks + "' exceed maximum allowed '" + exam.getMaximumMarks() + "' for exam '" + exam.getName() + "'");
             }
 
             // Save score

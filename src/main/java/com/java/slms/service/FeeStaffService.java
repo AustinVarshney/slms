@@ -1,15 +1,21 @@
 package com.java.slms.service;
 
-import com.java.slms.dto.FeeStaffRequest;
-import com.java.slms.dto.UserRegistrationRequest;
+import com.java.slms.dto.UserRequest;
 
 import java.util.List;
 
 public interface FeeStaffService
 {
-    UserRegistrationRequest createFeeStaff(UserRegistrationRequest req);
 
-    UserRegistrationRequest getFeeStaff(Long id);
+    UserRequest createFeeStaff(UserRequest feeStaffDto);
 
-    List<UserRegistrationRequest> getAllFeeStaff();
+    UserRequest getFeeStaffById(Long id);
+
+    List<UserRequest> getAllFeeStaff();
+
+    List<UserRequest> getActiveFeeStaff();
+
+    UserRequest updateFeeStaff(Long id, UserRequest feeStaffDto);
+
+    void deleteFeeStaff(Long id);
 }

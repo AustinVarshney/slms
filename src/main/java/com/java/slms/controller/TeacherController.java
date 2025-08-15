@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -49,6 +50,27 @@ public class TeacherController
                         .build()
         );
     }
+
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('ROLE_TEACHER')")
+    public ResponseEntity<ApiResponse<TeacherDto>> getCurrentTeacher()
+    {
+        String email = SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getName();
+
+        log.info("Fetching teacher with Email: {}", email);
+        TeacherDto teacher = teacherService.getTeacherByEmail(email);
+        return ResponseEntity.ok(
+                ApiResponse.<TeacherDto>builder()
+                        .data(teacher)
+                        .message("Teacher retrieved successfully")
+                        .status(HttpStatus.OK.value())
+                        .build()
+        );
+    }
+
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<TeacherDto>>> getAllTeachers()

@@ -1,10 +1,8 @@
 package com.java.slms.util;
 
 import com.java.slms.exception.ResourceNotFoundException;
-import com.java.slms.model.ClassEntity;
-import com.java.slms.model.Student;
-import com.java.slms.repository.ClassEntityRepository;
-import com.java.slms.repository.StudentRepository;
+import com.java.slms.model.*;
+import com.java.slms.repository.*;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -30,5 +28,36 @@ public class CommonUtil
                 });
 
     }
+
+    public static User fetchUserByUserId(UserRepository userRepository, Long userId)
+    {
+        return userRepository.findById(userId)
+                .orElseThrow(() ->
+                {
+                    log.error("User not found with Id: " + userId);
+                    return new ResourceNotFoundException("User not found with Id: " + userId);
+                });
+    }
+
+    public static Admin fetchAdminById(AdminRepository adminRepository, Long adminId)
+    {
+        return adminRepository.findById(adminId)
+                .orElseThrow(() ->
+                {
+                    log.error("Admin not found with Id: " + adminId);
+                    return new ResourceNotFoundException("Admin not found with Id: " + adminId);
+                });
+    }
+
+    public static FeeStaff fetchFeeStaffById(FeeStaffRepository feeStaffRepository, Long feeStaffId)
+    {
+        return feeStaffRepository.findById(feeStaffId)
+                .orElseThrow(() ->
+                {
+                    log.error("FeeStaff not found with Id: " + feeStaffId);
+                    return new ResourceNotFoundException("FeeStaff not found with Id: " + feeStaffId);
+                });
+    }
+
 
 }

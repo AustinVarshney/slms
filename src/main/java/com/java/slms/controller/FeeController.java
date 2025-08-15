@@ -13,6 +13,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Date;
@@ -59,6 +60,30 @@ public class FeeController
                 .status(HttpStatus.OK.value())
                 .build());
     }
+
+    // ---------------- Get Fees by Student PAN ----------------
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('ROLE_STUDENT')")
+    public ResponseEntity<ApiResponse<List<FeeResponseDTO>>> getFeesByCurrentStudentPan(
+            @RequestParam(required = false) FeeMonth month)
+    {
+
+        String panNumber = SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getName();
+
+        List<FeeResponseDTO> fees = (month != null)
+                ? feeService.getFeesByStudentPan(panNumber, month)
+                : feeService.getFeesByStudentPan(panNumber);
+
+        return ResponseEntity.ok(ApiResponse.<List<FeeResponseDTO>>builder()
+                .data(fees)
+                .message("Fees fetched for student")
+                .status(HttpStatus.OK.value())
+                .build());
+    }
+
 
     // ---------------- Get Fees by FeeStructure ----------------
     @GetMapping("/structure/{feeStructureId}")

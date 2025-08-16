@@ -12,6 +12,7 @@ import com.java.slms.repository.FeeRepository;
 import com.java.slms.repository.FeeStructureRepository;
 import com.java.slms.repository.StudentRepository;
 import com.java.slms.service.FeeService;
+import com.java.slms.util.CommonUtil;
 import com.java.slms.util.FeeMonth;
 import com.java.slms.util.FeeStatus;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -89,33 +92,22 @@ public class FeeServiceImpl implements FeeService
     }
 
     @Override
-    public List<FeeResponseDTO> getFeesByStudentPan(String panNumber)
-    {
-        if (!studentRepository.existsById(panNumber))
-        {
-            log.error("Student not exists with PAN: {}", panNumber);
-            throw new ResourceNotFoundException("Student not exists with PAN: " + panNumber);
-        }
-
-        return feeRepository.findByStudent_PanNumber(panNumber)
-                .stream()
-                .map(f -> modelMapper.map(f, FeeResponseDTO.class))
-                .toList();
+    public List<FeeResponseDTO> getFeesByStudentPan(String panNumber) {
+        Student student = CommonUtil.fetchStudentByPan(studentRepository, panNumber);
+        List<Fee> paidFees = feeRepository.findByStudent_PanNumber(panNumber);
+        return buildFeeResponseList(student, paidFees);
     }
 
     @Override
-    public List<FeeResponseDTO> getFeesByStudentPan(String panNumber, FeeMonth month)
-    {
-        if (!studentRepository.existsById(panNumber))
-        {
+    public List<FeeResponseDTO> getFeesByStudentPan(String panNumber, FeeMonth month) {
+        if (!studentRepository.existsById(panNumber)) {
             log.error("Student not exists with PAN: {}", panNumber);
             throw new ResourceNotFoundException("Student not exists with PAN: " + panNumber);
         }
 
-        return feeRepository.findByStudent_PanNumberAndMonth(panNumber, month)
-                .stream()
-                .map(f -> modelMapper.map(f, FeeResponseDTO.class))
-                .toList();
+        Student student = CommonUtil.fetchStudentByPan(studentRepository, panNumber);
+        List<Fee> paidFees = feeRepository.findByStudent_PanNumberAndMonth(panNumber, month);
+        return buildFeeResponseList(student, paidFees);
     }
 
     @Override
@@ -230,6 +222,40 @@ public class FeeServiceImpl implements FeeService
                 .map(s -> modelMapper.map(s, StudentDto.class))
                 .toList();
     }
+
+    private List<FeeResponseDTO> buildFeeResponseList(Student student, List<Fee> paidFees) {
+        List<FeeStructure> feeStructures = student.getCurrentClass().getFeeStructures();
+
+        // Extract paid FeeStructure IDs
+        Set<Long> paidFeeStructureIds = paidFees.stream()
+                .map(f -> f.getFeeStructure().getId())
+                .collect(Collectors.toSet());
+
+        // Start with paid fee DTOs
+        List<FeeResponseDTO> feeResponseDTOs = paidFees.stream()
+                .map(f -> modelMapper.map(f, FeeResponseDTO.class))
+                .collect(Collectors.toList());
+
+        // Add unpaid fee DTOs for missing FeeStructure IDs
+        feeStructures.stream()
+                .filter(feeStructure -> !paidFeeStructureIds.contains(feeStructure.getId()))
+                .forEach(feeStructure -> {
+                    FeeResponseDTO unpaidFeeDTO = new FeeResponseDTO();
+                    unpaidFeeDTO.setFeeStructureId(feeStructure.getId());
+                    unpaidFeeDTO.setStudentPanNumber(student.getPanNumber());
+                    unpaidFeeDTO.setStudentName(student.getName());
+                    unpaidFeeDTO.setFeeType(feeStructure.getFeeType());
+                    unpaidFeeDTO.setTotalAmount(feeStructure.getDefaultAmount());
+                    unpaidFeeDTO.setAmountPaid(0.0);
+                    unpaidFeeDTO.setRemainingAmount(feeStructure.getDefaultAmount());
+                    unpaidFeeDTO.setStatus(FeeStatus.UNPAID);
+                    unpaidFeeDTO.setPaidOn(null);
+                    feeResponseDTOs.add(unpaidFeeDTO);
+                });
+
+        return feeResponseDTOs;
+    }
+
 
 
 }

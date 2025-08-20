@@ -26,13 +26,13 @@ public class DataInitializer implements ApplicationRunner
     @Override
     public void run(ApplicationArguments args)
     {
-        boolean adminExists = userRepository.existsByRolesContaining(RoleEnum.ROLE_SUPER_ADMIN);
+        boolean adminExists = userRepository.existsByRolesContaining(RoleEnum.ROLE_ADMIN);
         if (!adminExists)
         {
             User admin = new User();
             admin.setEmail("admin@company.com");
             admin.setPassword(passwordEncoder.encode("temporaryStrongPassword!123"));
-            admin.setRoles(Set.of(RoleEnum.ROLE_SUPER_ADMIN));
+            admin.setRoles(Set.of(RoleEnum.ROLE_ADMIN));
             admin.setEnabled(true);
             userRepository.save(admin);
         }

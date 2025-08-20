@@ -10,10 +10,7 @@ import java.util.Date;
 @AllArgsConstructor
 public class FeeStructureRequestDTO
 {
-    private String feeType;
-    private Double defaultAmount;
-
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
-    private Date dueDate;
+    private Double feesAmount;
     private Long classId;
+    private Long sessionId;
 }

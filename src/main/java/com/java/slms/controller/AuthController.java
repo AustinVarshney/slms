@@ -138,16 +138,16 @@ public class AuthController
         );
     }
 
-    @PreAuthorize("hasRole('ROLE_SUPER_ADMIN')")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     @PostMapping("/register/student")
     @Transactional
-    public ResponseEntity<ApiResponse<StudentDto>> registerStudent(@RequestBody StudentDto req)
+    public ResponseEntity<ApiResponse<StudentResponseDto>> registerStudent(@RequestBody StudentRequestDto req)
     {
         if (userRepository.findByPanNumberIgnoreCase(req.getPanNumber()).isPresent())
         {
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.<StudentDto>builder()
+                    .body(ApiResponse.<StudentResponseDto>builder()
                             .message("PAN already registered")
                             .status(HttpStatus.BAD_REQUEST.value())
                             .build());
@@ -163,7 +163,7 @@ public class AuthController
         req.setUserId(user.getId());
 
         return ResponseEntity.ok(
-                ApiResponse.<StudentDto>builder()
+                ApiResponse.<StudentResponseDto>builder()
                         .data(studentService.createStudent(req))
                         .message("Student registered successfully")
                         .status(HttpStatus.OK.value())

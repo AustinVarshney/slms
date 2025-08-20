@@ -10,9 +10,9 @@ import java.util.Date;
 public class FeeStructureResponseDTO
 {
     private Long id;
-    private String feeType;
-    private Double defaultAmount;
-    private Date dueDate;
+    private Double feesAmount;
     private Long classId;
     private String className;
+    private Long sessionId;
+    private String sessionName;
 }

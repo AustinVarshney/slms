@@ -25,6 +25,10 @@ public class Exam extends BaseEntity
     private Double passingMarks;
 
     @ManyToOne
+    @JoinColumn(name = "session_id", nullable = false)
+    private Session session;
+
+    @ManyToOne
     @JoinColumn(name = "class_id")
     private ClassEntity classEntity;
 

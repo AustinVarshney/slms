@@ -1,6 +1,6 @@
 package com.java.slms.dto;
 
-import com.java.slms.util.UserStatuses;
+import com.java.slms.util.UserStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -15,7 +15,7 @@ public class UserRequest
     private String name;
     private String email;
     private String qualification;
-    private UserStatuses status;
+    private UserStatus status;
     private Long userId;
     private Date createdAt;
     private Date deletedAt;

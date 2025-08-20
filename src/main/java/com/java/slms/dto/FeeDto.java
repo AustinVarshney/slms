@@ -1,7 +1,10 @@
 package com.java.slms.dto;
 
+import com.java.slms.util.FeeCatalogStatus;
 import lombok.*;
 
+import java.time.LocalDate;
+import java.time.Month;
 import java.util.Date;
 
 @Data
@@ -13,9 +16,11 @@ public class FeeDto
     private String studentPanNumber;
     private String studentName;
     private String className;
-    private String feeType;
+    private int year;
+    private LocalDate dueDate;
+    private Month month;
     private Double totalAmount;
-    private Double amountPaid;
+    private Double amount;
     private Double remainingAmount;
     private String status;
     private Date paidOn;

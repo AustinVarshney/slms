@@ -23,7 +23,7 @@ public class AttendanceController
     private final AttendanceService attendanceService;
 
     @PostMapping()
-    @PreAuthorize("hasAnyRole('ROLE_SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_TEACHER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER')")
     public ResponseEntity<ApiResponse<?>> markAttendance(@RequestBody AttendanceDto attendanceDto)
     {
         ApiResponse<?> response = ApiResponse.builder()
@@ -36,7 +36,7 @@ public class AttendanceController
     }
 
     @PatchMapping("/{date}")
-    @PreAuthorize("hasAnyRole('ROLE_SUPER_ADMIN', 'ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
     public ResponseEntity<ApiResponse<AttendanceDto>> updateAttendanceForAdmin(
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestBody AttendanceDto attendanceDto)
@@ -54,7 +54,7 @@ public class AttendanceController
     }
 
     @GetMapping("/{pan}")
-    @PreAuthorize("hasAnyRole('ROLE_SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_STUDENT')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_STUDENT')")
     public ResponseEntity<ApiResponse<List<AttendenceResponse>>> getAllAttendance(@PathVariable String pan)
     {
         List<AttendenceResponse> records = attendanceService.getAllAttendanceByPan(pan);

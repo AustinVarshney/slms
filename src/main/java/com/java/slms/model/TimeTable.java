@@ -37,4 +37,8 @@ public class TimeTable extends BaseEntity
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "class_id", nullable = false)
     private ClassEntity classEntity;
+
+    @ManyToOne
+    @JoinColumn(name = "session_id")
+    private Session session;
 }

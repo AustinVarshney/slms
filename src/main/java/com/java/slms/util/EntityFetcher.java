@@ -4,9 +4,12 @@ import com.java.slms.exception.ResourceNotFoundException;
 import com.java.slms.model.*;
 import com.java.slms.repository.*;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.Optional;
 
 @Slf4j
-public class CommonUtil
+public class EntityFetcher
 {
 
     public static ClassEntity fetchClassEntityByClassId(ClassEntityRepository classEntityRepository, Long classId)
@@ -57,6 +60,27 @@ public class CommonUtil
                     log.error("FeeStaff not found with Id: " + feeStaffId);
                     return new ResourceNotFoundException("FeeStaff not found with Id: " + feeStaffId);
                 });
+    }
+
+
+    public static <T, ID> T fetchByIdOrThrow(
+            JpaRepository<T, ID> repository,
+            ID id,
+            String entityName
+    )
+    {
+        log.info("Fetching {} with ID: {}", entityName, id);
+
+        Optional<T> entity = repository.findById(id);
+
+        if (entity.isEmpty())
+        {
+            log.error("{} not found with ID: {}", entityName, id);
+            throw new com.java.slms.exception.ResourceNotFoundException(entityName + " not found with ID: " + id);
+        }
+
+        log.info("{} found with ID: {}", entityName, id);
+        return entity.get();
     }
 
 

@@ -1,26 +1,26 @@
 package com.java.slms.serviceImpl;
 
-import com.java.slms.dto.StudentDto;
+import com.java.slms.dto.StudentRequestDto;
 import com.java.slms.dto.StudentAttendance;
+import com.java.slms.dto.StudentResponseDto;
+import com.java.slms.dto.UpdateStudentInfo;
 import com.java.slms.exception.ResourceNotFoundException;
 import com.java.slms.exception.AlreadyExistException;
-import com.java.slms.model.ClassEntity;
-import com.java.slms.model.Student;
-import com.java.slms.model.User;
-import com.java.slms.repository.ClassEntityRepository;
-import com.java.slms.repository.StudentRepository;
-import com.java.slms.repository.UserRepository;
+import com.java.slms.exception.WrongArgumentException;
+import com.java.slms.model.*;
+import com.java.slms.repository.*;
 import com.java.slms.service.StudentService;
-import com.java.slms.util.CommonUtil;
-import com.java.slms.util.UserStatuses;
+import com.java.slms.util.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Date;
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
+import java.util.Optional;
 
 @RequiredArgsConstructor
 @Service
@@ -32,35 +32,123 @@ public class StudentServiceImpl implements StudentService
     private final StudentRepository studentRepository;
     private final ClassEntityRepository classEntityRepository;
     private final UserRepository userRepository;
+    private final SessionRepository sessionRepository;
+    private final FeeStructureRepository feeStructureRepository;
+    private final FeeRepository feeRepository;
 
     @Override
-    public StudentDto createStudent(StudentDto studentDto)
+    public StudentResponseDto createStudent(StudentRequestDto studentRequestDto)
     {
-        log.info("Attempting to create student with PAN: {}", studentDto.getPanNumber());
+        log.info("Attempting to create student with PAN: {}", studentRequestDto.getPanNumber());
 
-        if (studentRepository.existsById(studentDto.getPanNumber()))
+        if (studentRepository.existsById(studentRequestDto.getPanNumber()))
         {
-            throw new AlreadyExistException("Student already exists with PAN: " + studentDto.getPanNumber());
+            throw new AlreadyExistException("Student already exists with PAN: " + studentRequestDto.getPanNumber());
         }
 
-        ClassEntity classEntity = classEntityRepository.findById(studentDto.getClassId())
-                .orElseThrow(() -> new ResourceNotFoundException("Class not found with ID: " + studentDto.getClassId()));
+        User user = userRepository.findByPanNumberIgnoreCase(studentRequestDto.getPanNumber())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Student User not found with PAN: " + studentRequestDto.getPanNumber()));
 
-        User user = userRepository.findByPanNumberIgnoreCase(studentDto.getPanNumber())
-                .orElseThrow(() -> new ResourceNotFoundException("Student User not found with PAN: " + studentDto.getPanNumber()));
+        ClassEntity classEntity = EntityFetcher.fetchByIdOrThrow(
+                classEntityRepository,
+                studentRequestDto.getClassId(),
+                EntityNames.CLASS_ENTITY);
 
-        Student student = modelMapper.map(studentDto, Student.class);
+        Session session = EntityFetcher.fetchByIdOrThrow(
+                sessionRepository,
+                studentRequestDto.getSessionId(),
+                EntityNames.SESSION);
+
+        // Check if another class with same name and session already exists
+        Optional<ClassEntity> duplicateClass = classEntityRepository
+                .findByClassNameIgnoreCaseAndSessionId(classEntity.getClassName(), studentRequestDto.getSessionId());
+
+        if (duplicateClass.isPresent() && !duplicateClass.get().getId().equals(classEntity.getId()))
+        {
+            throw new AlreadyExistException("Class already exists with name: " + classEntity.getClassName() +
+                    " for the selected session.");
+        }
+
+        Student student = modelMapper.map(studentRequestDto, Student.class);
+        student.setStatus(UserStatus.ACTIVE);
+
+        Integer maxRoll = studentRepository.findMaxClassRollNumberByCurrentClassId(studentRequestDto.getClassId());
+        student.setClassRollNumber((maxRoll != null ? maxRoll : 0) + 1);
+
         student.setCurrentClass(classEntity);
+        student.setFeeStatus(FeeStatus.PENDING);
+        student.setFeeCatalogStatus(FeeCatalogStatus.PENDING);
         student.setUser(user);
+        student.setSession(session);
 
         Student savedStudent = studentRepository.save(student);
-        log.info("Student created successfully with PAN: {}", studentDto.getPanNumber());
+
+        FeeStructure feeStructure = feeStructureRepository.findByClassEntity_IdAndSession_Id(studentRequestDto.getClassId(), studentRequestDto.getSessionId())
+                .orElseThrow(() -> new ResourceNotFoundException("Fee structure not found for class and session"));
+
+        List<Fee> feeEntries = new ArrayList<>();
+        LocalDate currentMonth = session.getStartDate().withDayOfMonth(1);
+
+        for (int i = 0; i < 12; i++)
+        {
+            Fee fee = new Fee();
+            fee.setMonth(FeeMonth.valueOf(currentMonth.getMonth().toString()));
+            fee.setYear(currentMonth.getYear());
+            fee.setStatus(FeeStatus.PENDING);
+            fee.setAmount(feeStructure.getFeesAmount());
+            fee.setFeeStructure(feeStructure);
+            fee.setDueDate(currentMonth.withDayOfMonth(15));
+            fee.setStudent(savedStudent);
+            feeEntries.add(fee);
+            currentMonth = currentMonth.plusMonths(1);
+        }
+        feeRepository.saveAll(feeEntries);
+
+        log.info("Student created successfully with PAN: {}", studentRequestDto.getPanNumber());
 
         return convertToDto(savedStudent);
     }
 
+    @Transactional
     @Override
-    public List<StudentDto> getAllStudent()
+    public void markStudentsGraduateOrInActive(List<String> panNumbers, UserStatus status)
+    {
+        List<Student> students = new ArrayList<>();
+        List<User> users = new ArrayList<>();
+
+        for (String panNumber : panNumbers)
+        {
+            Student student = EntityFetcher.fetchByIdOrThrow(studentRepository, panNumber, EntityNames.STUDENT);
+
+            User user = student.getUser();
+            if (user != null)
+            {
+                user.setEnabled(false);
+                users.add(user);
+            }
+
+            student.setStatus(status);
+            students.add(student);
+        }
+
+        userRepository.saveAll(users);
+        studentRepository.saveAll(students);
+    }
+
+    @Override
+    public List<StudentResponseDto> getStudentsByClassId(Long classId)
+    {
+        log.info("Fetching students by class ID: {}", classId);
+        List<Student> activeStudents = studentRepository.findByStatusAndCurrentClass_Id(UserStatus.ACTIVE, classId);
+
+        return activeStudents.stream()
+                .map(this::convertToDto)
+                .toList();
+    }
+
+    @Override
+    public List<StudentResponseDto> getAllStudent()
     {
         log.info("Fetching all students");
         return studentRepository.findAll().stream()
@@ -69,50 +157,75 @@ public class StudentServiceImpl implements StudentService
     }
 
     @Override
-    public List<StudentDto> getActiveStudents()
+    public List<StudentResponseDto> getActiveStudents()
     {
-        log.info("Fetching students with the status: ACTIVE");
+        log.info("Fetching all active students");
+        List<Student> activeStudents = studentRepository.findByStatus(UserStatus.ACTIVE);
 
-        List<User> activeUsers = userRepository.findByPanNumberIsNotNullAndEnabledTrue();
-        List<String> panNumbers = activeUsers.stream()
-                .map(User::getPanNumber)
-                .filter(Objects::nonNull)
-                .toList();
-
-        List<Student> students = studentRepository.findByPanNumberIn(panNumbers);
-
-        return students.stream()
-                .map(this::convertToDto)
+        return activeStudents.stream()
+                .map(student ->
+                {
+                    StudentResponseDto dto = modelMapper.map(student, StudentResponseDto.class);
+                    if (student.getSession() != null)
+                    {
+                        dto.setSessionId(student.getSession().getId());
+                        dto.setSessionName(student.getSession().getName());
+                    }
+                    return dto;
+                })
                 .toList();
     }
 
     @Override
-    public StudentDto getStudentByPAN(String pan)
+    public StudentResponseDto getStudentByPAN(String pan)
     {
         log.info("Fetching student with PAN: {}", pan);
-        Student fetchedStudent = CommonUtil.fetchStudentByPan(studentRepository, pan);
+        Student fetchedStudent = EntityFetcher.fetchStudentByPan(studentRepository, pan);
 
-        StudentDto studentDto = convertToDto(fetchedStudent);
-
+        StudentResponseDto studentResponseDto = convertToDto(fetchedStudent);
         log.info("Student fetched successfully with PAN: {}", pan);
-        return studentDto;
+
+        return studentResponseDto;
     }
 
     @Override
-    public StudentDto updateStudent(String pan, StudentDto studentDto)
+    public StudentResponseDto updateStudent(String pan, UpdateStudentInfo updateStudentInfo) //Only Active students can be change
     {
         log.info("Updating student with PAN: {}", pan);
 
-        Student fetchedStudent = CommonUtil.fetchStudentByPan(studentRepository, pan);
-        modelMapper.map(studentDto, fetchedStudent);
+        Student fetchedStudent = EntityFetcher.fetchStudentByPan(studentRepository, pan);
+        if (!fetchedStudent.getStatus().equals(UserStatus.ACTIVE))
+        {
+            log.info("Update not allowed. Student with PAN {} has status: {}",
+                    fetchedStudent.getPanNumber(), fetchedStudent.getStatus());
+            throw new WrongArgumentException(
+                    "Only active students can be changed. Student with PAN " +
+                            fetchedStudent.getPanNumber() + " is currently " +
+                            fetchedStudent.getStatus().name().toLowerCase() + ".");
+        }
+
+        modelMapper.map(updateStudentInfo, fetchedStudent);
         fetchedStudent.setPanNumber(pan);
 
         Student updatedStudent = studentRepository.save(fetchedStudent);
-
         log.info("Student updated successfully with PAN: {}", pan);
+
         return convertToDto(updatedStudent);
     }
 
+    @Override
+    public void deleteStudentByPan(String panNumber)
+    {
+        log.info("Deleting student and user with PAN: {}", panNumber);
+
+        Student student = EntityFetcher.fetchStudentByPan(studentRepository, panNumber);
+
+        User user = userRepository.findByPanNumberIgnoreCase(panNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with PAN: " + panNumber));
+
+        studentRepository.delete(student);
+        log.info("Deleted student with PAN: {}", panNumber);
+    }
 
     @Override
     public List<StudentAttendance> getStudentsPresentToday()
@@ -127,48 +240,19 @@ public class StudentServiceImpl implements StudentService
     public List<StudentAttendance> getStudentsPresentTodayByClass(Long classId)
     {
         log.info("Fetching today's present students for class ID: {}", classId);
-        CommonUtil.fetchClassEntityByClassId(classEntityRepository, classId);
+        EntityFetcher.fetchClassEntityByClassId(classEntityRepository, classId);
 
         return studentRepository.findStudentsPresentTodayByClassName(classId).stream()
                 .map(student -> modelMapper.map(student, StudentAttendance.class))
                 .toList();
     }
 
-    @Override
-    public void deleteStudentByPan(String panNumber)
+    private StudentResponseDto convertToDto(Student student)
     {
-        log.info("Deleting student and user with PAN: {}", panNumber);
-
-        Student student = CommonUtil.fetchStudentByPan(studentRepository, panNumber);
-
-        User user = userRepository.findByPanNumberIgnoreCase(panNumber)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with PAN: " + panNumber));
-
-        studentRepository.delete(student);
-        log.info("Deleted student with PAN: {}", panNumber);
-
-    }
-
-
-    @Override
-    public List<StudentDto> getStudentsByClassId(Long classId)
-    {
-        log.info("Fetching students for class ID: {}", classId);
-        CommonUtil.fetchClassEntityByClassId(classEntityRepository, classId);
-
-        return studentRepository.findByCurrentClass_Id(classId).stream()
-                .filter(student -> student.getUser().isEnabled())
-                .map(this::convertToDto)
-                .toList();
-    }
-
-
-    // Common conversion method used across all methods
-    private StudentDto convertToDto(Student student)
-    {
-        StudentDto dto = modelMapper.map(student, StudentDto.class);
-        boolean isActive = student.getUser() != null && student.getUser().isEnabled();
-        dto.setStatus(isActive ? UserStatuses.ACTIVE : UserStatuses.INACTIVE);
+        StudentResponseDto dto = modelMapper.map(student, StudentResponseDto.class);
+        dto.setClassId(student.getCurrentClass().getId());
+        dto.setSessionId(student.getSession().getId());
+        dto.setSessionName(student.getSession().getName());
         return dto;
     }
 }

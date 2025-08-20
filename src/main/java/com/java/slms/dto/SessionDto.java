@@ -4,16 +4,16 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
+import java.time.LocalDate;
 
-@Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class ClassEntityUpdateDto
+@Data
+public class SessionDto
 {
     private Long id;
-    private String className;
-    private int totalStudents;
-    private List<StudentRequestDto> students;
-
+    private String name;
+    private LocalDate startDate;
+    private LocalDate endDate;
+    private boolean active;
 }

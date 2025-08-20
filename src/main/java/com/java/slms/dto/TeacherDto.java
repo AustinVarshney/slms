@@ -1,6 +1,6 @@
 package com.java.slms.dto;
 
-import com.java.slms.util.UserStatuses;
+import com.java.slms.util.UserStatus;
 import lombok.Data;
 
 import java.util.Date;
@@ -18,7 +18,7 @@ public class TeacherDto
     private List<String> className;
     private List<String> subjectName;
     private List<Long> subjectId;
-    private UserStatuses status;
+    private UserStatus status;
     private Date createdAt;
     private Date deletedAt;
     private Date updatedAt;

@@ -17,7 +17,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/fee-structures")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('ROLE_SUPER_ADMIN', 'ROLE_ADMIN')")
+@PreAuthorize("hasAnyRole('ROLE_ADMIN')")
 public class FeeStructureController
 {
 

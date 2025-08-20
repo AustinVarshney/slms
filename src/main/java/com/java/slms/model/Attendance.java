@@ -14,7 +14,8 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Attendance extends BaseEntity {
+public class Attendance extends BaseEntity
+{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -24,4 +25,8 @@ public class Attendance extends BaseEntity {
 
     @ManyToOne
     private Student student;
+
+    @ManyToOne
+    @JoinColumn(name = "session_id")
+    private Session session;
 }

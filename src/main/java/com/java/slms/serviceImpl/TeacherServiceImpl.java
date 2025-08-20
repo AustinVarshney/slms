@@ -9,7 +9,7 @@ import com.java.slms.model.Teacher;
 import com.java.slms.model.User;
 import com.java.slms.repository.*;
 import com.java.slms.service.TeacherService;
-import com.java.slms.util.UserStatuses;
+import com.java.slms.util.UserStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -155,7 +155,7 @@ public class TeacherServiceImpl implements TeacherService
         // 3. Status based on user
         userRepository.findByEmailIgnoreCase(teacher.getEmail()).ifPresent(user ->
         {
-            dto.setStatus(user.isEnabled() ? UserStatuses.ACTIVE : UserStatuses.INACTIVE);
+            dto.setStatus(user.isEnabled() ? UserStatus.ACTIVE : UserStatus.INACTIVE);
         });
 
         // 4. Timestamps

@@ -17,7 +17,7 @@ import java.util.List;
 @RequestMapping("/api/teachers")
 @RequiredArgsConstructor
 @Slf4j
-@PreAuthorize("hasAnyRole('ROLE_SUPER_ADMIN', 'ROLE_ADMIN')")
+@PreAuthorize("hasAnyRole('ROLE_ADMIN')")
 public class TeacherController
 {
 
@@ -87,7 +87,7 @@ public class TeacherController
     }
 
     @GetMapping("/active")
-    @PreAuthorize("hasAnyRole('ROLE_SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_TEACHER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER')")
     public ResponseEntity<ApiResponse<List<TeacherDto>>> getActiveTeachers()
     {
         log.info("Fetching all active teachers...");

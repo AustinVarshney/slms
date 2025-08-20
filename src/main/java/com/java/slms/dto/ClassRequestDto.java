@@ -4,16 +4,13 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
-public class ClassEntityUpdateDto
+@AllArgsConstructor
+public class ClassRequestDto
 {
-    private Long id;
     private String className;
-    private int totalStudents;
-    private List<StudentRequestDto> students;
+    private Long sessionId;
+    private Double feesAmount;
 
 }

@@ -16,7 +16,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/scores")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('ROLE_SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_TEACHER')")
+@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER')")
 public class ScoreController
 {
 

@@ -1,21 +1,28 @@
 package com.java.slms.service;
 
-import com.java.slms.dto.StudentDto;
+import com.java.slms.dto.StudentRequestDto;
 import com.java.slms.dto.StudentAttendance;
+import com.java.slms.dto.StudentResponseDto;
+import com.java.slms.dto.UpdateStudentInfo;
+import com.java.slms.util.UserStatus;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 public interface StudentService
 {
-    StudentDto createStudent(StudentDto studentDto);
+    StudentResponseDto createStudent(StudentRequestDto studentRequestDto);
 
-    List<StudentDto> getAllStudent();
+    @Transactional
+    void markStudentsGraduateOrInActive(List<String> panNumbers, UserStatus status);
 
-    List<StudentDto> getActiveStudents();
+    List<StudentResponseDto> getAllStudent();
 
-    StudentDto getStudentByPAN(String pan);
+    List<StudentResponseDto> getActiveStudents();
 
-    StudentDto updateStudent(String pan, StudentDto studentDto);
+    StudentResponseDto getStudentByPAN(String pan);
+
+    StudentResponseDto updateStudent(String pan, UpdateStudentInfo updateStudentInfo);
 
     List<StudentAttendance> getStudentsPresentToday();
 
@@ -23,5 +30,5 @@ public interface StudentService
 
     void deleteStudentByPan(String panNumber);
 
-    List<StudentDto> getStudentsByClassId(Long classId);
+    List<StudentResponseDto> getStudentsByClassId(Long classId);
 }

@@ -18,7 +18,7 @@ import java.util.List;
 @RequestMapping("/api/timetables")
 @RequiredArgsConstructor
 @Slf4j
-@PreAuthorize("hasAnyRole('ROLE_SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_TEACHER')")
+@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER')")
 public class TimeTableController
 {
     private final TimeTableService timetableService;
@@ -27,7 +27,7 @@ public class TimeTableController
      * Create a new timetable entry
      */
     @PostMapping
-    @PreAuthorize("hasAnyRole('ROLE_SUPER_ADMIN', 'ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
     public ResponseEntity<ApiResponse<TimetableResponseDTO>> createTimetable(
             @RequestBody TimetableRequestDTO dto)
     {
@@ -91,7 +91,7 @@ public class TimeTableController
      * Update timetable entry
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ROLE_SUPER_ADMIN', 'ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
     public ResponseEntity<ApiResponse<TimetableResponseDTO>> updateTimetable(
             @PathVariable Long id, @RequestBody TimetableRequestDTO dto)
     {
@@ -108,7 +108,7 @@ public class TimeTableController
      * Delete timetable entry
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ROLE_SUPER_ADMIN', 'ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteTimetable(@PathVariable Long id)
     {
         log.info("Deleting timetable with id={}", id);

@@ -1,21 +1,20 @@
 package com.java.slms.service;
 
-import com.java.slms.dto.ClassEntityDto;
+import com.java.slms.dto.ClassRequestDto;
+import com.java.slms.dto.ClassResponseDto;
 
 import java.util.List;
 
 public interface ClassEntityService
 {
-    ClassEntityDto addClass(ClassEntityDto classEntityDto);
+    ClassResponseDto addClass(ClassRequestDto classRequestDto);
 
-    List<ClassEntityDto> getAllClass();
+    List<ClassResponseDto> getAllClass();
 
-    List<ClassEntityDto> getClassWithSections();
+    ClassResponseDto getClassByClassIdAndSessionId(Long classId, Long sessionId);
 
-    ClassEntityDto getClassByClassId(Long id);
+    void deleteClassByIdAndSessionId(Long id, Long sessionId);
 
-    void deleteClassById(Long id);
-
-    ClassEntityDto updateClassNameById(Long id, ClassEntityDto classEntityDto);
+    ClassResponseDto updateClassNameById(Long id, ClassRequestDto classRequestDto);
 
 }

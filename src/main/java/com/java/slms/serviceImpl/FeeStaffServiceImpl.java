@@ -8,7 +8,7 @@ import com.java.slms.model.User;
 import com.java.slms.repository.FeeStaffRepository;
 import com.java.slms.repository.UserRepository;
 import com.java.slms.service.FeeStaffService;
-import com.java.slms.util.UserStatuses;
+import com.java.slms.util.UserStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -110,7 +110,7 @@ public class FeeStaffServiceImpl implements FeeStaffService
         // Set status from user entity if exists
         userRepository.findByEmailIgnoreCase(feeStaff.getEmail()).ifPresent(user ->
         {
-            dto.setStatus(user.isEnabled() ? UserStatuses.ACTIVE : UserStatuses.INACTIVE);
+            dto.setStatus(user.isEnabled() ? UserStatus.ACTIVE : UserStatus.INACTIVE);
             dto.setUserId(user.getId());
         });
 

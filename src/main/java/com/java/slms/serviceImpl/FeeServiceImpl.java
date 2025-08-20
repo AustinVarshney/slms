@@ -1,29 +1,28 @@
 package com.java.slms.serviceImpl;
 
+import com.java.slms.dto.FeeCatalogDto;
 import com.java.slms.dto.FeeRequestDTO;
-import com.java.slms.dto.FeeResponseDTO;
-import com.java.slms.dto.StudentDto;
+import com.java.slms.dto.MonthlyFeeDto;
 import com.java.slms.exception.ResourceNotFoundException;
 import com.java.slms.exception.WrongArgumentException;
 import com.java.slms.model.Fee;
 import com.java.slms.model.FeeStructure;
 import com.java.slms.model.Student;
 import com.java.slms.repository.FeeRepository;
-import com.java.slms.repository.FeeStructureRepository;
 import com.java.slms.repository.StudentRepository;
 import com.java.slms.service.FeeService;
-import com.java.slms.util.CommonUtil;
-import com.java.slms.util.FeeMonth;
+import com.java.slms.util.EntityFetcher;
+import com.java.slms.util.EntityNames;
 import com.java.slms.util.FeeStatus;
+import com.java.slms.util.UserStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -31,231 +30,101 @@ import java.util.stream.Collectors;
 public class FeeServiceImpl implements FeeService
 {
 
-    private final FeeRepository feeRepository;
     private final StudentRepository studentRepository;
-    private final FeeStructureRepository feeStructureRepository;
-    private final ModelMapper modelMapper;
+    private final FeeRepository feeRepository;
 
     @Override
-    public FeeResponseDTO createFee(FeeRequestDTO dto)
+    public void payFeesOfStudent(FeeRequestDTO feeRequestDTO)
     {
-        // Fetch Student
-        Student student = studentRepository.findById(dto.getStudentPanNumber())
-                .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + dto.getStudentPanNumber()));
-
-        // Validate class relation
-        Long studentClassId = student.getCurrentClass().getId();
-
-        FeeStructure feeStructure = feeStructureRepository.findById(dto.getFeeStructureId())
-                .orElseThrow(() -> new ResourceNotFoundException("FeeStructure not found: " + dto.getFeeStructureId()));
-
-        Long feeStructureClassId = feeStructure.getClassEntity().getId();
-        if (!studentClassId.equals(feeStructureClassId))
+        Student student = EntityFetcher.fetchByIdOrThrow(studentRepository, feeRequestDTO.getStudentPanNumber(), EntityNames.STUDENT);
+        FeeStructure feeStructure = student.getCurrentClass().getFeeStructures();
+        if (!student.getSession().getId().equals(feeStructure.getSession().getId()))
         {
-            throw new WrongArgumentException("FeeStructure does not belong to the student's class.");
+            throw new WrongArgumentException("Student and FeeStructure session mismatch");
+        }
+        List<Fee> fees = feeRepository.findByStudent_PanNumberAndMonth(feeRequestDTO.getStudentPanNumber(), feeRequestDTO.getMonth());
+        if (fees.isEmpty())
+        {
+            throw new ResourceNotFoundException("Fee entry not found for given student and month");
+        }
+        if (fees.size() > 1)
+        {
+            throw new WrongArgumentException("More than one fee entry found for student and month");
+        }
+        Fee fee = fees.get(0);
+
+        if (Double.compare(feeStructure.getFeesAmount(), feeRequestDTO.getAmount()) != 0)
+        {
+            throw new WrongArgumentException("Payment amount does not match the required fee amount.");
         }
 
-        // Check if already paid for this month
-        boolean alreadyPaid = feeRepository
-                .existsByFeeStructureIdAndStudent_PanNumberAndMonth(dto.getFeeStructureId(), dto.getStudentPanNumber(), dto.getMonth());
-
-        if (alreadyPaid)
-        {
-            throw new WrongArgumentException("Fee already paid for month: " + dto.getMonth());
-        }
-
-        // Validate exact amount match
-        if (dto.getAmountPaid() == null || dto.getAmountPaid() <= 0)
-        {
-            throw new WrongArgumentException("Amount paid must be greater than zero.");
-        }
-        if (!dto.getAmountPaid().equals(feeStructure.getDefaultAmount()))
-        {
-            throw new WrongArgumentException("Amount paid must exactly match the monthly fee: " + feeStructure.getDefaultAmount());
-        }
-
-        // Save Fee record
-        Fee fee = new Fee();
-        fee.setStudent(student);
+        fee.setAmount(fee.getAmount());
         fee.setFeeStructure(feeStructure);
-        fee.setMonth(dto.getMonth());
-        fee.setTotalAmount(feeStructure.getDefaultAmount());
-        fee.setAmountPaid(dto.getAmountPaid());
-        fee.setRemainingAmount(0.0);
         fee.setStatus(FeeStatus.PAID);
-        fee.setPaidOn(new Date());
-        fee.setPaymentHistory(dto.getPaymentHistory());
-
-        Fee saved = feeRepository.save(fee);
-
-        return modelMapper.map(saved, FeeResponseDTO.class);
+        fee.setStudent(student);
+        fee.setPaymentDate(LocalDate.now());
+        fee.setReceiptNumber(feeRequestDTO.getReceiptNumber());
+        feeRepository.save(fee);
     }
 
     @Override
-    public List<FeeResponseDTO> getFeesByStudentPan(String panNumber) {
-        Student student = CommonUtil.fetchStudentByPan(studentRepository, panNumber);
-        List<Fee> paidFees = feeRepository.findByStudent_PanNumber(panNumber);
-        return buildFeeResponseList(student, paidFees);
-    }
-
-    @Override
-    public List<FeeResponseDTO> getFeesByStudentPan(String panNumber, FeeMonth month) {
-        if (!studentRepository.existsById(panNumber)) {
-            log.error("Student not exists with PAN: {}", panNumber);
-            throw new ResourceNotFoundException("Student not exists with PAN: " + panNumber);
-        }
-
-        Student student = CommonUtil.fetchStudentByPan(studentRepository, panNumber);
-        List<Fee> paidFees = feeRepository.findByStudent_PanNumberAndMonth(panNumber, month);
-        return buildFeeResponseList(student, paidFees);
-    }
-
-    @Override
-    public List<FeeResponseDTO> getFeesByFeeStructureId(Long feeStructureId)
+    public List<FeeCatalogDto> getAllFeeCatalogs()
     {
-        if (!feeStructureRepository.existsById(feeStructureId))
+        List<Student> students = studentRepository.findAll();
+        List<FeeCatalogDto> feeCatalogs = new ArrayList<>();
+
+        for (Student student : students)
         {
-            throw new ResourceNotFoundException("FeeStructure not found with ID: " + feeStructureId);
+            List<Fee> fees = feeRepository.findByStudent_PanNumberOrderByYearAscMonthAsc(student.getPanNumber());
+
+            FeeCatalogDto catalog = new FeeCatalogDto();
+            catalog.setStudentId(student.getPanNumber());
+
+            List<MonthlyFeeDto> monthlyFees = new ArrayList<>();
+            double totalAmount = 0;
+            double totalPaid = 0;
+            double totalPending = 0;
+            double totalOverdue = 0;
+
+            for (Fee fee : fees)
+            {
+                MonthlyFeeDto mFee = new MonthlyFeeDto();
+                mFee.setMonth(fee.getMonth().name());
+                mFee.setYear(fee.getYear());
+                mFee.setAmount(fee.getAmount());
+                mFee.setDueDate(fee.getDueDate());
+                mFee.setStatus(fee.getStatus().name());
+                mFee.setPaymentDate(fee.getPaymentDate());
+                mFee.setReceiptNumber(fee.getReceiptNumber());
+
+                monthlyFees.add(mFee);
+
+                totalAmount += fee.getAmount();
+                switch (fee.getStatus())
+                {
+                    case PAID:
+                        totalPaid += fee.getAmount();
+                        break;
+                    case PENDING:
+                        totalPending += fee.getAmount();
+                        break;
+                    case OVERDUE:
+                        totalOverdue += fee.getAmount();
+                        break;
+                    default:
+                }
+            }
+
+            catalog.setMonthlyFees(monthlyFees);
+            catalog.setTotalAmount(totalAmount);
+            catalog.setTotalPaid(totalPaid);
+            catalog.setTotalPending(totalPending);
+            catalog.setTotalOverdue(totalOverdue);
+
+            feeCatalogs.add(catalog);
         }
 
-        return feeRepository.findByFeeStructure_Id(feeStructureId)
-                .stream()
-                .map(f -> modelMapper.map(f, FeeResponseDTO.class))
-                .toList();
+        return feeCatalogs;
     }
-
-    @Override
-    public List<FeeResponseDTO> getFeesByFeeStructureId(Long feeStructureId, FeeMonth month)
-    {
-        if (!feeStructureRepository.existsById(feeStructureId))
-        {
-            throw new ResourceNotFoundException("FeeStructure not found with ID: " + feeStructureId);
-        }
-
-        return feeRepository.findByFeeStructure_IdAndMonth(feeStructureId, month)
-                .stream()
-                .map(f -> modelMapper.map(f, FeeResponseDTO.class))
-                .toList();
-    }
-
-
-    @Override
-    public List<FeeResponseDTO> getFeesByStatus(FeeStatus status)
-    {
-        return feeRepository.findByStatus(status)
-                .stream()
-                .map(f -> modelMapper.map(f, FeeResponseDTO.class))
-                .toList();
-    }
-
-    @Override
-    public List<FeeResponseDTO> getFeesByStatus(FeeStatus status, FeeMonth month)
-    {
-        return feeRepository.findByMonthAndStatus(month, status)
-                .stream()
-                .map(f -> modelMapper.map(f, FeeResponseDTO.class))
-                .toList();
-    }
-
-    @Override
-    public List<FeeResponseDTO> getFeesPaidBetween(Date startDate, Date endDate)
-    {
-        return feeRepository.findByPaidOnBetween(startDate, endDate)
-                .stream()
-                .map(f -> modelMapper.map(f, FeeResponseDTO.class))
-                .toList();
-    }
-
-    @Override
-    public List<FeeResponseDTO> getFeesByStudentPanAndStatus(String panNumber, FeeStatus status)
-    {
-        if (!studentRepository.existsById(panNumber))
-        {
-            log.error("Student not exists with PAN: {}", panNumber);
-            throw new ResourceNotFoundException("Student not exists with PAN: " + panNumber);
-        }
-
-        return feeRepository.findByStudent_PanNumberAndStatus(panNumber, status)
-                .stream()
-                .map(f -> modelMapper.map(f, FeeResponseDTO.class))
-                .toList();
-    }
-
-    @Override
-    public List<FeeResponseDTO> getFeesByStudentPanAndStatus(String panNumber, FeeStatus status, FeeMonth month)
-    {
-        if (!studentRepository.existsById(panNumber))
-        {
-            log.error("Student not exists with PAN: {}", panNumber);
-            throw new ResourceNotFoundException("Student not exists with PAN: " + panNumber);
-        }
-
-        return feeRepository.findByStudent_PanNumberAndStatusAndMonth(panNumber, status, month)
-                .stream()
-                .map(f -> modelMapper.map(f, FeeResponseDTO.class))
-                .toList();
-    }
-
-    @Override
-    public List<StudentDto> getDefaulters(Long feeStructureId, FeeMonth month)
-    {
-        // 1️⃣ Validate FeeStructure
-        FeeStructure feeStructure = feeStructureRepository.findById(feeStructureId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "FeeStructure not found with ID: " + feeStructureId));
-
-        Long classId = feeStructure.getClassEntity().getId();
-
-        // 2️⃣ Get all students in that class
-        List<Student> studentsInClass = studentRepository.findByCurrentClass_Id(classId);
-
-        // 3️⃣ Get students who paid for that month
-        List<String> paidPanNumbers = feeRepository
-                .findByFeeStructure_IdAndMonth(feeStructureId, month)
-                .stream()
-                .map(f -> f.getStudent().getPanNumber())
-                .toList();
-
-        // 4️⃣ Filter out those who haven't paid
-        return studentsInClass.stream()
-                .filter(s -> !paidPanNumbers.contains(s.getPanNumber()))
-                .map(s -> modelMapper.map(s, StudentDto.class))
-                .toList();
-    }
-
-    private List<FeeResponseDTO> buildFeeResponseList(Student student, List<Fee> paidFees) {
-        List<FeeStructure> feeStructures = student.getCurrentClass().getFeeStructures();
-
-        // Extract paid FeeStructure IDs
-        Set<Long> paidFeeStructureIds = paidFees.stream()
-                .map(f -> f.getFeeStructure().getId())
-                .collect(Collectors.toSet());
-
-        // Start with paid fee DTOs
-        List<FeeResponseDTO> feeResponseDTOs = paidFees.stream()
-                .map(f -> modelMapper.map(f, FeeResponseDTO.class))
-                .collect(Collectors.toList());
-
-        // Add unpaid fee DTOs for missing FeeStructure IDs
-        feeStructures.stream()
-                .filter(feeStructure -> !paidFeeStructureIds.contains(feeStructure.getId()))
-                .forEach(feeStructure -> {
-                    FeeResponseDTO unpaidFeeDTO = new FeeResponseDTO();
-                    unpaidFeeDTO.setFeeStructureId(feeStructure.getId());
-                    unpaidFeeDTO.setStudentPanNumber(student.getPanNumber());
-                    unpaidFeeDTO.setStudentName(student.getName());
-                    unpaidFeeDTO.setFeeType(feeStructure.getFeeType());
-                    unpaidFeeDTO.setTotalAmount(feeStructure.getDefaultAmount());
-                    unpaidFeeDTO.setAmountPaid(0.0);
-                    unpaidFeeDTO.setRemainingAmount(feeStructure.getDefaultAmount());
-                    unpaidFeeDTO.setStatus(FeeStatus.UNPAID);
-                    unpaidFeeDTO.setPaidOn(null);
-                    feeResponseDTOs.add(unpaidFeeDTO);
-                });
-
-        return feeResponseDTOs;
-    }
-
-
 
 }

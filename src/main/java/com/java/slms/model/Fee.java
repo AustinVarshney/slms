@@ -8,6 +8,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 
@@ -22,17 +24,18 @@ public class Fee extends BaseEntity
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Double totalAmount;
-    private Double amountPaid = 0.0;
-    private Double remainingAmount;
+    private Double amount;
 
     @Enumerated(EnumType.STRING)
     private FeeStatus status;
 
-    private String paymentHistory;
+    private int year;
 
-    @Temporal(TemporalType.TIMESTAMP)
-    private Date paidOn;
+    private LocalDate dueDate;
+
+    private LocalDate paymentDate;
+
+    private String receiptNumber;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_pan", nullable = false)
@@ -42,7 +45,7 @@ public class Fee extends BaseEntity
     @JoinColumn(name = "fee_structure_id", nullable = false)
     private FeeStructure feeStructure;
 
-    @Enumerated(EnumType.STRING)
+    @Enumerated(EnumType.ORDINAL)
     @Column(nullable = false)
     private FeeMonth month;
 

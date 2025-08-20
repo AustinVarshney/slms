@@ -8,7 +8,7 @@ import com.java.slms.exception.ResourceNotFoundException;
 import com.java.slms.model.*;
 import com.java.slms.repository.*;
 import com.java.slms.service.ScoreService;
-import com.java.slms.util.CommonUtil;
+import com.java.slms.util.EntityFetcher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -37,7 +37,7 @@ public class ScoreServiceImpl implements ScoreService
     public List<ScoreResponseDTO> createScoresOfStudents(ScoreRequestDTO scoreDto)
     {
         // Validate class
-        ClassEntity classEntity = CommonUtil.fetchClassEntityByClassId(classEntityRepository, scoreDto.getClassId());
+        ClassEntity classEntity = EntityFetcher.fetchClassEntityByClassId(classEntityRepository, scoreDto.getClassId());
 
         // Validate subject
         Subject subject = subjectRepository.findById(scoreDto.getSubjectId()).orElseThrow(() ->
@@ -70,7 +70,7 @@ public class ScoreServiceImpl implements ScoreService
             String panNumber = studentScore.getStudentPanNumber();
 
             // Validate student
-            Student student = CommonUtil.fetchStudentByPan(studentRepository, studentScore.getStudentPanNumber());
+            Student student = EntityFetcher.fetchStudentByPan(studentRepository, studentScore.getStudentPanNumber());
 
             // Check enrollment
             boolean isEnrolled = studentRepository.existsByClassNameAndPanNumberIgnoreCase(classEntity.getClassName(), panNumber);
@@ -123,7 +123,7 @@ public class ScoreServiceImpl implements ScoreService
     public List<ScoreResponseDTO> getScoresByStudentPan(String panNumber)
     {
 
-        Student fetchedStudent = CommonUtil.fetchStudentByPan(studentRepository, panNumber);
+        Student fetchedStudent = EntityFetcher.fetchStudentByPan(studentRepository, panNumber);
 
         List<Score> scores = scoreRepository.findByStudentPanNumber(panNumber);
 
@@ -148,7 +148,7 @@ public class ScoreServiceImpl implements ScoreService
         // Fetch the exam and class to ensure they exist
         Exam exam = examRepository.findById(examId).orElseThrow(() -> new ResourceNotFoundException("Exam not found with ID: " + examId));
 
-        ClassEntity classEntity = CommonUtil.fetchClassEntityByClassId(classEntityRepository, classId);
+        ClassEntity classEntity = EntityFetcher.fetchClassEntityByClassId(classEntityRepository, classId);
 
         // Fetch the scores based on exam and class
         List<Score> scores = scoreRepository.findByExam_IdAndStudent_CurrentClass_Id(examId, classId);
@@ -175,7 +175,7 @@ public class ScoreServiceImpl implements ScoreService
     {
 
         // Validate ClassEntity existence
-        ClassEntity classEntity = CommonUtil.fetchClassEntityByClassId(classEntityRepository, classId);
+        ClassEntity classEntity = EntityFetcher.fetchClassEntityByClassId(classEntityRepository, classId);
 
         // Validate Subject existence and class relation
         Subject subject = subjectRepository.findById(subjectId).orElseThrow(() ->
@@ -202,7 +202,7 @@ public class ScoreServiceImpl implements ScoreService
         }
 
         // Validate Student existence
-        Student student = CommonUtil.fetchStudentByPan(studentRepository, panNumber);
+        Student student = EntityFetcher.fetchStudentByPan(studentRepository, panNumber);
 
         // Verify student's enrollment in class
         boolean isEnrolled = studentRepository.existsByClassNameAndPanNumberIgnoreCase(classEntity.getClassName(), panNumber);
@@ -256,7 +256,7 @@ public class ScoreServiceImpl implements ScoreService
     {
 
         // Validate ClassEntity existence
-        ClassEntity classEntity = CommonUtil.fetchClassEntityByClassId(classEntityRepository, classId);
+        ClassEntity classEntity = EntityFetcher.fetchClassEntityByClassId(classEntityRepository, classId);
 
         // Validate Subject existence and class relation
         Subject subject = subjectRepository.findById(subjectId)
@@ -287,7 +287,7 @@ public class ScoreServiceImpl implements ScoreService
         }
 
         // Validate Student existence
-        Student student = CommonUtil.fetchStudentByPan(studentRepository, panNumber);
+        Student student = EntityFetcher.fetchStudentByPan(studentRepository, panNumber);
 
         // Verify student's enrollment in class
         boolean isEnrolled = studentRepository.existsByClassNameAndPanNumberIgnoreCase(classEntity.getClassName(), panNumber);

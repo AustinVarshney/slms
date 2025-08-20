@@ -9,8 +9,7 @@ import lombok.*;
 public class FeeRequestDTO
 {
     private String studentPanNumber;
-    private Long feeStructureId;
-    private Double amountPaid;
+    private Double amount;
     private FeeMonth month;
-    private String paymentHistory;
+    private String receiptNumber;
 }

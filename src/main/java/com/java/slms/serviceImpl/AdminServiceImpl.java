@@ -8,7 +8,7 @@ import com.java.slms.model.User;
 import com.java.slms.repository.AdminRepository;
 import com.java.slms.repository.UserRepository;
 import com.java.slms.service.AdminService;
-import com.java.slms.util.UserStatuses;
+import com.java.slms.util.UserStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -104,7 +104,7 @@ public class AdminServiceImpl implements AdminService {
 
         // Set user status
         userRepository.findByEmailIgnoreCase(admin.getEmail()).ifPresent(user ->
-                dto.setStatus(user.isEnabled() ? UserStatuses.ACTIVE : UserStatuses.INACTIVE));
+                dto.setStatus(user.isEnabled() ? UserStatus.ACTIVE : UserStatus.INACTIVE));
 
         // Set timestamps
         dto.setCreatedAt(admin.getCreatedAt());

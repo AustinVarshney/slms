@@ -1,9 +1,8 @@
 package com.java.slms.util;
 
-public enum FeeStatus
+public enum FeeCatalogStatus
 {
-    UNPAID,
+    UP_TO_DATE,
     PENDING,
-    PAID,
     OVERDUE
 }

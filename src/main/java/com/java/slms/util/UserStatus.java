@@ -1,8 +1,8 @@
 package com.java.slms.util;
 
-public enum UserStatuses
+public enum UserStatus
 {
-    NEW,
     ACTIVE,
     INACTIVE,
+    GRADUATED
 }

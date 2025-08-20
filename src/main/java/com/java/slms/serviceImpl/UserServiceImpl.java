@@ -2,12 +2,11 @@ package com.java.slms.serviceImpl;
 
 import com.java.slms.dto.UserRequest;
 import com.java.slms.exception.AlreadyExistException;
-import com.java.slms.exception.ResourceNotFoundException;
 import com.java.slms.model.*;
 import com.java.slms.repository.*;
 import com.java.slms.service.UserService;
-import com.java.slms.util.CommonUtil;
-import com.java.slms.util.UserStatuses;
+import com.java.slms.util.EntityFetcher;
+import com.java.slms.util.UserStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -18,7 +17,7 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@PreAuthorize("hasAnyRole('ROLE_SUPER_ADMIN')")
+@PreAuthorize("hasAnyRole('ROLE_ADMIN')")
 public class UserServiceImpl implements UserService
 {
     private final UserRepository userRepository;
@@ -33,7 +32,7 @@ public class UserServiceImpl implements UserService
     public void changePassword(Long userId, String password)
     {
         log.info("Changing password for user with ID: {}", userId);
-        User user = CommonUtil.fetchUserByUserId(userRepository, userId);
+        User user = EntityFetcher.fetchUserByUserId(userRepository, userId);
         user.setPassword(passwordEncoder.encode(password));
         userRepository.save(user);
         log.info("Password changed successfully for user ID: {}", userId);
@@ -43,7 +42,7 @@ public class UserServiceImpl implements UserService
     public void deleteUser(Long userId)
     {
         log.info("Deleting user with ID: {}", userId);
-        User user = CommonUtil.fetchUserByUserId(userRepository, userId);
+        User user = EntityFetcher.fetchUserByUserId(userRepository, userId);
         userRepository.delete(user);
         log.info("User deleted successfully with ID: {}", userId);
     }
@@ -54,7 +53,7 @@ public class UserServiceImpl implements UserService
         log.info("Updating user details for ID: {}", userId);
 
         // Fetch the user by ID
-        User user = CommonUtil.fetchUserByUserId(userRepository, userId);
+        User user = EntityFetcher.fetchUserByUserId(userRepository, userId);
 
         // Configure modelMapper to skip null fields
         modelMapper.getConfiguration().setSkipNullEnabled(true);
@@ -66,7 +65,7 @@ public class UserServiceImpl implements UserService
         {
             log.info("User ID {} is a Student", userId);
 
-            Student student = CommonUtil.fetchStudentByPan(studentRepository, user.getPanNumber());
+            Student student = EntityFetcher.fetchStudentByPan(studentRepository, user.getPanNumber());
             modelMapper.map(userRequest, student);
             studentRepository.save(student);
 
@@ -103,7 +102,7 @@ public class UserServiceImpl implements UserService
 
         // Save updated user
         log.info("User updated successfully for ID: {}", userId);
-        updatedUser.setStatus(UserStatuses.ACTIVE);
+        updatedUser.setStatus(UserStatus.ACTIVE);
         return updatedUser;
     }
 
@@ -111,7 +110,7 @@ public class UserServiceImpl implements UserService
     public void inActiveUser(Long userId)
     {
         log.info("Disabling user with ID: {}", userId);
-        User user = CommonUtil.fetchUserByUserId(userRepository, userId);
+        User user = EntityFetcher.fetchUserByUserId(userRepository, userId);
         if (!user.isEnabled())
         {
             log.warn("User with ID: {} is already disabled", userId);

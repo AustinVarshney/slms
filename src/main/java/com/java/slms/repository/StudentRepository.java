@@ -1,6 +1,8 @@
 package com.java.slms.repository;
 
 import com.java.slms.model.Student;
+import com.java.slms.model.User;
+import com.java.slms.util.UserStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -32,7 +34,16 @@ public interface StudentRepository extends JpaRepository<Student, String>
             """)
     List<Student> findStudentsPresentTodayByClassName(@Param("classId") Long classId);
 
+    List<Student> findByStatusAndCurrentClass_Id(UserStatus status, Long classId);
+
     List<Student> findByCurrentClass_Id(Long classId);
+
+    List<Student> findByStatus(UserStatus status);
+
+    Optional<Student> findByPanNumberAndStatus(String panNumber, UserStatus status);
+
+    @Query("SELECT COALESCE(MAX(s.classRollNumber), 0) FROM Student s WHERE s.currentClass.id = :classId")
+    Integer findMaxClassRollNumberByCurrentClassId(@Param("classId") Long classId);
 
     List<Student> findByPanNumberIn(List<String> panNumbers);
 

@@ -16,7 +16,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/subjects")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('ROLE_SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_TEACHER')")
+@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER')")
 public class SubjectController
 {
 
@@ -62,7 +62,7 @@ public class SubjectController
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ROLE_SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_STUDENT')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_STUDENT')")
     public ResponseEntity<ApiResponse<SubjectDto>> getSubjectById(@PathVariable Long id)
     {
         SubjectDto dto = subjectService.getSubjectById(id);
@@ -76,7 +76,7 @@ public class SubjectController
     }
 
     @GetMapping("/class/{classId}")
-    @PreAuthorize("hasAnyRole('ROLE_SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_STUDENT')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_STUDENT')")
     public ResponseEntity<ApiResponse<List<SubjectDto>>> getSubjectsByClassId(@PathVariable Long classId)
     {
         List<SubjectDto> subjectDtos = subjectService.getSubjectsByClassId(classId);

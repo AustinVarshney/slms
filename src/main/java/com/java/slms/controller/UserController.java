@@ -47,19 +47,6 @@ public class UserController
         );
     }
 
-    @PutMapping("/{userId}/deactivate")
-    public ResponseEntity<ApiResponse<UserRequest>> inactivateUser(@PathVariable Long userId)
-    {
-        userService.inActiveUser(userId);
-        return ResponseEntity.ok(
-                ApiResponse.<UserRequest>builder()
-                        .data(null)
-                        .message("User deactivated successfully")
-                        .status(HttpStatus.OK.value())
-                        .build()
-        );
-    }
-
     @DeleteMapping("/{userId}")
     public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable Long userId)
     {

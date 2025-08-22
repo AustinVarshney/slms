@@ -90,7 +90,7 @@ public class FeeServiceImpl implements FeeService
     }
 
     @Override
-    public List<FeeCatalogDto> getAllFeeCatalogs()
+    public List<FeeCatalogDto> getAllFeeCatalogsInActiveSesssion()
     {
         Session activeSession = sessionRepository.findByActiveTrue()
                 .orElseThrow(() -> new ResourceNotFoundException("No active session found"));
@@ -112,14 +112,6 @@ public class FeeServiceImpl implements FeeService
     {
         Student student = studentRepository.findById(panNumber)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found with PAN: " + panNumber));
-
-        Session activeSession = sessionRepository.findByActiveTrue()
-                .orElseThrow(() -> new ResourceNotFoundException("No active session found"));
-
-        if (!student.getSession().getId().equals(activeSession.getId()))
-        {
-            throw new WrongArgumentException("Student does not belong to the active session");
-        }
 
         return buildFeeCatalogForStudent(student);
     }

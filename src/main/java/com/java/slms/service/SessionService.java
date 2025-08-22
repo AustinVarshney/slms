@@ -3,6 +3,7 @@ package com.java.slms.service;
 import com.java.slms.dto.CreateOrUpdateSessionRequest;
 import com.java.slms.dto.SessionDto;
 import com.java.slms.model.Session;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -19,5 +20,8 @@ public interface SessionService
     SessionDto getSessionById(Long id);
 
     SessionDto getCurrentSession();
+
+    @Transactional
+    void deactivateCurrentSession();
 }
 

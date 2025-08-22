@@ -10,7 +10,5 @@ public interface UserService
 
     UserRequest updateUserDetails(Long userId, UserRequest userRequest);
 
-    void inActiveUser(Long userId);
-
 }
 

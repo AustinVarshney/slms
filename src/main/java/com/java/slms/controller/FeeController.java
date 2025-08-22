@@ -41,7 +41,7 @@ public class FeeController
     @GetMapping("/catalogs")
     public ResponseEntity<ApiResponse<List<FeeCatalogDto>>> getAllFeeCatalogs()
     {
-        List<FeeCatalogDto> feeCatalogs = feeService.getAllFeeCatalogs();
+        List<FeeCatalogDto> feeCatalogs = feeService.getAllFeeCatalogsInActiveSesssion();
 
         ApiResponse<List<FeeCatalogDto>> response = ApiResponse.<List<FeeCatalogDto>>builder()
                 .data(feeCatalogs)

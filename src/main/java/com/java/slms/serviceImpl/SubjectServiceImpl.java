@@ -220,13 +220,6 @@ public class SubjectServiceImpl implements SubjectService
         ClassEntity classEntity = classEntityRepository.findById(classId)
                 .orElseThrow(() -> new ResourceNotFoundException("Class not found with ID: " + classId));
 
-        if (!classEntity.getSession().isActive())
-        {
-            log.error("Cannot fetch Subjects for class '{}' because the session with ID {} is inactive",
-                    classEntity.getClassName(), classEntity.getSession().getId());
-            throw new WrongArgumentException("Cannot fetch subjects for a class in an inactive session");
-        }
-
         List<Subject> subjects = subjectRepository.findByClassEntity_Id(classId);
 
         if (subjects.isEmpty())

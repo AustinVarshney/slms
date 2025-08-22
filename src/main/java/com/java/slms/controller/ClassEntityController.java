@@ -1,5 +1,6 @@
 package com.java.slms.controller;
 
+import com.java.slms.dto.ClassInfoResponse;
 import com.java.slms.dto.ClassRequestDto;
 import com.java.slms.dto.ClassResponseDto;
 import com.java.slms.payload.ApiResponse;
@@ -35,10 +36,10 @@ public class ClassEntityController
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
-    public ResponseEntity<ApiResponse<List<ClassResponseDto>>> getAllClasses()
+    public ResponseEntity<ApiResponse<List<ClassInfoResponse>>> getAllClasses()
     {
-        List<ClassResponseDto> classes = classEntityService.getAllClass();
-        ApiResponse<List<ClassResponseDto>> response = ApiResponse.<List<ClassResponseDto>>builder()
+        List<ClassInfoResponse> classes = classEntityService.getAllClassInActiveSession();
+        ApiResponse<List<ClassInfoResponse>> response = ApiResponse.<List<ClassInfoResponse>>builder()
                 .data(classes)
                 .message("Total Classes - " + classes.size())
                 .status(HttpStatus.OK.value())
@@ -61,10 +62,10 @@ public class ClassEntityController
 
     @GetMapping("/{classId}/session/{sessionId}")
     @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
-    public ResponseEntity<ApiResponse<ClassResponseDto>> getClassByName(@PathVariable Long classId, @PathVariable Long sessionId)
+    public ResponseEntity<ApiResponse<ClassInfoResponse>> getClassByName(@PathVariable Long classId, @PathVariable Long sessionId)
     {
-        ClassResponseDto classDto = classEntityService.getClassByClassIdAndSessionId(classId, sessionId);
-        ApiResponse<ClassResponseDto> response = ApiResponse.<ClassResponseDto>builder()
+        ClassInfoResponse classDto = classEntityService.getClassByClassIdAndSessionId(classId, sessionId);
+        ApiResponse<ClassInfoResponse> response = ApiResponse.<ClassInfoResponse>builder()
                 .data(classDto)
                 .message("Class fetched successfully")
                 .status(HttpStatus.OK.value())
@@ -75,13 +76,13 @@ public class ClassEntityController
 
     @PatchMapping("/{id}")
     @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
-    public ResponseEntity<ApiResponse<ClassResponseDto>> updateClassName(
+    public ResponseEntity<ApiResponse<ClassInfoResponse>> updateClassName(
             @PathVariable Long id,
             @RequestBody ClassRequestDto classRequestDto
     )
     {
-        ClassResponseDto updatedClass = classEntityService.updateClassNameById(id, classRequestDto);
-        ApiResponse<ClassResponseDto> response = ApiResponse.<ClassResponseDto>builder()
+        ClassInfoResponse updatedClass = classEntityService.updateClassNameById(id, classRequestDto);
+        ApiResponse<ClassInfoResponse> response = ApiResponse.<ClassInfoResponse>builder()
                 .data(updatedClass)
                 .message("Class name updated successfully")
                 .status(HttpStatus.OK.value())

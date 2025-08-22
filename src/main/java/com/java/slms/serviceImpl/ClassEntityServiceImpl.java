@@ -1,8 +1,6 @@
 package com.java.slms.serviceImpl;
 
-import com.java.slms.dto.ClassRequestDto;
-import com.java.slms.dto.ClassResponseDto;
-import com.java.slms.dto.StudentResponseDto;
+import com.java.slms.dto.*;
 import com.java.slms.exception.AlreadyExistException;
 import com.java.slms.exception.ResourceNotFoundException;
 import com.java.slms.exception.WrongArgumentException;
@@ -14,6 +12,7 @@ import com.java.slms.repository.FeeStructureRepository;
 import com.java.slms.repository.SessionRepository;
 import com.java.slms.repository.TeacherRepository;
 import com.java.slms.service.ClassEntityService;
+import com.java.slms.service.FeeService;
 import com.java.slms.service.StudentService;
 import com.java.slms.util.EntityFetcher;
 import com.java.slms.util.EntityNames;
@@ -37,6 +36,7 @@ public class ClassEntityServiceImpl implements ClassEntityService
     private final SessionRepository sessionRepository;
     private final FeeStructureRepository feeStructureRepository;
     private final StudentService studentService;
+    private final FeeService feeService;
 
     @Override
     @Transactional
@@ -84,42 +84,43 @@ public class ClassEntityServiceImpl implements ClassEntityService
     }
 
     @Override
-    public List<ClassResponseDto> getAllClass()
+    public List<ClassInfoResponse> getAllClassInActiveSession()
     {
         log.info("Fetching all classes with session and fee details");
 
-        List<ClassEntity> classEntities = classEntityRepository.findAll();
+        // Get the active session
+        Session activeSession = sessionRepository.findByActiveTrue()
+                .orElseThrow(() -> new ResourceNotFoundException("No active session found"));
+
+        // Fetch classes only for the active session
+        List<ClassEntity> classEntities = classEntityRepository.findBySession_Id(activeSession.getId());
 
         return classEntities.stream()
                 .map(classEntity ->
                 {
                     Long classId = classEntity.getId();
-                    Long sessionId = classEntity.getSession() != null ? classEntity.getSession().getId() : null;
+                    Long sessionId = activeSession.getId();
 
-                    FeeStructure feeStructure = null;
-                    if (sessionId != null)
-                    {
-                        feeStructure = feeStructureRepository.findByClassEntity_IdAndSession_Id(classId, sessionId)
-                                .orElse(null);
-                    }
+                    FeeStructure feeStructure = feeStructureRepository.findByClassEntity_IdAndSession_Id(classId, sessionId)
+                            .orElse(null);
 
-                    ClassResponseDto dto = modelMapper.map(classEntity, ClassResponseDto.class);
-                    if (classEntity.getSession() != null)
-                    {
-                        dto.setSessionId(classEntity.getSession().getId());
-                        dto.setSessionName(classEntity.getSession().getName());
-                    }
+                    ClassInfoResponse dto = modelMapper.map(classEntity, ClassInfoResponse.class);
+                    dto.setSessionId(sessionId);
+                    dto.setSessionName(activeSession.getName());
+
                     dto.setFeesAmount(feeStructure != null ? feeStructure.getFeesAmount() : null);
                     dto.setTotalStudents(classEntity.getStudents() != null ? classEntity.getStudents().size() : 0);
+
                     List<StudentResponseDto> students = studentService.getStudentsByClassId(classId);
                     dto.setStudents(students);
+                    dto.setFeeCollectionRate(calculateFeeCollectionRate(students));
                     return dto;
                 })
                 .toList();
     }
 
     @Override
-    public ClassResponseDto getClassByClassIdAndSessionId(Long classId, Long sessionId)
+    public ClassInfoResponse getClassByClassIdAndSessionId(Long classId, Long sessionId)
     {
         ClassEntity classEntity = classEntityRepository.findByIdAndSessionId(classId, sessionId)
                 .orElseThrow(() ->
@@ -132,12 +133,13 @@ public class ClassEntityServiceImpl implements ClassEntityService
                 .orElseThrow(() -> new ResourceNotFoundException("Fee structure not found for class and session"));
 
 
-        ClassResponseDto dto = modelMapper.map(classEntity, ClassResponseDto.class);
+        ClassInfoResponse dto = modelMapper.map(classEntity, ClassInfoResponse.class);
         dto.setSessionId(classEntity.getSession().getId());
         dto.setSessionName(classEntity.getSession().getName());
         dto.setFeesAmount(feeStructure.getFeesAmount());
         dto.setTotalStudents(classEntity.getStudents() != null ? classEntity.getStudents().size() : 0);
         List<StudentResponseDto> students = studentService.getStudentsByClassId(classId);
+        dto.setFeeCollectionRate(calculateFeeCollectionRate(students));
         dto.setStudents(students);
         return dto;
     }
@@ -161,7 +163,7 @@ public class ClassEntityServiceImpl implements ClassEntityService
     }
 
     @Override
-    public ClassResponseDto updateClassNameById(Long id, ClassRequestDto classRequestDto)
+    public ClassInfoResponse updateClassNameById(Long id, ClassRequestDto classRequestDto)
     {
         ClassEntity existingClass = classEntityRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Class not found with ID: " + id));
@@ -202,9 +204,37 @@ public class ClassEntityServiceImpl implements ClassEntityService
 
         ClassEntity updatedClass = classEntityRepository.save(existingClass);
 
-        ClassResponseDto dto = modelMapper.map(updatedClass, ClassResponseDto.class);
+        ClassInfoResponse dto = modelMapper.map(updatedClass, ClassInfoResponse.class);
         dto.setTotalStudents(updatedClass.getStudents() != null ? updatedClass.getStudents().size() : 0);
         return dto;
+    }
+
+    private double calculateFeeCollectionRate(List<StudentResponseDto> students)
+    {
+        double totalOfRates = 0.0;
+        int countedStudents = 0;
+
+        for (StudentResponseDto studentDto : students)
+        {
+            try
+            {
+                FeeCatalogDto feeCatalog = feeService.getFeeCatalogByStudentPanNumber(studentDto.getPanNumber());
+                if (feeCatalog.getTotalAmount() > 0)
+                {
+                    double rate = feeCatalog.getTotalPaid() / feeCatalog.getTotalAmount();
+                    totalOfRates += rate;
+                    countedStudents++;
+                }
+            } catch (ResourceNotFoundException ex)
+            {
+                log.warn("Fee catalog not found for student PAN: {}", studentDto.getPanNumber());
+            } catch (Exception ex)
+            {
+                log.error("Error fetching fee catalog for student PAN: {}", studentDto.getPanNumber(), ex);
+            }
+        }
+
+        return countedStudents > 0 ? (totalOfRates / countedStudents) : 0.0;
     }
 
 

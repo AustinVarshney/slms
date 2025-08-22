@@ -1,7 +1,7 @@
 package com.java.slms.serviceImpl;
 
 import com.java.slms.dto.UserRequest;
-import com.java.slms.exception.AlreadyExistException;
+import com.java.slms.exception.WrongArgumentException;
 import com.java.slms.model.*;
 import com.java.slms.repository.*;
 import com.java.slms.service.UserService;
@@ -33,6 +33,12 @@ public class UserServiceImpl implements UserService
     {
         log.info("Changing password for user with ID: {}", userId);
         User user = EntityFetcher.fetchUserByUserId(userRepository, userId);
+
+        if (!user.isEnabled())
+        {
+            throw new WrongArgumentException("Cannot change password: user account is disabled");
+        }
+
         user.setPassword(passwordEncoder.encode(password));
         userRepository.save(user);
         log.info("Password changed successfully for user ID: {}", userId);
@@ -52,8 +58,12 @@ public class UserServiceImpl implements UserService
     {
         log.info("Updating user details for ID: {}", userId);
 
-        // Fetch the user by ID
         User user = EntityFetcher.fetchUserByUserId(userRepository, userId);
+
+        if (!user.isEnabled())
+        {
+            throw new WrongArgumentException("Cannot change details: user account is disabled");
+        }
 
         modelMapper.getConfiguration().setSkipNullEnabled(true);
         modelMapper.map(userRequest, user);
@@ -62,61 +72,61 @@ public class UserServiceImpl implements UserService
 
         if (user.getPanNumber() != null)
         {
-            log.info("User ID {} is a Student", userId);
-
-            Student student = EntityFetcher.fetchStudentByPan(studentRepository, user.getPanNumber());
-            modelMapper.map(userRequest, student);
-            studentRepository.save(student);
-
+            log.info("User ID {} is a Student. Details update skipped; use Student API to update student details.", userId);
+            throw new WrongArgumentException("Student details can only be updated via the Student API.");
         }
         else
         {
+            updatedUser = modelMapper.map(user, UserRequest.class);
 
             if (user.getAdmin() != null)
             {
-                log.info("User ID {} is an Admin", userId);
                 Admin admin = user.getAdmin();
-                modelMapper.map(userRequest, admin);
-                updatedUser = modelMapper.map(adminRepository.save(admin), UserRequest.class);
+                if (admin.getStatus() == UserStatus.INACTIVE)
+                {
+                    log.info("User ID {} Admin is inactive; skipping admin update", userId);
+                }
+                else
+                {
+                    log.info("User ID {} is an Admin", userId);
+                    modelMapper.map(userRequest, admin);
+                    updatedUser = modelMapper.map(adminRepository.save(admin), UserRequest.class);
+                }
             }
 
             if (user.getTeacher() != null)
             {
-                log.info("User ID {} is a Teacher", userId);
                 Teacher teacher = user.getTeacher();
-                modelMapper.map(userRequest, teacher);
-                updatedUser = modelMapper.map(teacherRepository.save(teacher), UserRequest.class);
-
+                if (teacher.getStatus() == UserStatus.INACTIVE)
+                {
+                    log.info("User ID {} Teacher is inactive; skipping teacher update", userId);
+                }
+                else
+                {
+                    log.info("User ID {} is a Teacher", userId);
+                    modelMapper.map(userRequest, teacher);
+                    updatedUser = modelMapper.map(teacherRepository.save(teacher), UserRequest.class);
+                }
             }
 
             if (user.getNonTeachingStaff() != null)
             {
-                log.info("User ID {} is a Fee Staff", userId);
-                NonTeachingStaff nonTeachingStaff = user.getNonTeachingStaff();
-                modelMapper.map(userRequest, nonTeachingStaff);
-                updatedUser = modelMapper.map(nonTeachingStaffRepository.save(nonTeachingStaff), UserRequest.class);
-
+                NonTeachingStaff nts = user.getNonTeachingStaff();
+                if (nts.getStatus() == UserStatus.INACTIVE)
+                {
+                    log.info("User ID {} NonTeachingStaff is inactive; skipping fee staff update", userId);
+                }
+                else
+                {
+                    log.info("User ID {} is a Fee Staff", userId);
+                    modelMapper.map(userRequest, nts);
+                    updatedUser = modelMapper.map(nonTeachingStaffRepository.save(nts), UserRequest.class);
+                }
             }
         }
 
-        // Save updated user
         log.info("User updated successfully for ID: {}", userId);
-        updatedUser.setStatus(UserStatus.ACTIVE);
         return updatedUser;
     }
 
-    @Override
-    public void inActiveUser(Long userId)
-    {
-        log.info("Disabling user with ID: {}", userId);
-        User user = EntityFetcher.fetchUserByUserId(userRepository, userId);
-        if (!user.isEnabled())
-        {
-            log.warn("User with ID: {} is already disabled", userId);
-            throw new AlreadyExistException("User is already disabled with UserId: " + userId);
-        }
-        user.setEnabled(false);
-        userRepository.save(user);
-        log.info("User disabled successfully for ID: {}", userId);
-    }
 }

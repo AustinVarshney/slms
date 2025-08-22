@@ -104,7 +104,7 @@ public class TeacherController
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> inActiveTeacher(@PathVariable Long id)
     {
-        log.info("Hard deleting teacher with ID: {}", id);
+        log.info("InActive teacher with ID: {}", id);
         teacherService.inActiveTeacher(id);
         return ResponseEntity.ok(
                 ApiResponse.<Void>builder()

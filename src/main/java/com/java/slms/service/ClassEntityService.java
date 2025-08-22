@@ -1,5 +1,6 @@
 package com.java.slms.service;
 
+import com.java.slms.dto.ClassInfoResponse;
 import com.java.slms.dto.ClassRequestDto;
 import com.java.slms.dto.ClassResponseDto;
 
@@ -9,12 +10,12 @@ public interface ClassEntityService
 {
     ClassResponseDto addClass(ClassRequestDto classRequestDto);
 
-    List<ClassResponseDto> getAllClass();
+    List<ClassInfoResponse> getAllClassInActiveSession();
 
-    ClassResponseDto getClassByClassIdAndSessionId(Long classId, Long sessionId);
+    ClassInfoResponse getClassByClassIdAndSessionId(Long classId, Long sessionId);
 
     void deleteClassByIdAndSessionId(Long id, Long sessionId);
 
-    ClassResponseDto updateClassNameById(Long id, ClassRequestDto classRequestDto);
+    ClassInfoResponse updateClassNameById(Long id, ClassRequestDto classRequestDto);
 
 }

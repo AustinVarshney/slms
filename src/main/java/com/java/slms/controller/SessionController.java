@@ -76,15 +76,16 @@ public class SessionController
         );
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteSession(@PathVariable Long id)
+    @PutMapping("/deactivate")
+    public ResponseEntity<ApiResponse<Void>> deactivateCurrentSession()
     {
-        sessionService.deleteSession(id);
+        sessionService.deactivateCurrentSession();
         return ResponseEntity.ok(
                 ApiResponse.<Void>builder()
-                        .message("Session deleted")
+                        .message("Session Deactivated")
                         .status(HttpStatus.OK.value())
                         .build()
         );
     }
+
 }

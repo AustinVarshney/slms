@@ -12,5 +12,7 @@ public class FeeRequestDTO
     private String studentPanNumber;
     private Double amount;
     private FeeMonth month;
+    private Long sessionId;
+    private Long classId;
     private String receiptNumber;
 }

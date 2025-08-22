@@ -9,8 +9,10 @@ import com.java.slms.model.Session;
 import com.java.slms.repository.SessionRepository;
 import com.java.slms.service.SessionService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -20,6 +22,7 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class SessionServiceImpl implements SessionService
 {
 
@@ -57,6 +60,7 @@ public class SessionServiceImpl implements SessionService
         }
 
         Session session = modelMapper.map(dto, Session.class);
+        session.setActive(true);
         Session saved = sessionRepository.save(session);
         return modelMapper.map(saved, SessionDto.class);
     }
@@ -67,6 +71,11 @@ public class SessionServiceImpl implements SessionService
         Session existing = sessionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Session not found with id: " + id));
 
+        if (!existing.isActive())
+        {
+            throw new WrongArgumentException("Only the active session can be updated.");
+        }
+
         LocalDate start = request.getStartDate();
         LocalDate end = request.getEndDate();
 
@@ -75,9 +84,9 @@ public class SessionServiceImpl implements SessionService
                 YearMonth.from(end)
         );
 
-        if (months == 12)
+        if (months != 12)
         {
-            throw new WrongArgumentException("Session length must be 12 months.");
+            throw new WrongArgumentException("Session length must be exactly 12 months.");
         }
 
         boolean overlap = sessionRepository.existsByStartDateLessThanEqualAndEndDateGreaterThanEqual(
@@ -127,4 +136,18 @@ public class SessionServiceImpl implements SessionService
                 .orElseThrow(() -> new ResourceNotFoundException("No active session found"));
         return modelMapper.map(session, SessionDto.class);
     }
+
+    @Transactional
+    @Override
+    public void deactivateCurrentSession() {
+        Session activeSession = sessionRepository.findByActiveTrue()
+                .orElseThrow(() -> new ResourceNotFoundException("No active session found to deactivate"));
+
+        activeSession.setActive(false);
+        sessionRepository.save(activeSession);
+
+        log.info("Deactivated session with ID: {}", activeSession.getId());
+    }
+
+
 }

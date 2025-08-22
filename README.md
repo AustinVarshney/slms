@@ -95,7 +95,6 @@ Once the repository is cloned and the `SLMS_CONFIG` environment variable is set,
    ```
    src/main/java/com/java/slms/SlmsApplication.java
    ```
-   > (Update with your actual package name if different.)
 
 4. **Right-click** the file and select:
    ```

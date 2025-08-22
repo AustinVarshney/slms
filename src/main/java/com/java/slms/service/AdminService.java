@@ -16,5 +16,5 @@ public interface AdminService
 
     UserRequest updateAdmin(Long id, UserRequest adminDto);
 
-    void deleteAdmin(Long id);
+    void inActiveAdmin(Long id);
 }

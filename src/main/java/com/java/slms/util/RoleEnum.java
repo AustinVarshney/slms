@@ -5,5 +5,5 @@ public enum RoleEnum
     ROLE_ADMIN,
     ROLE_STUDENT,
     ROLE_TEACHER,
-    ROLE_FEE_STAFF
+    ROLE_NON_TEACHING_STAFF
 }

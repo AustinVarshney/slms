@@ -17,5 +17,7 @@ public interface SessionService
     List<SessionDto> getAllSessions();
 
     SessionDto getSessionById(Long id);
+
+    SessionDto getCurrentSession();
 }
 

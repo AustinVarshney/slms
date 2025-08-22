@@ -2,10 +2,13 @@ package com.java.slms.dto;
 
 import com.java.slms.util.DayOfWeek;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalTime;
 
-@Data
+@Getter
+@Setter
 public class TimetableResponseDTO
 {
     private Long id;

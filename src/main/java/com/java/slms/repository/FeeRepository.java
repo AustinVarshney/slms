@@ -6,6 +6,7 @@ import com.java.slms.util.FeeStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -16,6 +17,14 @@ public interface FeeRepository extends JpaRepository<Fee, Long>
     List<Fee> findByStudent_PanNumberAndMonth(String panNumber, FeeMonth month);
 
     List<Fee> findByStudent_PanNumberOrderByYearAscMonthAsc(String panNumber);
+
+    List<Fee> findByStatusAndDueDateLessThanEqual(FeeStatus status, LocalDate dueDate);
+
+    List<Fee> findByStatusAndDueDateLessThanEqualAndFeeStructure_Session_Id(
+            FeeStatus status,
+            LocalDate dueDate,
+            Long sessionId
+    );
 
 //
 //    List<Fee> findByFeeStructure_Id(Long feeStructureId);

@@ -1,8 +1,9 @@
 package com.java.slms.dto;
 
-import lombok.Data;
+import lombok.*;
 
-@Data
+@Getter
+@Setter
 public class StudentAuthRequest
 {
     String panNumber;

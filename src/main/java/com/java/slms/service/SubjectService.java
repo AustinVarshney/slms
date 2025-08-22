@@ -15,7 +15,7 @@ public interface SubjectService
 
     void deleteSubject(Long subjectId, Long classId);
 
-    SubjectDto updateSubjectById(Long subjectId, SubjectDto subjectDto);
+    SubjectDto updateSubjectInfoById(Long subjectId, SubjectDto subjectDto);
 
     List<SubjectDto> addSubjectsByClass(SubjectsBulkDto bulkDto);
 

@@ -1,14 +1,12 @@
 package com.java.slms.serviceImpl;
 
-import com.java.slms.dto.StudentRequestDto;
-import com.java.slms.dto.StudentAttendance;
-import com.java.slms.dto.StudentResponseDto;
-import com.java.slms.dto.UpdateStudentInfo;
+import com.java.slms.dto.*;
 import com.java.slms.exception.ResourceNotFoundException;
 import com.java.slms.exception.AlreadyExistException;
 import com.java.slms.exception.WrongArgumentException;
 import com.java.slms.model.*;
 import com.java.slms.repository.*;
+import com.java.slms.service.FeeService;
 import com.java.slms.service.StudentService;
 import com.java.slms.util.*;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -35,6 +34,7 @@ public class StudentServiceImpl implements StudentService
     private final SessionRepository sessionRepository;
     private final FeeStructureRepository feeStructureRepository;
     private final FeeRepository feeRepository;
+    private final FeeService feeService;
 
     @Override
     public StudentResponseDto createStudent(StudentRequestDto studentRequestDto)
@@ -60,6 +60,7 @@ public class StudentServiceImpl implements StudentService
                 studentRequestDto.getSessionId(),
                 EntityNames.SESSION);
 
+
         // Check if another class with same name and session already exists
         Optional<ClassEntity> duplicateClass = classEntityRepository
                 .findByClassNameIgnoreCaseAndSessionId(classEntity.getClassName(), studentRequestDto.getSessionId());
@@ -70,6 +71,12 @@ public class StudentServiceImpl implements StudentService
                     " for the selected session.");
         }
 
+        if (!session.isActive())
+        {
+            log.warn("Cannot add student to inactive session with ID {}", session.getId());
+            throw new WrongArgumentException("Cannot add student to an inactive session");
+        }
+
         Student student = modelMapper.map(studentRequestDto, Student.class);
         student.setStatus(UserStatus.ACTIVE);
 
@@ -77,8 +84,6 @@ public class StudentServiceImpl implements StudentService
         student.setClassRollNumber((maxRoll != null ? maxRoll : 0) + 1);
 
         student.setCurrentClass(classEntity);
-        student.setFeeStatus(FeeStatus.PENDING);
-        student.setFeeCatalogStatus(FeeCatalogStatus.PENDING);
         student.setUser(user);
         student.setSession(session);
 
@@ -106,8 +111,10 @@ public class StudentServiceImpl implements StudentService
         feeRepository.saveAll(feeEntries);
 
         log.info("Student created successfully with PAN: {}", studentRequestDto.getPanNumber());
-
-        return convertToDto(savedStudent);
+        StudentResponseDto studentResponseDto = convertToDto(savedStudent);
+        studentResponseDto.setFeeCatalogStatus(FeeCatalogStatus.PENDING);
+        studentResponseDto.setFeeStatus(FeeStatus.PENDING);
+        return studentResponseDto;
     }
 
     @Transactional
@@ -140,10 +147,24 @@ public class StudentServiceImpl implements StudentService
     public List<StudentResponseDto> getStudentsByClassId(Long classId)
     {
         log.info("Fetching students by class ID: {}", classId);
+
+        ClassEntity classEntity = classEntityRepository.findById(classId)
+                .orElseThrow(() -> new ResourceNotFoundException("Class not found with ID: " + classId));
+
+        if (!classEntity.getSession().isActive())
+        {
+            throw new WrongArgumentException("Current Class is already Inactive");
+        }
+
         List<Student> activeStudents = studentRepository.findByStatusAndCurrentClass_Id(UserStatus.ACTIVE, classId);
 
         return activeStudents.stream()
-                .map(this::convertToDto)
+                .map(student ->
+                {
+                    StudentResponseDto dto = convertToDto(student);
+                    setFeeStatuses(dto, student.getPanNumber());
+                    return dto;
+                })
                 .toList();
     }
 
@@ -152,7 +173,12 @@ public class StudentServiceImpl implements StudentService
     {
         log.info("Fetching all students");
         return studentRepository.findAll().stream()
-                .map(this::convertToDto)
+                .map(student ->
+                {
+                    StudentResponseDto dto = convertToDto(student);
+                    setFeeStatuses(dto, student.getPanNumber());
+                    return dto;
+                })
                 .toList();
     }
 
@@ -171,6 +197,7 @@ public class StudentServiceImpl implements StudentService
                         dto.setSessionId(student.getSession().getId());
                         dto.setSessionName(student.getSession().getName());
                     }
+                    setFeeStatuses(dto, student.getPanNumber());
                     return dto;
                 })
                 .toList();
@@ -183,6 +210,7 @@ public class StudentServiceImpl implements StudentService
         Student fetchedStudent = EntityFetcher.fetchStudentByPan(studentRepository, pan);
 
         StudentResponseDto studentResponseDto = convertToDto(fetchedStudent);
+        setFeeStatuses(studentResponseDto, pan);
         log.info("Student fetched successfully with PAN: {}", pan);
 
         return studentResponseDto;
@@ -204,27 +232,20 @@ public class StudentServiceImpl implements StudentService
                             fetchedStudent.getStatus().name().toLowerCase() + ".");
         }
 
+        if (!fetchedStudent.getSession().isActive())
+        {
+            throw new WrongArgumentException("Cannot update student because the session is inactive");
+        }
+
         modelMapper.map(updateStudentInfo, fetchedStudent);
         fetchedStudent.setPanNumber(pan);
 
         Student updatedStudent = studentRepository.save(fetchedStudent);
         log.info("Student updated successfully with PAN: {}", pan);
 
-        return convertToDto(updatedStudent);
-    }
-
-    @Override
-    public void deleteStudentByPan(String panNumber)
-    {
-        log.info("Deleting student and user with PAN: {}", panNumber);
-
-        Student student = EntityFetcher.fetchStudentByPan(studentRepository, panNumber);
-
-        User user = userRepository.findByPanNumberIgnoreCase(panNumber)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with PAN: " + panNumber));
-
-        studentRepository.delete(student);
-        log.info("Deleted student with PAN: {}", panNumber);
+        StudentResponseDto studentResponseDto = convertToDto(updatedStudent);
+        setFeeStatuses(studentResponseDto, pan);
+        return studentResponseDto;
     }
 
     @Override
@@ -255,4 +276,83 @@ public class StudentServiceImpl implements StudentService
         dto.setSessionName(student.getSession().getName());
         return dto;
     }
+
+    private void setFeeStatuses(StudentResponseDto dto, String pan)
+    {
+        FeeCatalogDto feeCatalog = feeService.getFeeCatalogByStudentPanNumber(pan);
+
+        LocalDate today = LocalDate.now();
+        Month currentMonth = today.getMonth();
+        int currentYear = today.getYear();
+
+        Month previousMonth = currentMonth.minus(1);
+        int previousYear = currentMonth == Month.JANUARY ? currentYear - 1 : currentYear;
+
+        Optional<MonthlyFeeDto> currentMonthFeeOpt = feeCatalog.getMonthlyFees().stream()
+                .filter(fee -> fee.getYear() == currentYear && fee.getMonth().equalsIgnoreCase(currentMonth.name()))
+                .findFirst();
+
+        Optional<MonthlyFeeDto> previousMonthFeeOpt = feeCatalog.getMonthlyFees().stream()
+                .filter(fee -> fee.getYear() == previousYear && fee.getMonth().equalsIgnoreCase(previousMonth.name()))
+                .findFirst();
+
+        if (currentMonthFeeOpt.isPresent() && "paid".equalsIgnoreCase(currentMonthFeeOpt.get().getStatus()))
+        {
+            // Current month paid
+            dto.setFeeStatus(FeeStatus.PAID);
+            dto.setFeeCatalogStatus(FeeCatalogStatus.UP_TO_DATE);
+            return;
+        }
+
+        if (today.getDayOfMonth() <= 15)
+        {
+            // On or before 15th and current month fee not paid
+            if (previousMonthFeeOpt.isPresent()
+                    && "paid".equalsIgnoreCase(previousMonthFeeOpt.get().getStatus()))
+            {
+                dto.setFeeStatus(FeeStatus.PENDING);
+                dto.setFeeCatalogStatus(FeeCatalogStatus.PENDING);
+                return;
+            }
+            // If no previous month or not paid, treat as pending as well
+            dto.setFeeStatus(FeeStatus.PENDING);
+            dto.setFeeCatalogStatus(FeeCatalogStatus.PENDING);
+            return;
+        }
+        else
+        {
+            // After 15th
+            if (currentMonthFeeOpt.isEmpty())
+            {
+                // No current month fee submitted → OVERDUE
+                dto.setFeeStatus(FeeStatus.OVERDUE);
+                dto.setFeeCatalogStatus(FeeCatalogStatus.OVERDUE);
+                return;
+            }
+
+            // Check if previous month is overdue
+            if (previousMonthFeeOpt.isPresent()
+                    && "overdue".equalsIgnoreCase(previousMonthFeeOpt.get().getStatus()))
+            {
+                dto.setFeeStatus(FeeStatus.OVERDUE);
+                dto.setFeeCatalogStatus(FeeCatalogStatus.OVERDUE);
+                return;
+            }
+
+            // Otherwise default to pending if current month fee exists but not paid
+            if (currentMonthFeeOpt.isPresent() &&
+                    !"paid".equalsIgnoreCase(currentMonthFeeOpt.get().getStatus()))
+            {
+                dto.setFeeStatus(FeeStatus.PENDING);
+                dto.setFeeCatalogStatus(FeeCatalogStatus.PENDING);
+                return;
+            }
+        }
+
+        // Default fallback
+        dto.setFeeStatus(FeeStatus.PENDING);
+        dto.setFeeCatalogStatus(FeeCatalogStatus.PENDING);
+    }
+
+
 }

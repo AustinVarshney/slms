@@ -4,7 +4,6 @@ import com.java.slms.util.RoleEnum;
 import jakarta.persistence.*;
 import lombok.*;
 
-import javax.management.relation.Role;
 import java.util.Set;
 
 @Entity
@@ -40,7 +39,7 @@ public class User
     private Set<RoleEnum> roles;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private FeeStaff feeStaff;
+    private NonTeachingStaff nonTeachingStaff;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private Teacher teacher;

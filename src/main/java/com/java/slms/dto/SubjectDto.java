@@ -1,10 +1,13 @@
 package com.java.slms.dto;
 
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.Date;
 
-@Data
+@Getter
+@Setter
 public class SubjectDto
 {
     private Long id;
@@ -12,6 +15,7 @@ public class SubjectDto
     private Long classId;
     private String className;
     private Long teacherId;
+    private Long sessionId;
     private String teacherName;
     private Date createdAt;
     private Date deletedAt;

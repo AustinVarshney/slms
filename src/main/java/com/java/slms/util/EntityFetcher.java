@@ -5,6 +5,7 @@ import com.java.slms.model.*;
 import com.java.slms.repository.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
@@ -52,9 +53,9 @@ public class EntityFetcher
                 });
     }
 
-    public static FeeStaff fetchFeeStaffById(FeeStaffRepository feeStaffRepository, Long feeStaffId)
+    public static NonTeachingStaff fetchFeeStaffById(NonTeachingStaffRepository nonTeachingStaffRepository, Long feeStaffId)
     {
-        return feeStaffRepository.findById(feeStaffId)
+        return nonTeachingStaffRepository.findById(feeStaffId)
                 .orElseThrow(() ->
                 {
                     log.error("FeeStaff not found with Id: " + feeStaffId);
@@ -81,6 +82,25 @@ public class EntityFetcher
 
         log.info("{} found with ID: {}", entityName, id);
         return entity.get();
+    }
+
+    @Transactional
+    public static void removeRoleFromUser(Long userId, RoleEnum roleToRemove, UserRepository userRepository)
+    {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (user.getRoles() != null && user.getRoles().contains(roleToRemove))
+        {
+            user.getRoles().remove(roleToRemove);
+            userRepository.save(user);
+
+            if (user.getRoles().isEmpty())
+            {
+                user.setEnabled(false);
+                userRepository.save(user);
+            }
+        }
     }
 
 

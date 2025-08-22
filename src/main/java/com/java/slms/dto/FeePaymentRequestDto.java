@@ -2,7 +2,8 @@ package com.java.slms.dto;
 
 import lombok.*;
 
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class FeePaymentRequestDto

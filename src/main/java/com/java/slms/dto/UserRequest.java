@@ -1,13 +1,13 @@
 package com.java.slms.dto;
 
 import com.java.slms.util.UserStatus;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
+import java.time.LocalDate;
 import java.util.Date;
 
-@Data
+@Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
 public class UserRequest
@@ -16,6 +16,10 @@ public class UserRequest
     private String email;
     private String qualification;
     private UserStatus status;
+    private String salaryGrade;
+    private String designation;
+    private String contactNumber;
+    private LocalDate joiningDate;
     private Long userId;
     private Date createdAt;
     private Date deletedAt;

@@ -22,7 +22,7 @@ public class UserServiceImpl implements UserService
 {
     private final UserRepository userRepository;
     private final StudentRepository studentRepository;
-    private final FeeStaffRepository feeStaffRepository;
+    private final NonTeachingStaffRepository nonTeachingStaffRepository;
     private final TeacherRepository teacherRepository;
     private final AdminRepository adminRepository;
     private final ModelMapper modelMapper;
@@ -55,7 +55,6 @@ public class UserServiceImpl implements UserService
         // Fetch the user by ID
         User user = EntityFetcher.fetchUserByUserId(userRepository, userId);
 
-        // Configure modelMapper to skip null fields
         modelMapper.getConfiguration().setSkipNullEnabled(true);
         modelMapper.map(userRequest, user);
 
@@ -90,12 +89,12 @@ public class UserServiceImpl implements UserService
 
             }
 
-            if (user.getFeeStaff() != null)
+            if (user.getNonTeachingStaff() != null)
             {
                 log.info("User ID {} is a Fee Staff", userId);
-                FeeStaff feeStaff = user.getFeeStaff();
-                modelMapper.map(userRequest, feeStaff);
-                updatedUser = modelMapper.map(feeStaffRepository.save(feeStaff), UserRequest.class);
+                NonTeachingStaff nonTeachingStaff = user.getNonTeachingStaff();
+                modelMapper.map(userRequest, nonTeachingStaff);
+                updatedUser = modelMapper.map(nonTeachingStaffRepository.save(nonTeachingStaff), UserRequest.class);
 
             }
         }

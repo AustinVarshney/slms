@@ -90,10 +90,10 @@ public class SubjectController
         );
     }
 
-    @PatchMapping("/{subjectId}")
+    @PutMapping("/{subjectId}")
     public ResponseEntity<ApiResponse<SubjectDto>> updateSubject(@PathVariable Long subjectId, @RequestBody SubjectDto subjectDto)
     {
-        SubjectDto updated = subjectService.updateSubjectById(subjectId, subjectDto);
+        SubjectDto updated = subjectService.updateSubjectInfoById(subjectId, subjectDto);
         return ResponseEntity.ok(
                 ApiResponse.<SubjectDto>builder()
                         .data(updated)

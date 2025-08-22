@@ -1,6 +1,7 @@
 package com.java.slms.controller;
 
 import com.java.slms.dto.*;
+import com.java.slms.exception.WrongArgumentException;
 import com.java.slms.model.User;
 import com.java.slms.payload.ApiResponse;
 import com.java.slms.repository.UserRepository;
@@ -11,6 +12,7 @@ import com.java.slms.service.StudentService;
 import com.java.slms.service.TeacherService;
 import com.java.slms.util.JwtUtil;
 import com.java.slms.util.RoleEnum;
+import com.java.slms.util.UserStatus;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
@@ -87,6 +89,14 @@ public class AuthController
                     .build());
         }
 
+        if (roleEnums.contains(RoleEnum.ROLE_TEACHER) && roleEnums.contains(RoleEnum.ROLE_NON_TEACHING_STAFF))
+        {
+            return ResponseEntity.badRequest().body(ApiResponse.<Void>builder()
+                    .message("A person cannot have both ROLE_TEACHER and NON_TEACHING_STAFF")
+                    .status(HttpStatus.BAD_REQUEST.value())
+                    .build());
+        }
+
         // Create and save user
         User user = User.builder()
                 .email(req.getEmail())
@@ -113,7 +123,7 @@ public class AuthController
                     adminReq.setUserId(user.getId());
                     adminService.createAdmin(adminReq);
                 }
-                case ROLE_FEE_STAFF ->
+                case ROLE_NON_TEACHING_STAFF ->
                 {
                     UserRequest feeStaffReq = modelMapper.map(req, UserRequest.class);
                     feeStaffReq.setUserId(user.getId());
@@ -172,7 +182,7 @@ public class AuthController
     }
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<AuthResponse>> login(@RequestBody AuthRequest req)
+    public ResponseEntity<ApiResponse<AuthResponse>> staffLogin(@RequestBody AuthRequest req)
     {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(req.getEmail(), req.getPassword()));

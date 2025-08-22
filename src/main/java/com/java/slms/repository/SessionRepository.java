@@ -11,7 +11,7 @@ public interface SessionRepository extends JpaRepository<Session, Long>
 {
     Optional<Session> findByName(String name);
 
-    List<Session> findByActive(boolean active);
+    Optional<Session> findByActiveTrue();
 
     boolean existsByStartDateLessThanEqualAndEndDateGreaterThanEqual(LocalDate endDate, LocalDate startDate);
 

@@ -14,14 +14,13 @@ import java.io.PrintWriter;
 public class JwtAuthEntryPoint implements AuthenticationEntryPoint
 {
     @Override
-    public void commence(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            AuthenticationException authException
-    ) throws IOException
+    public void commence(HttpServletRequest request,
+                         HttpServletResponse response,
+                         AuthenticationException authException) throws IOException
     {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
 
         String message = "Unauthorized access";
         String jwtError = (String) request.getAttribute("expiredJwt");
@@ -30,7 +29,10 @@ public class JwtAuthEntryPoint implements AuthenticationEntryPoint
             message = "JWT expired: " + jwtError;
         }
 
-        PrintWriter writer = response.getWriter();
-        writer.println("{ \"status\": 401, \"message\": \"" + message + "\" }");
+        try (PrintWriter writer = response.getWriter())
+        {
+            writer.write("{ \"status\": 401, \"message\": \"" + message + "\" }");
+            writer.flush();
+        }
     }
 }

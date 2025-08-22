@@ -28,7 +28,5 @@ public interface StudentService
 
     List<StudentAttendance> getStudentsPresentTodayByClass(Long classId);
 
-    void deleteStudentByPan(String panNumber);
-
     List<StudentResponseDto> getStudentsByClassId(Long classId);
 }

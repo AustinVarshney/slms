@@ -3,11 +3,13 @@ package com.java.slms.serviceImpl;
 import com.java.slms.dto.UserRequest;
 import com.java.slms.exception.AlreadyExistException;
 import com.java.slms.exception.ResourceNotFoundException;
-import com.java.slms.model.FeeStaff;
+import com.java.slms.model.NonTeachingStaff;
 import com.java.slms.model.User;
-import com.java.slms.repository.FeeStaffRepository;
+import com.java.slms.repository.NonTeachingStaffRepository;
 import com.java.slms.repository.UserRepository;
 import com.java.slms.service.FeeStaffService;
+import com.java.slms.util.EntityFetcher;
+import com.java.slms.util.RoleEnum;
 import com.java.slms.util.UserStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +26,7 @@ import java.util.stream.Collectors;
 public class FeeStaffServiceImpl implements FeeStaffService
 {
 
-    private final FeeStaffRepository feeStaffRepository;
+    private final NonTeachingStaffRepository nonTeachingStaffRepository;
     private final UserRepository userRepository;
     private final ModelMapper modelMapper;
 
@@ -33,34 +35,35 @@ public class FeeStaffServiceImpl implements FeeStaffService
     {
         log.info("Creating fee staff with email: {}", feeStaffDto.getEmail());
 
-        if (feeStaffRepository.findByEmailIgnoreCase(feeStaffDto.getEmail()).isPresent())
+        if (nonTeachingStaffRepository.findByEmailIgnoreCase(feeStaffDto.getEmail()).isPresent())
         {
             throw new AlreadyExistException("FeeStaff already exists with email: " + feeStaffDto.getEmail());
         }
 
-        FeeStaff feeStaff = modelMapper.map(feeStaffDto, FeeStaff.class);
-        feeStaff.setId(null);
-        FeeStaff savedFeeStaff = feeStaffRepository.save(feeStaff);
+        NonTeachingStaff nonTeachingStaff = modelMapper.map(feeStaffDto, NonTeachingStaff.class);
+        nonTeachingStaff.setId(null);
+        nonTeachingStaff.setStatus(UserStatus.ACTIVE);
+        NonTeachingStaff savedNonTeachingStaff = nonTeachingStaffRepository.save(nonTeachingStaff);
 
-        log.info("FeeStaff created with ID: {}", savedFeeStaff.getId());
-        return convertToDto(savedFeeStaff);
+        log.info("FeeStaff created with ID: {}", savedNonTeachingStaff.getId());
+        return convertToDto(savedNonTeachingStaff);
     }
 
     @Override
     public UserRequest getFeeStaffById(Long id)
     {
         log.info("Fetching fee staff with ID: {}", id);
-        FeeStaff feeStaff = feeStaffRepository.findById(id)
+        NonTeachingStaff nonTeachingStaff = nonTeachingStaffRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("FeeStaff not found with ID: " + id));
 
-        return convertToDto(feeStaff);
+        return convertToDto(nonTeachingStaff);
     }
 
     @Override
     public List<UserRequest> getAllFeeStaff()
     {
         log.info("Fetching all fee staff");
-        return feeStaffRepository.findAll().stream()
+        return nonTeachingStaffRepository.findAll().stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
@@ -75,48 +78,52 @@ public class FeeStaffServiceImpl implements FeeStaffService
                 .filter(Objects::nonNull)
                 .toList();
 
-        List<FeeStaff> feeStaffList = feeStaffRepository.findByEmailIn(emails);
-        return feeStaffList.stream().map(this::convertToDto).toList();
+        List<NonTeachingStaff> nonTeachingStaffList = nonTeachingStaffRepository.findByEmailIn(emails);
+        return nonTeachingStaffList.stream().map(this::convertToDto).toList();
     }
 
     @Override
     public UserRequest updateFeeStaff(Long id, UserRequest feeStaffDto)
     {
         log.info("Updating fee staff with ID: {}", id);
-        FeeStaff existingFeeStaff = feeStaffRepository.findById(id)
+        NonTeachingStaff existingNonTeachingStaff = nonTeachingStaffRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("FeeStaff not found with ID: " + id));
 
-        modelMapper.map(feeStaffDto, existingFeeStaff);
-        FeeStaff updatedFeeStaff = feeStaffRepository.save(existingFeeStaff);
+        modelMapper.map(feeStaffDto, existingNonTeachingStaff);
+        NonTeachingStaff updatedNonTeachingStaff = nonTeachingStaffRepository.save(existingNonTeachingStaff);
 
         log.info("FeeStaff updated successfully: {}", id);
-        return convertToDto(updatedFeeStaff);
+        return convertToDto(updatedNonTeachingStaff);
     }
 
-    @Override
     @Transactional
-    public void deleteFeeStaff(Long id)
+    @Override
+    public void inActiveNonTeachingStaff(Long id)
     {
-        FeeStaff feeStaff = feeStaffRepository.findById(id).orElseThrow(() ->
-                new ResourceNotFoundException("FeeStaff not found with ID: " + id));
-        feeStaffRepository.delete(feeStaff);
-        log.info("Deleted fee staff record with ID: {}", id);
+        NonTeachingStaff staff = nonTeachingStaffRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("NonTeachingStaff not found with ID: " + id));
+
+        if (staff.getStatus() == UserStatus.INACTIVE)
+        {
+            throw new AlreadyExistException("NonTeachingStaff is already inactive");
+        }
+
+        User user = staff.getUser();
+        staff.setStatus(UserStatus.INACTIVE);
+        nonTeachingStaffRepository.save(staff);
+        EntityFetcher.removeRoleFromUser(user.getId(), RoleEnum.ROLE_NON_TEACHING_STAFF, userRepository);
+        log.info("Marked NonTeachingStaff inactive with ID: {}", id);
     }
 
-    private UserRequest convertToDto(FeeStaff feeStaff)
+
+    private UserRequest convertToDto(NonTeachingStaff nonTeachingStaff)
     {
-        UserRequest dto = modelMapper.map(feeStaff, UserRequest.class);
+        UserRequest dto = modelMapper.map(nonTeachingStaff, UserRequest.class);
 
         // Set status from user entity if exists
-        userRepository.findByEmailIgnoreCase(feeStaff.getEmail()).ifPresent(user ->
-        {
-            dto.setStatus(user.isEnabled() ? UserStatus.ACTIVE : UserStatus.INACTIVE);
-            dto.setUserId(user.getId());
-        });
-
-        dto.setCreatedAt(feeStaff.getCreatedAt());
-        dto.setUpdatedAt(feeStaff.getUpdatedAt());
-        dto.setDeletedAt(feeStaff.getDeletedAt());
+        dto.setCreatedAt(nonTeachingStaff.getCreatedAt());
+        dto.setUpdatedAt(nonTeachingStaff.getUpdatedAt());
+        dto.setDeletedAt(nonTeachingStaff.getDeletedAt());
 
         return dto;
     }

@@ -72,28 +72,28 @@ public class FeeStaffController {
         );
     }
 
+//    @PutMapping("/{id}")
+//    public ResponseEntity<ApiResponse<UserRequest>> updateFeeStaff(
+//            @PathVariable Long id,
+//            @RequestBody UserRequest feeStaffDto) {
+//        UserRequest updated = feeStaffService.updateFeeStaff(id, feeStaffDto);
+//
+//        return ResponseEntity.ok(
+//                ApiResponse.<UserRequest>builder()
+//                        .data(updated)
+//                        .message("FeeStaff updated successfully")
+//                        .status(HttpStatus.OK.value())
+//                        .build()
+//        );
+//    }
+
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<UserRequest>> updateFeeStaff(
-            @PathVariable Long id,
-            @RequestBody UserRequest feeStaffDto) {
-        UserRequest updated = feeStaffService.updateFeeStaff(id, feeStaffDto);
-
-        return ResponseEntity.ok(
-                ApiResponse.<UserRequest>builder()
-                        .data(updated)
-                        .message("FeeStaff updated successfully")
-                        .status(HttpStatus.OK.value())
-                        .build()
-        );
-    }
-
-    @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteFeeStaff(@PathVariable Long id) {
-        feeStaffService.deleteFeeStaff(id);
+        feeStaffService.inActiveNonTeachingStaff(id);
 
         return ResponseEntity.ok(
                 ApiResponse.<Void>builder()
-                        .message("FeeStaff deleted successfully")
+                        .message("FeeStaff Deactivated successfully")
                         .status(HttpStatus.OK.value())
                         .build()
         );

@@ -12,11 +12,9 @@ public interface TeacherService
 
     List<TeacherDto> getAllTeachers();
 
-    TeacherDto updateTeacher(Long id, TeacherDto teacherDto);
-
     List<TeacherDto> getActiveTeachers();
 
-    void deleteTeacher(Long id); // hard delete
+    void inActiveTeacher(Long id);
 
     TeacherDto getTeacherByEmail(String email);
 

@@ -2,10 +2,13 @@ package com.java.slms.dto;
 
 import com.java.slms.util.Gender;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDate;
 
-@Data
+@Getter
+@Setter
 public class UpdateStudentInfo
 {
     private String name;

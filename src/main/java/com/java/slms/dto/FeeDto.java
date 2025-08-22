@@ -7,7 +7,8 @@ import java.time.LocalDate;
 import java.time.Month;
 import java.util.Date;
 
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class FeeDto

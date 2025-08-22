@@ -18,4 +18,19 @@ public interface ClassEntityRepository extends JpaRepository<ClassEntity, Long>
 
     Optional<ClassEntity> findByIdAndSessionId(Long classId, Long sessionId);
 
+    @Query("SELECT c FROM ClassEntity c " +
+            "WHERE c.id = :classId " +
+            "AND c.session.id = :sessionId " +
+            "AND c.session.active = true")
+    Optional<ClassEntity> findByIdAndSessionIdAndActiveSession(@Param("classId") Long classId,
+                                                               @Param("sessionId") Long sessionId);
+
+    @Query("SELECT c FROM ClassEntity c " +
+            "WHERE LOWER(c.className) = LOWER(:className) " +
+            "AND c.session.id = :sessionId " +
+            "AND c.session.active = true")
+    Optional<ClassEntity> findByClassNameIgnoreCaseAndSessionIdAndActiveSession(@Param("className") String className,
+                                                                                @Param("sessionId") Long sessionId);
+
+
 }

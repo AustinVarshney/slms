@@ -47,4 +47,6 @@ public interface StudentRepository extends JpaRepository<Student, String>
 
     List<Student> findByPanNumberIn(List<String> panNumbers);
 
+    List<Student> findBySession_Id(Long sessionId);
+
 }

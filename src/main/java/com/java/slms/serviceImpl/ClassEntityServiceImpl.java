@@ -2,8 +2,10 @@ package com.java.slms.serviceImpl;
 
 import com.java.slms.dto.ClassRequestDto;
 import com.java.slms.dto.ClassResponseDto;
+import com.java.slms.dto.StudentResponseDto;
 import com.java.slms.exception.AlreadyExistException;
 import com.java.slms.exception.ResourceNotFoundException;
+import com.java.slms.exception.WrongArgumentException;
 import com.java.slms.model.ClassEntity;
 import com.java.slms.model.FeeStructure;
 import com.java.slms.model.Session;
@@ -12,6 +14,7 @@ import com.java.slms.repository.FeeStructureRepository;
 import com.java.slms.repository.SessionRepository;
 import com.java.slms.repository.TeacherRepository;
 import com.java.slms.service.ClassEntityService;
+import com.java.slms.service.StudentService;
 import com.java.slms.util.EntityFetcher;
 import com.java.slms.util.EntityNames;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +36,7 @@ public class ClassEntityServiceImpl implements ClassEntityService
     private final TeacherRepository teacherRepository;
     private final SessionRepository sessionRepository;
     private final FeeStructureRepository feeStructureRepository;
+    private final StudentService studentService;
 
     @Override
     @Transactional
@@ -44,7 +48,7 @@ public class ClassEntityServiceImpl implements ClassEntityService
         if (existingClass.isPresent())
         {
             log.warn("Class already exists with name '{}' for session ID {}", classRequestDto.getClassName(), classRequestDto.getSessionId());
-            throw new AlreadyExistException("Class already exists with this name for the selected session.");
+            throw new AlreadyExistException("Class already exists with this name for the selected active session.");
         }
 
         Session session = EntityFetcher.fetchByIdOrThrow(
@@ -52,6 +56,12 @@ public class ClassEntityServiceImpl implements ClassEntityService
                 classRequestDto.getSessionId(),
                 EntityNames.SESSION
         );
+
+        if (!session.isActive())
+        {
+            log.warn("Cannot add class to inactive session with ID {}", classRequestDto.getSessionId());
+            throw new WrongArgumentException("Cannot add class to an inactive session");
+        }
 
         ClassEntity classEntity = modelMapper.map(classRequestDto, ClassEntity.class);
         classEntity.setSession(session);
@@ -101,6 +111,8 @@ public class ClassEntityServiceImpl implements ClassEntityService
                     }
                     dto.setFeesAmount(feeStructure != null ? feeStructure.getFeesAmount() : null);
                     dto.setTotalStudents(classEntity.getStudents() != null ? classEntity.getStudents().size() : 0);
+                    List<StudentResponseDto> students = studentService.getStudentsByClassId(classId);
+                    dto.setStudents(students);
                     return dto;
                 })
                 .toList();
@@ -125,6 +137,8 @@ public class ClassEntityServiceImpl implements ClassEntityService
         dto.setSessionName(classEntity.getSession().getName());
         dto.setFeesAmount(feeStructure.getFeesAmount());
         dto.setTotalStudents(classEntity.getStudents() != null ? classEntity.getStudents().size() : 0);
+        List<StudentResponseDto> students = studentService.getStudentsByClassId(classId);
+        dto.setStudents(students);
         return dto;
     }
 
@@ -136,6 +150,13 @@ public class ClassEntityServiceImpl implements ClassEntityService
                     log.error("Class not found with ClassId: {} and SessionId: {}", classId, sessionId);
                     return new ResourceNotFoundException("Class not found with ClassId: " + classId + " and SessionId: " + sessionId);
                 });
+
+        if (!classEntity.getSession().isActive())
+        {
+            log.error("Cannot delete class from inactive session with ID {}", classEntity.getSession().getId());
+            throw new WrongArgumentException("Cannot add class to an inactive session");
+        }
+
         classEntityRepository.delete(classEntity);
     }
 
@@ -160,6 +181,12 @@ public class ClassEntityServiceImpl implements ClassEntityService
         {
             throw new AlreadyExistException("Class already exists with name: " + classRequestDto.getClassName() +
                     " for the selected session.");
+        }
+
+        if (!session.isActive())
+        {
+            log.warn("Cannot update class due to inactive session with ID {}", classRequestDto.getSessionId());
+            throw new WrongArgumentException("Cannot update class due to inactive session");
         }
 
         // Update the class

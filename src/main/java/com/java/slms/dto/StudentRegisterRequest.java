@@ -1,8 +1,10 @@
 package com.java.slms.dto;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
+@Getter
+@Setter
 public class StudentRegisterRequest
 {
     String panNumber;

@@ -17,7 +17,7 @@ import java.util.List;
 @RequestMapping("/api/teachers")
 @RequiredArgsConstructor
 @Slf4j
-@PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+@PreAuthorize("hasRole('ROLE_ADMIN')")
 public class TeacherController
 {
 
@@ -102,26 +102,10 @@ public class TeacherController
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<TeacherDto>> updateTeacher(
-            @PathVariable Long id,
-            @RequestBody TeacherDto teacherDto)
-    {
-        log.info("Updating teacher with ID: {}", id);
-        TeacherDto updatedTeacher = teacherService.updateTeacher(id, teacherDto);
-        return ResponseEntity.ok(
-                ApiResponse.<TeacherDto>builder()
-                        .data(updatedTeacher)
-                        .message("Teacher updated successfully")
-                        .status(HttpStatus.OK.value())
-                        .build()
-        );
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteTeacher(@PathVariable Long id)
+    public ResponseEntity<ApiResponse<Void>> inActiveTeacher(@PathVariable Long id)
     {
         log.info("Hard deleting teacher with ID: {}", id);
-        teacherService.deleteTeacher(id);
+        teacherService.inActiveTeacher(id);
         return ResponseEntity.ok(
                 ApiResponse.<Void>builder()
                         .message("Teacher deleted successfully")

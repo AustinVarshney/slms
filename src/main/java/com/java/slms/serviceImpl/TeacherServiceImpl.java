@@ -3,12 +3,11 @@ package com.java.slms.serviceImpl;
 import com.java.slms.dto.TeacherDto;
 import com.java.slms.exception.AlreadyExistException;
 import com.java.slms.exception.ResourceNotFoundException;
-import com.java.slms.model.ClassEntity;
-import com.java.slms.model.Subject;
-import com.java.slms.model.Teacher;
-import com.java.slms.model.User;
+import com.java.slms.model.*;
 import com.java.slms.repository.*;
 import com.java.slms.service.TeacherService;
+import com.java.slms.util.EntityFetcher;
+import com.java.slms.util.RoleEnum;
 import com.java.slms.util.UserStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +30,7 @@ public class TeacherServiceImpl implements TeacherService
     private final ClassEntityRepository classEntityRepository;
     private final UserRepository userRepository;
     private final AdminRepository adminRepository;
-    private final FeeStaffRepository feeStaffRepository;
+    private final NonTeachingStaffRepository nonTeachingStaffRepository;
 
     @Override
     public TeacherDto createTeacher(TeacherDto teacherDto)
@@ -44,6 +43,7 @@ public class TeacherServiceImpl implements TeacherService
         }
 
         Teacher teacher = modelMapper.map(teacherDto, Teacher.class);
+        teacher.setStatus(UserStatus.ACTIVE);
         Teacher savedTeacher = teacherRepository.save(teacher);
 
         log.info("Teacher created with ID: {}", savedTeacher.getId());
@@ -56,7 +56,6 @@ public class TeacherServiceImpl implements TeacherService
         log.info("Fetching teacher with ID: {}", id);
         Teacher teacher = teacherRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Teacher not found with ID: " + id));
-
         return convertToDto(teacher);
     }
 
@@ -72,40 +71,29 @@ public class TeacherServiceImpl implements TeacherService
     @Override
     public List<TeacherDto> getActiveTeachers()
     {
-        log.info("Fetching active teachers");
-        List<User> activeUsers = userRepository.findByEmailIsNotNullAndEnabledTrue();
-        List<String> emails = activeUsers.stream()
-                .map(User::getEmail)
-                .filter(Objects::nonNull)
-                .toList();
-
-        List<Teacher> teachers = teacherRepository.findByEmailIn(emails);
+        List<Teacher> teachers = teacherRepository.findByStatus(UserStatus.ACTIVE);
         return teachers.stream().map(this::convertToDto).toList();
     }
 
     @Override
-    public TeacherDto updateTeacher(Long id, TeacherDto teacherDto)
-    {
-        log.info("Updating teacher with ID: {}", id);
-        Teacher existingTeacher = teacherRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Teacher not found with ID: " + id));
-
-        modelMapper.map(teacherDto, existingTeacher);
-        Teacher updatedTeacher = teacherRepository.save(existingTeacher);
-
-        log.info("Teacher updated successfully: {}", id);
-        return convertToDto(updatedTeacher);
-    }
-
-
-    @Override
     @Transactional
-    public void deleteTeacher(Long id)
+    public void inActiveTeacher(Long id)
     {
         Teacher teacher = teacherRepository.findById(id).orElseThrow(() ->
                 new ResourceNotFoundException("Teacher not found with ID: " + id));
-        teacherRepository.delete(teacher);
-        log.info("Deleted teacher record with ID: {}", id);
+        if (teacher.getStatus().equals(UserStatus.INACTIVE))
+            throw new AlreadyExistException("Teacher Already inactive");
+
+        List<Subject> assignedSubjects = teacher.getSubjects();
+        for (Subject subject : assignedSubjects)
+        {
+            subject.setTeacher(null);
+        }
+        subjectRepository.saveAll(assignedSubjects);
+
+        teacher.setStatus(UserStatus.INACTIVE);
+        teacherRepository.save(teacher);
+        EntityFetcher.removeRoleFromUser(teacher.getUser().getId(), RoleEnum.ROLE_TEACHER, userRepository);
 
     }
 
@@ -151,12 +139,6 @@ public class TeacherServiceImpl implements TeacherService
                 .map(ClassEntity::getClassName)  // assuming getClassName() returns class name
                 .collect(Collectors.toList());
         dto.setClassName(classNames);
-
-        // 3. Status based on user
-        userRepository.findByEmailIgnoreCase(teacher.getEmail()).ifPresent(user ->
-        {
-            dto.setStatus(user.isEnabled() ? UserStatus.ACTIVE : UserStatus.INACTIVE);
-        });
 
         // 4. Timestamps
         dto.setCreatedAt(teacher.getCreatedAt());

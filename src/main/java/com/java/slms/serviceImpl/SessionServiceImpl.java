@@ -16,6 +16,7 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +29,12 @@ public class SessionServiceImpl implements SessionService
     @Override
     public SessionDto createSession(CreateOrUpdateSessionRequest dto)
     {
+        Optional<Session> activeSessionOpt = sessionRepository.findByActiveTrue();
+
+        if (activeSessionOpt.isPresent())
+        {
+            throw new WrongArgumentException("An active session already exists. Please close all active sessions before creating a new one.");
+        }
         LocalDate start = dto.getStartDate();
         LocalDate end = dto.getEndDate();
 
@@ -110,6 +117,14 @@ public class SessionServiceImpl implements SessionService
     {
         Session session = sessionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Session not found"));
+        return modelMapper.map(session, SessionDto.class);
+    }
+
+    @Override
+    public SessionDto getCurrentSession()
+    {
+        Session session = sessionRepository.findByActiveTrue()
+                .orElseThrow(() -> new ResourceNotFoundException("No active session found"));
         return modelMapper.map(session, SessionDto.class);
     }
 }

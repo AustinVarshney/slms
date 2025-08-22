@@ -1,6 +1,7 @@
 package com.java.slms.service;
 
 import com.java.slms.dto.UserRequest;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -17,5 +18,6 @@ public interface FeeStaffService
 
     UserRequest updateFeeStaff(Long id, UserRequest feeStaffDto);
 
-    void deleteFeeStaff(Long id);
+    @Transactional
+    void inActiveNonTeachingStaff(Long id);
 }

@@ -63,30 +63,13 @@ public class AdminController
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<UserRequest>> updateAdmin(
-            @PathVariable Long id,
-            @RequestBody UserRequest adminDto
-    )
+    public ResponseEntity<ApiResponse<Void>> inActiveAdmin(@PathVariable Long id)
     {
-        UserRequest updatedAdmin = adminService.updateAdmin(id, adminDto);
-
-        return ResponseEntity.ok(
-                ApiResponse.<UserRequest>builder()
-                        .data(updatedAdmin)
-                        .message("Admin updated successfully")
-                        .status(HttpStatus.OK.value())
-                        .build()
-        );
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteAdmin(@PathVariable Long id)
-    {
-        adminService.deleteAdmin(id);
+        adminService.inActiveAdmin(id);
 
         return ResponseEntity.ok(
                 ApiResponse.<Void>builder()
-                        .message("Admin deleted successfully")
+                        .message("Admin Deactivated successfully")
                         .status(HttpStatus.OK.value())
                         .build()
         );

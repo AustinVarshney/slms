@@ -4,13 +4,15 @@ import com.java.slms.util.FeeCatalogStatus;
 import com.java.slms.util.FeeStatus;
 import com.java.slms.util.Gender;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDate;
 import java.util.Date;
 
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class StudentRequestDto

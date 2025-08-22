@@ -1,20 +1,21 @@
 package com.java.slms.model;
 
-import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.java.slms.util.FeeStatus;
 import com.java.slms.util.UserStatus;
 import jakarta.persistence.*;
+
 import lombok.*;
 
 import java.time.LocalDate;
-import java.util.List;
 
-@Entity
+@EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 @Getter
 @Setter
-@NoArgsConstructor
+@Entity
 @AllArgsConstructor
-@EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
-public class Teacher extends BaseEntity
+@NoArgsConstructor
+@Builder
+public class NonTeachingStaff extends BaseEntity
 {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -24,7 +25,6 @@ public class Teacher extends BaseEntity
     private String name;
     private String email;
     private String designation;
-    private String salaryGrade;
     private String contactNumber;
     private String qualification;
     private LocalDate joiningDate;
@@ -33,16 +33,7 @@ public class Teacher extends BaseEntity
     @Column(name = "status")
     private UserStatus status;
 
-
-//    @ManyToMany(mappedBy = "teachers", fetch = FetchType.LAZY)
-//    private List<ClassEntity> classes;
-
-    @OneToMany(mappedBy = "teacher", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonManagedReference
-    private List<Subject> subjects;
-
     @OneToOne
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
-
 }

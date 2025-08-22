@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 public class JwtUtil
 {
     // load from application.yml / env in real app
-    private final String JWT_SECRET = "jwtSecret";
+    private final String JWT_SECRET = "jwt.secret";
     private final long jwtExpirationInMs = 1000L * 60 * 60; // 1 hour
 
     private final Key key = Keys.hmacShaKeyFor(ConfigUtil.getRequired(JWT_SECRET).getBytes());

@@ -3,7 +3,8 @@ package com.java.slms.dto;
 import com.java.slms.util.FeeMonth;
 import lombok.*;
 
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class FeeRequestDTO

@@ -21,5 +21,5 @@ public interface ClassEntityRepository extends JpaRepository<ClassEntity, Long>
 
     List<ClassEntity> findBySession_Id(Long sessionId);
 
-
+    boolean existsByIdAndSessionId(Long classId, Long sessionId);
 }

@@ -1,5 +1,6 @@
 package com.java.slms.controller;
 
+import com.java.slms.dto.PasswordDto;
 import com.java.slms.dto.UserRequest;
 import com.java.slms.payload.ApiResponse;
 import com.java.slms.service.UserService;
@@ -19,7 +20,7 @@ public class UserController
     @PutMapping("/{userId}/change-password")
     public ResponseEntity<ApiResponse<Void>> changePassword(
             @PathVariable Long userId,
-            @RequestParam String password
+            @RequestBody PasswordDto password
     )
     {
         userService.changePassword(userId, password);

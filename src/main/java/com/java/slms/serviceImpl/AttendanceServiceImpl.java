@@ -1,27 +1,30 @@
 package com.java.slms.serviceImpl;
 
-import com.java.slms.dto.AttendanceDto;
-import com.java.slms.dto.AttendenceResponse;
-import com.java.slms.dto.StudentAttendance;
-import com.java.slms.dto.StudentRequestDto;
-import com.java.slms.exception.AlreadyExistException;
+import com.java.slms.dto.*;
 import com.java.slms.exception.ResourceNotFoundException;
 import com.java.slms.exception.WrongArgumentException;
 import com.java.slms.model.Attendance;
+import com.java.slms.model.Session;
 import com.java.slms.model.Student;
 import com.java.slms.repository.AttendanceRepository;
+import com.java.slms.repository.ClassEntityRepository;
+import com.java.slms.repository.SessionRepository;
+import com.java.slms.repository.StudentRepository;
 import com.java.slms.service.AttendanceService;
 import com.java.slms.service.StudentService;
+import com.java.slms.util.FeeMonth;
+import com.java.slms.util.UserStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.time.LocalTime;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
@@ -31,147 +34,315 @@ public class AttendanceServiceImpl implements AttendanceService
     private final StudentService studentService;
     private final ModelMapper modelMapper;
     private final AttendanceRepository attendanceRepository;
+    private final SessionRepository sessionRepository;
+    private final ClassEntityRepository classEntityRepository;
+    private final StudentRepository studentRepository;
 
     @Override
-    public AttendanceDto markTodaysAttendance(AttendanceDto attendanceDto)
+    @Transactional
+    public void markTodaysAttendance(AttendanceDto attendanceDto)
     {
-        return null;
-//        LocalDate todayStart = LocalDate.now();
-//        LocalDateTime dayStart = todayStart.atStartOfDay();
-//        LocalDateTime dayEnd = dayStart.plusDays(1);
-//
-//        List<StudentAttendance> inputAttendances = attendanceDto.getStudentAttendances();
-//        if (inputAttendances == null || inputAttendances.isEmpty())
-//        {
-//            throw new WrongArgumentException("No student attendances provided");
-//        }
-//
-//        List<StudentAttendance> savedAttendanceList = new ArrayList<>();
-//
-//        for (StudentAttendance sa : inputAttendances)
-//        {
-//            String panNumber = sa.getPanNumber();
-//
-//            // Fetch student info
-//            StudentRequestDto studentRequestDto = studentService.getStudentByPAN(panNumber);
-//            if (studentRequestDto == null)
-//            {
-//                log.error("Student with PAN '{}' not found", panNumber);
-//                throw new ResourceNotFoundException("Student with PAN '" + panNumber + "' not found");
-//            }
-//
-//            // Map to entity
-//            Student student = modelMapper.map(studentRequestDto, Student.class);
-//
-//            // Check if attendance for today already exists for this student
-//            Optional<Attendance> existingAttendanceOpt = attendanceRepository.findByStudentAndDateBetween(student, dayStart, dayEnd);
-//
-//            if (existingAttendanceOpt.isPresent())
-//            {
-//                log.error("Attendance already marked for today for PAN: {}", panNumber);
-//                throw new AlreadyExistException("Attendance already marked for today for PAN: " + panNumber);
-//            }
-//
-//            // Create and save attendance
-//            Attendance attendance = new Attendance();
-//            attendance.setDate(LocalDateTime.now());
-//            attendance.setStudent(student);
-//            attendance.setPresent(sa.isPresent());
-//
-//            Attendance saved = attendanceRepository.save(attendance);
-//
-//            // Add to response list
-//            StudentAttendance savedSA = new StudentAttendance();
-//            savedSA.setPanNumber(panNumber);
-//            savedSA.setPresent(saved.isPresent());
-//            savedAttendanceList.add(savedSA);
-//        }
-//
-//        // Prepare and return updated AttendanceDto
-//        AttendanceDto responseDto = new AttendanceDto();
-//        responseDto.setDate(LocalDateTime.now());
-//        responseDto.setStudentAttendances(savedAttendanceList);
-//
-//        return responseDto;
+        LocalDate todayStart = LocalDate.now();
+        LocalDateTime dayStart = todayStart.atStartOfDay();
+        LocalDateTime dayEnd = dayStart.plusDays(1);
+
+        List<StudentAttendance> inputAttendances = attendanceDto.getStudentAttendances();
+        if (inputAttendances == null || inputAttendances.isEmpty())
+        {
+            throw new WrongArgumentException("No student attendances provided");
+        }
+
+        Long classId = attendanceDto.getClassId();
+        if (classId == null)
+        {
+            throw new WrongArgumentException("Class ID must be provided");
+        }
+
+        // Get the active session
+        Session activeSession = sessionRepository.findByActiveTrue()
+                .orElseThrow(() -> new ResourceNotFoundException("No active session found"));
+
+        boolean classBelongsToSession = classEntityRepository.existsByIdAndSessionId(classId, activeSession.getId());
+        if (!classBelongsToSession)
+        {
+            throw new WrongArgumentException("Class ID " + classId + " does not belong to the active session");
+        }
+
+        for (StudentAttendance sa : inputAttendances)
+        {
+            String panNumber = sa.getPanNumber();
+
+            // Fetch student info
+            StudentResponseDto studentResponseDto = studentService.getStudentByPAN(panNumber);
+
+            if (studentResponseDto.getStatus().equals(UserStatus.INACTIVE) ||
+                    studentResponseDto.getStatus().equals(UserStatus.GRADUATED))
+            {
+                log.error("Student with PAN '{}' has status: {}", panNumber, studentResponseDto.getStatus());
+                throw new WrongArgumentException("Student with PAN '" + panNumber + "' has status '" + studentResponseDto.getStatus() + "' and cannot be marked for attendance");
+            }
+
+            if (studentResponseDto == null)
+            {
+                log.error("Student with PAN '{}' not found", panNumber);
+                throw new ResourceNotFoundException("Student with PAN '" + panNumber + "' not found");
+            }
+
+            // Check if student belongs to active session
+            if (!studentResponseDto.getSessionId().equals(activeSession.getId()))
+            {
+                log.error("Student with PAN '{}' does not belong to the active session", panNumber);
+                throw new WrongArgumentException("Student with PAN '" + panNumber + "' does not belong to the active session");
+            }
+
+            // Check if student belongs to the specified class
+            if (!studentResponseDto.getClassId().equals(classId))
+            {
+                log.error("Student with PAN '{}' does not belong to class ID {}", panNumber, classId);
+                throw new WrongArgumentException("Student with PAN '" + panNumber + "' does not belong to class ID " + classId);
+            }
+
+            // Map to entity
+            Student student = modelMapper.map(studentResponseDto, Student.class);
+
+            // Check if attendance for today already exists for this student and class
+            Optional<Attendance> existingAttendanceOpt = attendanceRepository.findByStudentAndDateBetween(student, dayStart, dayEnd);
+
+            if (existingAttendanceOpt.isPresent())
+            {
+                log.error("Attendance already marked for today for PAN: {}", panNumber);
+                continue;
+            }
+
+            // Create and save attendance
+            Attendance attendance = new Attendance();
+            attendance.setDate(LocalDateTime.now());
+            attendance.setStudent(student);
+            attendance.setPresent(sa.isPresent());
+            attendance.setSession(activeSession);
+
+            attendanceRepository.save(attendance);
+        }
+
     }
 
     @Override
-    public AttendanceDto updateAttendanceForAdmin(AttendanceDto attendanceDto, LocalDate attendanceDate)
+    @Transactional
+    public AttendanceUpdateResult updateAttendanceForAdmin(AttendanceDto attendanceDto, LocalDate attendanceDate)
     {
-        return null;
-//        // Validate attendanceDate is within last 5 days including today
-//        LocalDate today = LocalDate.now();
-//        LocalDate earliestAllowedDate = today.minusDays(4); // 5 days window: today + previous 4 days
-//
-//        if (attendanceDate.isBefore(earliestAllowedDate) || attendanceDate.isAfter(today))
-//        {
-//            throw new WrongArgumentException("Attendance date must be within the last five days including today.");
-//        }
-//
-//        List<StudentAttendance> inputAttendances = attendanceDto.getStudentAttendances();
-//        if (inputAttendances == null || inputAttendances.isEmpty())
-//        {
-//            throw new WrongArgumentException("No student attendance records provided.");
-//        }
-//
-//        LocalDateTime startDateTime = attendanceDate.atStartOfDay();
-//        LocalDateTime endDateTime = startDateTime.plusDays(1);
-//
-//        List<StudentAttendance> updatedAttendances = new ArrayList<>();
-//
-//        for (StudentAttendance sa : inputAttendances)
-//        {
-//            String panNumber = sa.getPanNumber();
-//
-//            // Fetch student info
-//            StudentRequestDto studentRequestDto = studentService.getStudentByPAN(panNumber);
-//            if (studentRequestDto == null)
-//            {
-//                log.error("Student with PAN '{}' not found", panNumber);
-//                throw new ResourceNotFoundException("Student with PAN '" + panNumber + "' not found");
-//            }
-//            Student student = modelMapper.map(studentRequestDto, Student.class);
-//
-//            // Find attendance for this student at the specific date
-//            Optional<Attendance> existingAttendanceOpt = attendanceRepository.findByStudentAndDateBetween(
-//                    student, startDateTime, endDateTime);
-//
-//            if (existingAttendanceOpt.isPresent())
-//            {
-//                Attendance attendance = existingAttendanceOpt.get();
-//                // Update attendance present status
-//                attendance.setPresent(sa.isPresent());
-//                attendanceRepository.save(attendance);
-//            }
-//            else
-//            {
-//                // Optionally: create if absent or throw exception
-//                // Here, create a new attendance record if none exists
-//                Attendance attendance = new Attendance();
-//                attendance.setStudent(student);
-//                attendance.setDate(attendanceDate.atStartOfDay()); // or LocalDateTime.now(), or datetime precision you want
-//                attendance.setPresent(sa.isPresent());
-//                attendanceRepository.save(attendance);
-//            }
-//
-//            updatedAttendances.add(sa);
-//        }
-//
-//        // Return DTO summarizing the updated data
-//        AttendanceDto responseDto = new AttendanceDto();
-//        responseDto.setDate(attendanceDate.atStartOfDay());
-//        responseDto.setStudentAttendances(updatedAttendances);
-//
-//        return responseDto;
+        AttendanceUpdateResult result = new AttendanceUpdateResult();
+
+        Session activeSession = sessionRepository.findByActiveTrue()
+                .orElseThrow(() -> new ResourceNotFoundException("No active session found"));
+
+        if (attendanceDate.isBefore(activeSession.getStartDate()) || attendanceDate.isAfter(activeSession.getEndDate()))
+        {
+            throw new IllegalArgumentException("Attendance date " + attendanceDate + " is outside the active session period.");
+        }
+
+        if (attendanceDto.getStudentAttendances() == null || attendanceDto.getStudentAttendances().isEmpty())
+        {
+            throw new IllegalArgumentException("Student attendances must be provided");
+        }
+
+        for (StudentAttendance sa : attendanceDto.getStudentAttendances())
+        {
+            String panNumber = sa.getPanNumber();
+
+            Optional<Student> fetchedStudent = studentRepository.findById(panNumber);
+
+            if (fetchedStudent.isEmpty())
+            {
+                log.warn("Student with PAN '{}' not found. Skipping attendance update.", panNumber);
+                result.getInvalidPanNumbers().add(panNumber);
+                continue;
+            }
+
+            Student student = fetchedStudent.get();
+
+            if (student.getStatus().equals(UserStatus.INACTIVE) || student.getStatus().equals(UserStatus.GRADUATED))
+            {
+                log.warn("Student with PAN '{}' is inactive or graduated. Skipping attendance update.", panNumber);
+                result.getInvalidPanNumbers().add(panNumber);
+                continue;
+            }
+
+            LocalDateTime dayStart = attendanceDate.atStartOfDay();
+            LocalDateTime dayEnd = attendanceDate.plusDays(1).atStartOfDay();
+
+            Optional<Attendance> attendanceOpt = attendanceRepository.findByStudentAndDateBetween(student, dayStart, dayEnd);
+
+            if (attendanceOpt.isEmpty())
+            {
+                log.warn("Attendance record not found for student PAN '{}' on date {}. Skipping.", panNumber, attendanceDate);
+                result.getInvalidPanNumbers().add(panNumber);
+                continue;
+            }
+
+            Attendance attendance = attendanceOpt.get();
+
+            if (attendance.isPresent() == sa.isPresent())
+            {
+                log.info("Attendance for student PAN '{}' on {} already marked as present={}, skipping update.",
+                        panNumber, attendanceDate, attendance.isPresent());
+                result.getUnchangedPanNumbers().add(panNumber);
+                continue;
+            }
+
+            attendance.setPresent(sa.isPresent());
+            attendance.setUpdatedAt(new Date());
+            attendanceRepository.save(attendance);
+
+            result.getUpdatedPanNumbers().add(panNumber);
+            log.info("Updated attendance for student PAN '{}' on {} to present={}.", panNumber, attendanceDate, sa.isPresent());
+        }
+
+        return result;
     }
 
     @Override
-    public List<AttendenceResponse> getAllAttendanceByPan(String panNumber)
+    public List<AttendanceInfoDto> getAllAttendanceByPanAndSessionId(String panNumber, Long sessionId, FeeMonth month)
     {
-        List<Attendance> attendances = attendanceRepository.findByStudent_PanNumberOrderByDateDesc(panNumber);
-        return attendances.stream()
-                .map(att -> modelMapper.map(att, AttendenceResponse.class))
-                .toList();
+        // Fetch session for date range filtering
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Session not found with id: " + sessionId));
+
+        LocalDateTime sessionStart = session.getStartDate().atStartOfDay();
+        LocalDateTime sessionEnd = session.getEndDate().atTime(LocalTime.MAX);
+
+        List<Attendance> attendances;
+
+        Integer monthNumber = (month != null) ? month.ordinal() + 1 : null;
+
+        if (monthNumber != null)
+        {
+            // Repository method with date range and month filter (you'll need to implement this)
+            attendances = attendanceRepository.findByStudent_PanNumberAndSession_IdAndMonthWithinSession(
+                    panNumber, sessionId, sessionStart, sessionEnd, monthNumber);
+        }
+        else
+        {
+            // Repository method with date range only
+            attendances = attendanceRepository.findByStudent_PanNumberAndSession_IdWithinSession(
+                    panNumber, sessionId, sessionStart, sessionEnd);
+        }
+
+        if (attendances.isEmpty())
+        {
+            return Collections.emptyList();
+        }
+
+        Map<Long, List<Attendance>> attendancesByClass = attendances.stream()
+                .filter(att -> att.getStudent().getCurrentClass() != null) // Defensive null check
+                .collect(Collectors.groupingBy(att -> att.getStudent().getCurrentClass().getId()));
+
+        List<AttendanceInfoDto> result = new ArrayList<>();
+
+        for (Map.Entry<Long, List<Attendance>> entry : attendancesByClass.entrySet())
+        {
+            Long classId = entry.getKey();
+            List<Attendance> classAttendances = entry.getValue();
+
+            AttendanceInfoDto dto = new AttendanceInfoDto();
+
+            Student student = classAttendances.get(0).getStudent();
+            Session sess = classAttendances.get(0).getSession();
+
+            dto.setPanNumber(student.getPanNumber());
+            dto.setStudentName(student.getName());
+            dto.setSessionId(sess.getId());
+            dto.setSessionName(sess.getName());
+            dto.setClassId(classId);
+            dto.setClassName(student.getCurrentClass().getClassName());
+
+            if (month != null)
+            {
+                dto.setMonth(month);
+            }
+            else
+            {
+                int monthValue = classAttendances.get(0).getDate().getMonthValue();
+                dto.setMonth(FeeMonth.values()[monthValue - 1]);
+            }
+
+
+            List<AttendenceResponse> attendanceResponses = classAttendances.stream()
+                    .map(att ->
+                    {
+                        AttendenceResponse response = modelMapper.map(att, AttendenceResponse.class);
+                        response.setCreatedAt(att.getCreatedAt());
+                        response.setUpdatedAt(att.getUpdatedAt());
+                        return response;
+                    })
+                    .toList();
+
+            dto.setAttendances(attendanceResponses);
+
+            result.add(dto);
+        }
+
+        return result;
+    }
+
+    @Override
+    public List<AttendanceByClassDto> getAttendanceByClassAndSession(Long classId, Long sessionId, FeeMonth month)
+    {
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Session not found with id: " + sessionId));
+
+        LocalDateTime sessionStart = session.getStartDate().atStartOfDay();
+        LocalDateTime sessionEnd = session.getEndDate().atTime(LocalTime.MAX);
+
+        Integer monthNumber = (month != null) ? month.ordinal() + 1 : null;
+
+        List<Attendance> attendances = (monthNumber != null) ?
+                attendanceRepository.findByClassIdAndSessionIdAndMonthWithinSession(
+                        classId, sessionId, sessionStart, sessionEnd, monthNumber) :
+                attendanceRepository.findByClassIdAndSessionIdWithinSession(
+                        classId, sessionId, sessionStart, sessionEnd);
+
+        if (attendances.isEmpty())
+        {
+            return Collections.emptyList();
+        }
+
+        Map<Integer, List<Attendance>> attendancesByMonth = attendances.stream()
+                .collect(Collectors.groupingBy(att -> att.getDate().getMonthValue()));
+
+        List<AttendanceByClassDto> result = new ArrayList<>();
+
+        for (Map.Entry<Integer, List<Attendance>> entry : attendancesByMonth.entrySet())
+        {
+            Integer monthVal = entry.getKey();
+            List<Attendance> monthAttendances = entry.getValue();
+
+            AttendanceByClassDto dto = new AttendanceByClassDto();
+
+            Attendance firstAttendance = monthAttendances.get(0);
+
+            dto.setId(firstAttendance.getId());
+            dto.setClassId(classId);
+            dto.setClassName(firstAttendance.getStudent().getCurrentClass().getClassName());
+            dto.setSessionId(sessionId);
+            dto.setSessionName(session.getName());
+            dto.setMonth(FeeMonth.values()[monthVal - 1]);
+
+            List<StudentAttendance> studentAttendances = monthAttendances.stream()
+                    .map(att ->
+                    {
+                        StudentAttendance sa = new StudentAttendance();
+                        sa.setPanNumber(att.getStudent().getPanNumber());
+                        sa.setPresent(att.isPresent());
+                        return sa;
+                    })
+                    .toList();
+
+            dto.setStudentAttendances(studentAttendances);
+
+            result.add(dto);
+        }
+
+        return result;
     }
 
 

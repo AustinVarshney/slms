@@ -1157,14 +1157,29 @@
 				{
 					"name": "Change Password of Any User",
 					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU1OTczMzU2LCJleHAiOjE3NTU5NzY5NTZ9.yDP920u5M_jIUUSoq5y9dkPg7dw9alohXu5xHJ2YOuE",
+									"type": "string"
+								}
+							]
+						},
 						"method": "PUT",
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": ""
+							"raw": "{\r\n    \"password\" : \"this is temporary password\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
-							"raw": "http://localhost:8080/api/users/3/change-password?password=abcd",
+							"raw": "http://localhost:8080/api/users/3/change-password",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -1175,12 +1190,6 @@
 								"users",
 								"3",
 								"change-password"
-							],
-							"query": [
-								{
-									"key": "password",
-									"value": "abcd"
-								}
 							]
 						}
 					},
@@ -1363,6 +1372,341 @@
 								"api",
 								"sessions",
 								"deactivate"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "TCRequest",
+			"item": [
+				{
+					"name": "Raise TC Request By Student",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBQkMxNDEiLCJyb2xlcyI6WyJST0xFX1NUVURFTlQiXSwiaWF0IjoxNzU1OTcxNzE1LCJleHAiOjE3NTU5NzUzMTV9.KcGNayoiGJJsctrDWO1PyNTvHnUMqlSKcFXjLgZNiQI",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"classId\": 1,\r\n  \"reason\": \"Leaving school due to relocation\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/tc/request",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"tc",
+								"request"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Approve TC Request By Admin",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"adminReply\": \"All documents verified, approved.\",\r\n  \"decision\": \"APPROVED\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/tc/process/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"tc",
+								"process",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Request Raise By Student",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"adminReply\": \"All documents verified, approved.\",\r\n  \"decision\": \"APPROVED\"\r\n}\r\n"
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/tc/requests/ABC141",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"tc",
+								"requests",
+								"ABC141"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Requests of Current Student",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBQkMxNDEiLCJyb2xlcyI6WyJST0xFX1NUVURFTlQiXSwiaWF0IjoxNzU1OTcxNzE1LCJleHAiOjE3NTU5NzUzMTV9.KcGNayoiGJJsctrDWO1PyNTvHnUMqlSKcFXjLgZNiQI",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/tc/requests/me",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"tc",
+								"requests",
+								"me"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All requests for student sort with Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/tc/requests?status=APPROVED",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"tc",
+								"requests"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "APPROVED"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Attendance",
+			"item": [
+				{
+					"name": "markAttendance Of Today",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBQkMxNDIiLCJyb2xlcyI6WyJST0xFX1NUVURFTlQiXSwiaWF0IjoxNzU1OTM0MTU1LCJleHAiOjE3NTU5Mzc3NTV9.cmSP6x8tNLtCt6jaLxV38h5FYnKB7fAv08qgMO_EDVc",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"classId\" : 1,\r\n  \"studentAttendances\": [\r\n    {\r\n      \"panNumber\": \"ABC142\",\r\n      \"present\": true\r\n    },\r\n    {\r\n      \"panNumber\": \"ABC141\",\r\n      \"present\": false\r\n    },\r\n    {\r\n      \"panNumber\": \"ABC140\",\r\n      \"present\": true\r\n    }\r\n  ]\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/attendance",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"attendance"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Attendance For Specific Date",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"sessionId\": 1,\r\n  \"studentAttendances\": [\r\n    {\r\n      \"panNumber\": \"ABC141\",\r\n      \"present\": true\r\n    },\r\n    {\r\n      \"panNumber\": \"ABC142\",\r\n      \"present\": false\r\n    }\r\n  ]\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/attendance/2025-08-23",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"attendance",
+								"2025-08-23"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Attendance By Pan and SessiomId",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/attendance/student/ABC140/session/1?month=AUGUST",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"attendance",
+								"student",
+								"ABC140",
+								"session",
+								"1"
+							],
+							"query": [
+								{
+									"key": "month",
+									"value": "AUGUST"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Attendance of Current Student",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBQkMxNDIiLCJyb2xlcyI6WyJST0xFX1NUVURFTlQiXSwiaWF0IjoxNzU1OTM0MTU1LCJleHAiOjE3NTU5Mzc3NTV9.cmSP6x8tNLtCt6jaLxV38h5FYnKB7fAv08qgMO_EDVc",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/attendance/me?month=AUGUST",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"attendance",
+								"me"
+							],
+							"query": [
+								{
+									"key": "month",
+									"value": "AUGUST"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Attendance By classId and sessionId",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/attendance/class/1/session/1?month=AUGUST",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"attendance",
+								"class",
+								"1",
+								"session",
+								"1"
+							],
+							"query": [
+								{
+									"key": "month",
+									"value": "AUGUST"
+								}
 							]
 						}
 					},

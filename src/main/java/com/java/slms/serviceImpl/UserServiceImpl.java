@@ -1,8 +1,12 @@
 package com.java.slms.serviceImpl;
 
+import com.java.slms.dto.PasswordDto;
 import com.java.slms.dto.UserRequest;
 import com.java.slms.exception.WrongArgumentException;
-import com.java.slms.model.*;
+import com.java.slms.model.Admin;
+import com.java.slms.model.NonTeachingStaff;
+import com.java.slms.model.Teacher;
+import com.java.slms.model.User;
 import com.java.slms.repository.*;
 import com.java.slms.service.UserService;
 import com.java.slms.util.EntityFetcher;
@@ -29,7 +33,7 @@ public class UserServiceImpl implements UserService
     private final PasswordEncoder passwordEncoder;
 
     @Override
-    public void changePassword(Long userId, String password)
+    public void changePassword(Long userId, PasswordDto password)
     {
         log.info("Changing password for user with ID: {}", userId);
         User user = EntityFetcher.fetchUserByUserId(userRepository, userId);
@@ -39,7 +43,7 @@ public class UserServiceImpl implements UserService
             throw new WrongArgumentException("Cannot change password: user account is disabled");
         }
 
-        user.setPassword(passwordEncoder.encode(password));
+        user.setPassword(passwordEncoder.encode(password.getPassword()));
         userRepository.save(user);
         log.info("Password changed successfully for user ID: {}", userId);
     }

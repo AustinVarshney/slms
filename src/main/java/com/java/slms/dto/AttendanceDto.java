@@ -17,6 +17,8 @@ public class AttendanceDto
     @JsonFormat(pattern = "dd-MM-yyyy HH:mm:ss")
     private LocalDateTime date;
     private List<StudentAttendance> studentAttendances;
+    private Long classId;
+    private String className;
     private Date createdAt;
     private Date updatedAt;
 }

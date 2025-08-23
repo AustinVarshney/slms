@@ -22,6 +22,8 @@ import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.Optional;
 
@@ -234,7 +236,18 @@ public class ClassEntityServiceImpl implements ClassEntityService
             }
         }
 
-        return countedStudents > 0 ? (totalOfRates / countedStudents) : 0.0;
+        if (countedStudents == 0)
+        {
+            return 0.0;
+        }
+
+        double averageRate = totalOfRates / countedStudents;
+
+        // Multiply by 100 for percentage and round to 2 decimal places
+        BigDecimal bd = new BigDecimal(averageRate * 100);
+        bd = bd.setScale(2, RoundingMode.HALF_UP);
+
+        return bd.doubleValue();
     }
 
 

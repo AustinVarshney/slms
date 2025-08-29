@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,14 +26,20 @@ public interface StudentRepository extends JpaRepository<Student, String>
     @Query("SELECT a.student FROM Attendance a WHERE a.present = true AND DATE(a.date) = CURRENT_DATE")
     List<Student> findStudentsPresentToday();
 
-    // Find students who are present today AND belong to specific class
-    @Query("""
-            SELECT a.student FROM Attendance a 
-            WHERE a.present = true 
-            AND DATE(a.date) = CURRENT_DATE 
-            AND a.student.currentClass.id = :classId
-            """)
-    List<Student> findStudentsPresentTodayByClassName(@Param("classId") Long classId);
+    @Query("SELECT DISTINCT s FROM Student s JOIN s.attendanceRecords a " +
+            "WHERE a.present = true AND a.date BETWEEN :start AND :end")
+    List<Student> findStudentsPresentToday(
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end
+    );
+
+    @Query("SELECT DISTINCT s FROM Student s JOIN s.attendanceRecords a " +
+            "WHERE s.currentClass.id = :classId AND a.present = true AND a.date BETWEEN :start AND :end")
+    List<Student> findStudentsPresentTodayByClassId(
+            @Param("classId") Long classId,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end
+    );
 
     List<Student> findByStatusAndCurrentClass_Id(UserStatus status, Long classId);
 

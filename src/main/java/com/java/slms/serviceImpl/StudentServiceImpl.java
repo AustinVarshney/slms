@@ -16,10 +16,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.Month;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
@@ -248,7 +251,58 @@ public class StudentServiceImpl implements StudentService
         return studentResponseDto;
     }
 
+
     @Override
+    public CurrentDayAttendance getStudentsPresentToday(Optional<Long> classId)
+    {
+        LocalDate today = LocalDate.now();
+        LocalDateTime startOfDay = today.atStartOfDay();
+        LocalDateTime endOfDay = today.atTime(LocalTime.MAX);
+
+        List<Student> presentStudents;
+        CurrentDayAttendance result = new CurrentDayAttendance();
+
+        if (classId.isPresent())
+        {
+            Long id = classId.get();
+            ClassEntity classEntity = classEntityRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Class not found with ID: " + id));
+
+            if (!classEntity.getSession().isActive())
+            {
+                throw new ResourceNotFoundException("Session is not active for class ID: " + id);
+            }
+
+            presentStudents = studentRepository.findStudentsPresentTodayByClassId(id, startOfDay, endOfDay);
+
+            result.setId(classEntity.getId());
+            result.setClassId(classEntity.getId());
+            result.setClassName(classEntity.getClassName());
+        }
+        else
+        {
+            presentStudents = studentRepository.findStudentsPresentToday(startOfDay, endOfDay);
+            result.setId(null);
+            result.setClassId(null);
+            result.setClassName("All Classes");
+        }
+
+        List<StudentAttendance> studentAttendances = presentStudents.stream()
+                .map(student ->
+                {
+                    StudentAttendance dto = new StudentAttendance();
+                    dto.setPanNumber(student.getPanNumber());
+                    dto.setPresent(true);
+                    return dto;
+                }).collect(Collectors.toList());
+
+        result.setDate(LocalDate.now());
+        result.setStudentAttendances(studentAttendances);
+
+        return result;
+    }
+
+
     public List<StudentAttendance> getStudentsPresentToday()
     {
         log.info("Fetching today's present students");
@@ -257,15 +311,42 @@ public class StudentServiceImpl implements StudentService
                 .toList();
     }
 
-    @Override
-    public List<StudentAttendance> getStudentsPresentTodayByClass(Long classId)
+    public CurrentDayAttendance getStudentsPresentTodayByClass(Long classId)
     {
         log.info("Fetching today's present students for class ID: {}", classId);
-        EntityFetcher.fetchClassEntityByClassId(classEntityRepository, classId);
 
-        return studentRepository.findStudentsPresentTodayByClassName(classId).stream()
-                .map(student -> modelMapper.map(student, StudentAttendance.class))
+        ClassEntity classEntity = EntityFetcher.fetchClassEntityByClassId(classEntityRepository, classId);
+
+        if (!classEntity.getSession().isActive())
+        {
+            throw new ResourceNotFoundException("Session is not active for the class ID: " + classId);
+        }
+
+        LocalDate today = LocalDate.now();
+        LocalDateTime startOfDay = today.atStartOfDay();
+        LocalDateTime endOfDay = today.atTime(LocalTime.MAX);
+
+        List<Student> presentStudents = studentRepository
+                .findStudentsPresentTodayByClassId(classId, startOfDay, endOfDay); // Custom query
+
+        List<StudentAttendance> studentAttendances = presentStudents.stream()
+                .map(student ->
+                {
+                    StudentAttendance dto = new StudentAttendance();
+                    dto.setPanNumber(student.getPanNumber());
+                    dto.setPresent(true);
+                    return dto;
+                })
                 .toList();
+
+        CurrentDayAttendance result = new CurrentDayAttendance();
+        result.setId(classEntity.getId());
+        result.setClassId(classEntity.getId());
+        result.setClassName(classEntity.getClassName());
+        result.setDate(LocalDate.now());
+        result.setStudentAttendances(studentAttendances);
+
+        return result;
     }
 
     private StudentResponseDto convertToDto(Student student)

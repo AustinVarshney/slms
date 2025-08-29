@@ -12,9 +12,9 @@ public interface TimetableRepository extends JpaRepository<TimeTable, Long>
 
     List<TimeTable> findByTeacher_IdAndDay(Long teacherId, DayOfWeek day);
 
-    List<TimeTable> findByTeacher_Id(Long teacherId); // ✅ added for getTimetableByTeacherId
+    List<TimeTable> findByTeacher_IdAndSession_Active(Long teacherId, boolean isActive); // ✅ added for getTimetableByTeacherIdInCurrentSession
 
-    List<TimeTable> findByClassEntity_Id(Long classId);
+    List<TimeTable> findByClassEntity_IdAndSession_Active(Long classId, boolean isActive);
 
     List<TimeTable> findByClassEntity_IdAndDay(Long classId, DayOfWeek day);
 

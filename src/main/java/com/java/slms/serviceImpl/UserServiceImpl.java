@@ -1,6 +1,7 @@
 package com.java.slms.serviceImpl;
 
 import com.java.slms.dto.PasswordDto;
+import com.java.slms.dto.UpdateUserDetails;
 import com.java.slms.dto.UserRequest;
 import com.java.slms.exception.WrongArgumentException;
 import com.java.slms.model.Admin;
@@ -58,7 +59,7 @@ public class UserServiceImpl implements UserService
     }
 
     @Override
-    public UserRequest updateUserDetails(Long userId, UserRequest userRequest)
+    public UserRequest updateUserDetails(Long userId, UpdateUserDetails updateUserDetails)
     {
         log.info("Updating user details for ID: {}", userId);
 
@@ -70,7 +71,7 @@ public class UserServiceImpl implements UserService
         }
 
         modelMapper.getConfiguration().setSkipNullEnabled(true);
-        modelMapper.map(userRequest, user);
+        modelMapper.map(updateUserDetails, user);
 
         UserRequest updatedUser = null;
 
@@ -93,7 +94,7 @@ public class UserServiceImpl implements UserService
                 else
                 {
                     log.info("User ID {} is an Admin", userId);
-                    modelMapper.map(userRequest, admin);
+                    modelMapper.map(updateUserDetails, admin);
                     updatedUser = modelMapper.map(adminRepository.save(admin), UserRequest.class);
                 }
             }
@@ -108,7 +109,7 @@ public class UserServiceImpl implements UserService
                 else
                 {
                     log.info("User ID {} is a Teacher", userId);
-                    modelMapper.map(userRequest, teacher);
+                    modelMapper.map(updateUserDetails, teacher);
                     updatedUser = modelMapper.map(teacherRepository.save(teacher), UserRequest.class);
                 }
             }
@@ -123,7 +124,7 @@ public class UserServiceImpl implements UserService
                 else
                 {
                     log.info("User ID {} is a Fee Staff", userId);
-                    modelMapper.map(userRequest, nts);
+                    modelMapper.map(updateUserDetails, nts);
                     updatedUser = modelMapper.map(nonTeachingStaffRepository.save(nts), UserRequest.class);
                 }
             }

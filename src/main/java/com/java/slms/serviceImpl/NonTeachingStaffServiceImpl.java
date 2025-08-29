@@ -7,7 +7,7 @@ import com.java.slms.model.NonTeachingStaff;
 import com.java.slms.model.User;
 import com.java.slms.repository.NonTeachingStaffRepository;
 import com.java.slms.repository.UserRepository;
-import com.java.slms.service.FeeStaffService;
+import com.java.slms.service.NonTeachingStaffService;
 import com.java.slms.util.EntityFetcher;
 import com.java.slms.util.RoleEnum;
 import com.java.slms.util.UserStatus;
@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class FeeStaffServiceImpl implements FeeStaffService
+public class NonTeachingStaffServiceImpl implements NonTeachingStaffService
 {
 
     private final NonTeachingStaffRepository nonTeachingStaffRepository;

@@ -10,11 +10,9 @@ public interface TimeTableService
 {
     public TimetableResponseDTO createTimetable(TimetableRequestDTO dto);
 
-    List<TimetableResponseDTO> getTimetableByClassId(Long classId);
+    List<TimetableResponseDTO> getTimetableByTeacherIdInCurrentSession(Long teacherId);
 
-    List<TimetableResponseDTO> getTimetableByTeacherId(Long teacherId);
-
-    List<TimetableResponseDTO> getTimetableByClassAndDay(Long classId, DayOfWeek day);
+    List<TimetableResponseDTO> getTimetableByClassAndOptionalDay(Long classId, DayOfWeek day);
 
     TimetableResponseDTO updateTimetable(Long id, TimetableRequestDTO dto);
 

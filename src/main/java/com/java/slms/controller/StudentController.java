@@ -1,10 +1,8 @@
 package com.java.slms.controller;
 
 import com.java.slms.dto.*;
-import com.java.slms.payload.ApiResponse;
-import com.java.slms.repository.UserRepository;
+import com.java.slms.payload.RestResponse;
 import com.java.slms.service.StudentService;
-import com.java.slms.util.UserStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,33 +12,36 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/students")
 @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+@Tag(name = "Student Controller", description = "APIs for managing students")
 public class StudentController
 {
     private final StudentService studentService;
-    private final UserRepository userRepository;
 
-//    @PostMapping
-//    public ResponseEntity<ApiResponse<StudentDto>> createStudent(@RequestBody StudentDto studentDto)
-//    {
-//        ApiResponse<StudentDto> response = ApiResponse.<StudentDto>builder()
-//                .data(studentService.createStudent(studentDto))
-//                .message("Student Created")
-//                .status(HttpStatus.CREATED.value())
-//                .build();
-//
-//        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-//    }
-
+    @Operation(
+            summary = "Get all students",
+            description = "Retrieves all students in the system.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Students retrieved successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content)
+            }
+    )
     @GetMapping
-    public ResponseEntity<ApiResponse<List<StudentResponseDto>>> getAllStudents()
+    public ResponseEntity<RestResponse<List<StudentResponseDto>>> getAllStudents()
     {
         List<StudentResponseDto> students = studentService.getAllStudent();
-        ApiResponse<List<StudentResponseDto>> response = ApiResponse.<List<StudentResponseDto>>builder()
+        RestResponse<List<StudentResponseDto>> response = RestResponse.<List<StudentResponseDto>>builder()
                 .data(students)
                 .message("Total Students - " + students.size())
                 .status(HttpStatus.OK.value())
@@ -49,12 +50,20 @@ public class StudentController
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
+    @Operation(
+            summary = "Get active students",
+            description = "Retrieves all active students.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Active students retrieved successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content)
+            }
+    )
     @GetMapping("/active")
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER')")
-    public ResponseEntity<ApiResponse<List<StudentResponseDto>>> getActiveStudents()
+    public ResponseEntity<RestResponse<List<StudentResponseDto>>> getActiveStudents()
     {
         List<StudentResponseDto> students = studentService.getActiveStudents();
-        ApiResponse<List<StudentResponseDto>> response = ApiResponse.<List<StudentResponseDto>>builder()
+        RestResponse<List<StudentResponseDto>> response = RestResponse.<List<StudentResponseDto>>builder()
                 .data(students)
                 .message("Total Students - " + students.size())
                 .status(HttpStatus.OK.value())
@@ -63,31 +72,21 @@ public class StudentController
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
-
-//    @GetMapping("/status")
-//    public ResponseEntity<ApiResponse<List<StudentDto>>> getStudentByStatus(@RequestParam String status)
-//    {
-//        if (!isValidStatus(status))
-//        {
-//            throw new WrongArgumentException("Invalid status value: " + status);
-//        }
-//
-//        StudentStatuses statusEnum = StudentStatuses.valueOf(status.toUpperCase());
-//
-//        List<StudentDto> students = studentService.getActiveStudents();
-//
-//        ApiResponse<List<StudentDto>> response = ApiResponse.<List<StudentDto>>builder()
-//                .data(students)
-//                .message("Total Students - " + students.size())
-//                .status(HttpStatus.OK.value())
-//                .build();
-//        return ResponseEntity.status(HttpStatus.OK).body(response);
-//    }
-
+    @Operation(
+            summary = "Get student by PAN number",
+            description = "Fetches a student by their PAN number.",
+            parameters = {
+                    @Parameter(name = "panNumber", description = "PAN number of the student", required = true)
+            },
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Student fetched successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid PAN or student not found", content = @Content)
+            }
+    )
     @GetMapping("/{panNumber}")
-    public ResponseEntity<ApiResponse<StudentResponseDto>> getStudentByPAN(@PathVariable String panNumber)
+    public ResponseEntity<RestResponse<StudentResponseDto>> getStudentByPAN(@PathVariable String panNumber)
     {
-        ApiResponse<StudentResponseDto> response = ApiResponse.<StudentResponseDto>builder()
+        RestResponse<StudentResponseDto> response = RestResponse.<StudentResponseDto>builder()
                 .data(studentService.getStudentByPAN(panNumber))
                 .message("Student Fetched")
                 .status(HttpStatus.OK.value())
@@ -96,9 +95,17 @@ public class StudentController
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
+    @Operation(
+            summary = "Get current student details",
+            description = "Fetches the currently logged in student's details.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Current student fetched successfully"),
+                    @ApiResponse(responseCode = "400", description = "Unauthorized or student not found", content = @Content)
+            }
+    )
     @GetMapping("/me")
     @PreAuthorize("hasRole('ROLE_STUDENT')")
-    public ResponseEntity<ApiResponse<StudentResponseDto>> getCurrentStudent()
+    public ResponseEntity<RestResponse<StudentResponseDto>> getCurrentStudent()
     {
         String panNumber = SecurityContextHolder
                 .getContext()
@@ -107,7 +114,7 @@ public class StudentController
 
         StudentResponseDto student = studentService.getStudentByPAN(panNumber);
 
-        ApiResponse<StudentResponseDto> response = ApiResponse.<StudentResponseDto>builder()
+        RestResponse<StudentResponseDto> response = RestResponse.<StudentResponseDto>builder()
                 .data(student)
                 .message("Current student fetched successfully")
                 .status(HttpStatus.OK.value())
@@ -116,13 +123,24 @@ public class StudentController
         return ResponseEntity.ok(response);
     }
 
+    @Operation(
+            summary = "Update student information",
+            description = "Updates information for active students identified by PAN number.",
+            parameters = {
+                    @Parameter(name = "panNumber", description = "PAN number of the student", required = true)
+            },
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Student updated successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid request or student inactive", content = @Content)
+            }
+    )
     @PutMapping("/{panNumber}")
-    public ResponseEntity<ApiResponse<StudentResponseDto>> updateStudent(
+    public ResponseEntity<RestResponse<StudentResponseDto>> updateStudent(
             @PathVariable String panNumber,
             @RequestBody UpdateStudentInfo updateStudentInfo
     )
     {
-        ApiResponse<StudentResponseDto> response = ApiResponse.<StudentResponseDto>builder()
+        RestResponse<StudentResponseDto> response = RestResponse.<StudentResponseDto>builder()
                 .data(studentService.updateStudent(panNumber, updateStudentInfo))
                 .message("Student updated successfully")
                 .status(HttpStatus.OK.value())
@@ -130,41 +148,56 @@ public class StudentController
         return ResponseEntity.ok(response);
     }
 
+    @Operation(
+            summary = "Get students present today",
+            description = "Returns list of students marked present for today. Optional filter by class ID.",
+            parameters = {
+                    @Parameter(name = "classId", description = "Optional class ID to filter students")
+            },
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Present students fetched successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid request")
+            }
+    )
     @GetMapping("/present-today")
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER')")
-    public ResponseEntity<ApiResponse<List<StudentAttendance>>> getPresentToday()
+    public ResponseEntity<RestResponse<CurrentDayAttendance>> getPresentToday(
+            @RequestParam(required = false) Long classId)
     {
-        List<StudentAttendance> list = studentService.getStudentsPresentToday();
+
+        CurrentDayAttendance attendance = studentService.getStudentsPresentToday(Optional.ofNullable(classId));
+
+        String message = (classId != null)
+                ? "Students present today in class " + classId + ": " + attendance.getStudentAttendances().size()
+                : "Students present today: " + attendance.getStudentAttendances().size();
+
         return ResponseEntity.ok(
-                ApiResponse.<List<StudentAttendance>>builder()
-                        .data(list)
-                        .message("Students present today: " + list.size())
+                RestResponse.<CurrentDayAttendance>builder()
+                        .data(attendance)
+                        .message(message)
                         .status(HttpStatus.OK.value())
                         .build()
         );
     }
 
-    @GetMapping("/present-today/{classId}")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER')")
-    public ResponseEntity<ApiResponse<List<StudentAttendance>>> getPresentTodayByClass(@PathVariable Long classId)
-    {
-        List<StudentAttendance> list = studentService.getStudentsPresentTodayByClass(classId);
-        return ResponseEntity.ok(
-                ApiResponse.<List<StudentAttendance>>builder()
-                        .data(list)
-                        .message("Students present today in class " + classId + ": " + list.size())
-                        .status(HttpStatus.OK.value())
-                        .build()
-        );
-    }
-
+    @Operation(
+            summary = "Get students by class ID",
+            description = "Fetch students for a given class by ID.",
+            parameters = {
+                    @Parameter(name = "classId", description = "ID of the class", required = true)
+            },
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Students fetched successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content)
+            }
+    )
     @GetMapping("/class/{classId}")
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER')")
-    public ResponseEntity<ApiResponse<List<StudentResponseDto>>> getStudentByClassId(@PathVariable Long classId)
+    public ResponseEntity<RestResponse<List<StudentResponseDto>>> getStudentByClassId(@PathVariable Long classId)
     {
         List<StudentResponseDto> list = studentService.getStudentsByClassId(classId);
         return ResponseEntity.ok(
-                ApiResponse.<List<StudentResponseDto>>builder()
+                RestResponse.<List<StudentResponseDto>>builder()
                         .data(list)
                         .message("Students in class " + classId + ": " + list.size())
                         .status(HttpStatus.OK.value())
@@ -172,41 +205,28 @@ public class StudentController
         );
     }
 
+    @Operation(
+            summary = "Update students status",
+            description = "Mark multiple students as graduate or inactive based on PAN numbers.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Students marked successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid request or student status", content = @Content)
+            }
+    )
     @PutMapping("/status")
     @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
-    public ResponseEntity<ApiResponse<Void>> updateStudentsStatus(
+    public ResponseEntity<RestResponse<Void>> updateStudentsStatus(
             @RequestBody UpdateStudentStatusRequest request)
     {
 
         studentService.markStudentsGraduateOrInActive(request.getPanNumbers(), request.getStatus());
 
         return ResponseEntity.ok(
-                ApiResponse.<Void>builder()
+                RestResponse.<Void>builder()
                         .message("Students updated successfully with status: " + request.getStatus())
                         .status(HttpStatus.OK.value())
                         .build()
         );
-    }
-
-//    @DeleteMapping("/{pan}")
-//    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
-//    public ResponseEntity<ApiResponse<Void>> deleteStudentByPan(@PathVariable String pan)
-//    {
-//        studentService.markStudentsGraduateOrInActive(pan);
-//
-//        return ResponseEntity.ok(
-//                ApiResponse.<Void>builder()
-//                        .message("Student and user deleted successfully for PAN: " + pan)
-//                        .status(HttpStatus.OK.value())
-//                        .build()
-//        );
-//    }
-
-
-    private boolean isValidStatus(String status)
-    {
-        return Arrays.stream(UserStatus.values())
-                .anyMatch(s -> s.name().equalsIgnoreCase(status));
     }
 
 }

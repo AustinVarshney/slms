@@ -4,10 +4,7 @@ import com.java.slms.dto.TimetableRequestDTO;
 import com.java.slms.dto.TimetableResponseDTO;
 import com.java.slms.exception.ResourceNotFoundException;
 import com.java.slms.exception.WrongArgumentException;
-import com.java.slms.model.ClassEntity;
-import com.java.slms.model.Subject;
-import com.java.slms.model.Teacher;
-import com.java.slms.model.TimeTable;
+import com.java.slms.model.*;
 import com.java.slms.repository.ClassEntityRepository;
 import com.java.slms.repository.SubjectRepository;
 import com.java.slms.repository.TeacherRepository;
@@ -50,6 +47,11 @@ public class TimeTableServiceImpl implements TimeTableService
             throw new WrongArgumentException("Subject does not belong to the selected class.");
         }
 
+        if (!classEntity.getSession().isActive())
+        {
+            throw new WrongArgumentException("Class does not belong to active session");
+        }
+
         // Prevent overlapping time for the same class
         List<TimeTable> existingClassSlots = timetableRepository.findByClassEntity_IdAndDay(dto.getClassId(), dto.getDay());
         for (TimeTable slot : existingClassSlots)
@@ -72,8 +74,8 @@ public class TimeTableServiceImpl implements TimeTableService
 
         // Manually map DTO fields
         TimeTable timetable = new TimeTable();
-        // Do NOT set timetable.setId() – JPA will generate this!
         timetable.setClassEntity(classEntity);
+        timetable.setSession(classEntity.getSession());
         timetable.setSubject(subject);
         timetable.setTeacher(teacher);
         timetable.setDay(dto.getDay());
@@ -81,26 +83,16 @@ public class TimeTableServiceImpl implements TimeTableService
         timetable.setEndTime(dto.getEndTime());
 
         TimeTable saved = timetableRepository.save(timetable);
-        return modelMapper.map(saved, TimetableResponseDTO.class);
+        TimetableResponseDTO timetableResponseDTO = modelMapper.map(saved, TimetableResponseDTO.class);
+        timetableResponseDTO.setClassId(classEntity.getId());
+        timetableResponseDTO.setClassName(classEntity.getClassName());
+        timetableResponseDTO.setSubjectId(subject.getId());
+        timetableResponseDTO.setTeacherId(teacher.getId());
+        return timetableResponseDTO;
     }
 
     @Override
-    public List<TimetableResponseDTO> getTimetableByClassId(Long classId)
-    {
-        if (!classEntityRepository.existsById(classId))
-        {
-            throw new ResourceNotFoundException("Class not found with ID: " + classId);
-        }
-
-        log.info("Fetching timetable for classId={}", classId);
-        return timetableRepository.findByClassEntity_Id(classId)
-                .stream()
-                .map(t -> modelMapper.map(t, TimetableResponseDTO.class))
-                .toList();
-    }
-
-    @Override
-    public List<TimetableResponseDTO> getTimetableByTeacherId(Long teacherId)
+    public List<TimetableResponseDTO> getTimetableByTeacherIdInCurrentSession(Long teacherId)
     {
         // Ensure teacher exists
         if (!teacherRepository.existsById(teacherId))
@@ -108,7 +100,7 @@ public class TimeTableServiceImpl implements TimeTableService
             throw new ResourceNotFoundException("Teacher not found with ID: " + teacherId);
         }
 
-        List<TimeTable> timetables = timetableRepository.findByTeacher_Id(teacherId);
+        List<TimeTable> timetables = timetableRepository.findByTeacher_IdAndSession_Active(teacherId, true);
         if (timetables.isEmpty())
         {
             throw new ResourceNotFoundException("No timetable found for teacher ID: " + teacherId);
@@ -120,18 +112,29 @@ public class TimeTableServiceImpl implements TimeTableService
     }
 
     @Override
-    public List<TimetableResponseDTO> getTimetableByClassAndDay(Long classId, DayOfWeek day)
+    public List<TimetableResponseDTO> getTimetableByClassAndOptionalDay(Long classId, DayOfWeek day)
     {
-        // Ensure class exists
-        if (!classEntityRepository.existsById(classId))
-        {
-            throw new ResourceNotFoundException("Class not found with ID: " + classId);
-        }
+        // Ensure class exists and belongs to active session
+        ClassEntity classEntity = classEntityRepository.findByIdAndSession_Active(classId, true)
+                .orElseThrow(() -> new ResourceNotFoundException("Class not found or not in active session: " + classId));
 
-        List<TimeTable> timetables = timetableRepository.findByClassEntity_IdAndDay(classId, day);
-        if (timetables.isEmpty())
+        List<TimeTable> timetables;
+
+        if (day != null)
         {
-            throw new ResourceNotFoundException("No timetable found for class ID " + classId + " on " + day);
+            timetables = timetableRepository.findByClassEntity_IdAndDay(classId, day);
+            if (timetables.isEmpty())
+            {
+                throw new ResourceNotFoundException("No timetable found for class ID " + classId + " on " + day);
+            }
+        }
+        else
+        {
+            timetables = timetableRepository.findByClassEntity_IdAndSession_Active(classId, true);
+            if (timetables.isEmpty())
+            {
+                throw new ResourceNotFoundException("No timetable found for class ID " + classId);
+            }
         }
 
         return timetables.stream()
@@ -151,9 +154,18 @@ public class TimeTableServiceImpl implements TimeTableService
             throw new WrongArgumentException("Cannot change class for timetable entry.");
         }
 
+        ClassEntity classEntity = classEntityRepository.findByIdAndSession_Active(dto.getClassId(), true)
+                .orElseThrow(() -> new ResourceNotFoundException("Class not found or not in active session: " + dto.getClassId()));
+
+
         // Validate subject belongs to class
         Subject subject = subjectRepository.findById(dto.getSubjectId())
                 .orElseThrow(() -> new ResourceNotFoundException("Subject not found with ID: " + dto.getSubjectId()));
+
+        if (!subject.getClassEntity().getSession().isActive())
+        {
+            throw new WrongArgumentException("Subject does not below to the active Session " + subject.getId());
+        }
 
         if (!subject.getClassEntity().getId().equals(dto.getClassId()))
         {
@@ -180,6 +192,7 @@ public class TimeTableServiceImpl implements TimeTableService
         existing.setDay(dto.getDay());
         existing.setStartTime(dto.getStartTime());
         existing.setEndTime(dto.getEndTime());
+        existing.setSession(classEntity.getSession());
 
         TimeTable updated = timetableRepository.save(existing);
         return modelMapper.map(updated, TimetableResponseDTO.class);

@@ -1,18 +1,17 @@
 package com.java.slms.controller;
 
 import com.java.slms.dto.*;
-import com.java.slms.exception.WrongArgumentException;
 import com.java.slms.model.User;
-import com.java.slms.payload.ApiResponse;
+import com.java.slms.payload.RestResponse;
 import com.java.slms.repository.UserRepository;
 import com.java.slms.security.CustomUserDetailsService;
 import com.java.slms.service.AdminService;
-import com.java.slms.service.FeeStaffService;
+import com.java.slms.service.NonTeachingStaffService;
 import com.java.slms.service.StudentService;
 import com.java.slms.service.TeacherService;
 import com.java.slms.util.JwtUtil;
 import com.java.slms.util.RoleEnum;
-import com.java.slms.util.UserStatus;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
@@ -37,9 +36,9 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@Tag(name = "Auth Controller", description = "Handles user authentication and registration")
 public class AuthController
 {
-
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
@@ -49,19 +48,19 @@ public class AuthController
     private final AdminService adminService;
     private final TeacherService teacherService;
     private final StudentService studentService;
-    private final FeeStaffService feeStaffService;
+    private final NonTeachingStaffService nonTeachingStaffService;
     private final ModelMapper modelMapper;
 
     @PostMapping("/register/staff")
     @Transactional
-    public ResponseEntity<ApiResponse<Void>> registerStaff(@RequestBody StaffRegisterRequest req)
+    public ResponseEntity<RestResponse<Void>> registerStaff(@RequestBody StaffRegisterRequest req)
     {
         // Check if user already exists
         if (userRepository.findByEmailIgnoreCase(req.getEmail()).isPresent())
         {
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.<Void>builder()
+                    .body(RestResponse.<Void>builder()
                             .message("Email already registered")
                             .status(HttpStatus.BAD_REQUEST.value())
                             .build());
@@ -83,7 +82,7 @@ public class AuthController
 
         if (!invalidRoles.isEmpty())
         {
-            return ResponseEntity.badRequest().body(ApiResponse.<Void>builder()
+            return ResponseEntity.badRequest().body(RestResponse.<Void>builder()
                     .message("Invalid roles: " + String.join(", ", invalidRoles))
                     .status(HttpStatus.BAD_REQUEST.value())
                     .build());
@@ -91,7 +90,7 @@ public class AuthController
 
         if (roleEnums.contains(RoleEnum.ROLE_TEACHER) && roleEnums.contains(RoleEnum.ROLE_NON_TEACHING_STAFF))
         {
-            return ResponseEntity.badRequest().body(ApiResponse.<Void>builder()
+            return ResponseEntity.badRequest().body(RestResponse.<Void>builder()
                     .message("A person cannot have both ROLE_TEACHER and NON_TEACHING_STAFF")
                     .status(HttpStatus.BAD_REQUEST.value())
                     .build());
@@ -127,11 +126,11 @@ public class AuthController
                 {
                     UserRequest feeStaffReq = modelMapper.map(req, UserRequest.class);
                     feeStaffReq.setUserId(user.getId());
-                    feeStaffService.createFeeStaff(feeStaffReq);
+                    nonTeachingStaffService.createFeeStaff(feeStaffReq);
                 }
                 default ->
                 {
-                    return ResponseEntity.badRequest().body(ApiResponse.<Void>builder()
+                    return ResponseEntity.badRequest().body(RestResponse.<Void>builder()
                             .message("Unsupported role: " + role.name())
                             .status(HttpStatus.BAD_REQUEST.value())
                             .build());
@@ -140,7 +139,7 @@ public class AuthController
         }
 
         return ResponseEntity.ok(
-                ApiResponse.<Void>builder()
+                RestResponse.<Void>builder()
                         .message("Staff registered successfully with roles: " +
                                 roleEnums.stream().map(Enum::name).collect(Collectors.joining(", ")))
                         .status(HttpStatus.OK.value())
@@ -151,13 +150,13 @@ public class AuthController
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     @PostMapping("/register/student")
     @Transactional
-    public ResponseEntity<ApiResponse<StudentResponseDto>> registerStudent(@RequestBody StudentRequestDto req)
+    public ResponseEntity<RestResponse<StudentResponseDto>> registerStudent(@RequestBody StudentRequestDto req)
     {
         if (userRepository.findByPanNumberIgnoreCase(req.getPanNumber()).isPresent())
         {
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.<StudentResponseDto>builder()
+                    .body(RestResponse.<StudentResponseDto>builder()
                             .message("PAN already registered")
                             .status(HttpStatus.BAD_REQUEST.value())
                             .build());
@@ -173,7 +172,7 @@ public class AuthController
         req.setUserId(user.getId());
 
         return ResponseEntity.ok(
-                ApiResponse.<StudentResponseDto>builder()
+                RestResponse.<StudentResponseDto>builder()
                         .data(studentService.createStudent(req))
                         .message("Student registered successfully")
                         .status(HttpStatus.OK.value())
@@ -182,7 +181,7 @@ public class AuthController
     }
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<AuthResponse>> staffLogin(@RequestBody AuthRequest req)
+    public ResponseEntity<RestResponse<AuthResponse>> staffLogin(@RequestBody AuthRequest req)
     {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(req.getEmail(), req.getPassword()));
@@ -190,7 +189,7 @@ public class AuthController
         String token = jwtUtil.generateToken(ud);
         AuthResponse resp = new AuthResponse(token, "Bearer", 3600);
         return ResponseEntity.ok(
-                ApiResponse.<AuthResponse>builder()
+                RestResponse.<AuthResponse>builder()
                         .data(resp)
                         .message("Login successful")
                         .status(HttpStatus.OK.value())
@@ -199,7 +198,7 @@ public class AuthController
     }
 
     @PostMapping("/student/login")
-    public ResponseEntity<ApiResponse<AuthResponse>> studentLogin(@RequestBody StudentAuthRequest req)
+    public ResponseEntity<RestResponse<AuthResponse>> studentLogin(@RequestBody StudentAuthRequest req)
     {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(req.getPanNumber(), req.getPassword()));
@@ -207,7 +206,7 @@ public class AuthController
         String token = jwtUtil.generateToken(ud);
         AuthResponse resp = new AuthResponse(token, "Bearer", 3600);
         return ResponseEntity.ok(
-                ApiResponse.<AuthResponse>builder()
+                RestResponse.<AuthResponse>builder()
                         .data(resp)
                         .message("Login successful")
                         .status(HttpStatus.OK.value())

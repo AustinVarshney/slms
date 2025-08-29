@@ -1,7 +1,7 @@
 package com.java.slms.controller;
 
 import com.java.slms.dto.TeacherDto;
-import com.java.slms.payload.ApiResponse;
+import com.java.slms.payload.RestResponse;
 import com.java.slms.service.TeacherService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,37 +13,59 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 @RestController
 @RequestMapping("/api/teachers")
 @RequiredArgsConstructor
 @Slf4j
 @PreAuthorize("hasRole('ROLE_ADMIN')")
+@Tag(name = "Teacher Controller", description = "APIs for managing teachers")
 public class TeacherController
 {
 
     private final TeacherService teacherService;
 
-    @PostMapping
-    public ResponseEntity<ApiResponse<TeacherDto>> createTeacher(@RequestBody TeacherDto teacherDto)
-    {
-        log.info("Creating teacher...");
-        TeacherDto createdTeacher = teacherService.createTeacher(teacherDto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(
-                ApiResponse.<TeacherDto>builder()
-                        .data(createdTeacher)
-                        .message("Teacher created successfully")
-                        .status(HttpStatus.CREATED.value())
-                        .build()
-        );
-    }
+//    @Operation(
+//            summary = "Create a teacher",
+//            description = "Creates a new teacher record.",
+//            responses = {
+//                    @ApiResponse(responseCode = "201", description = "Teacher created successfully"),
+//                    @ApiResponse(responseCode = "400", description = "Invalid request or teacher already exists", content = @Content)
+//            }
+//    )
+//    @PostMapping
+//    public ResponseEntity<RestResponse<TeacherDto>> createTeacher(@RequestBody TeacherDto teacherDto)
+//    {
+//        log.info("Creating teacher...");
+//        TeacherDto createdTeacher = teacherService.createTeacher(teacherDto);
+//        return ResponseEntity.status(HttpStatus.CREATED).body(
+//                RestResponse.<TeacherDto>builder()
+//                        .data(createdTeacher)
+//                        .message("Teacher created successfully")
+//                        .status(HttpStatus.CREATED.value())
+//                        .build()
+//        );
+//    }
 
+    @Operation(
+            summary = "Get teacher by ID",
+            description = "Retrieves a teacher by their ID.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Teacher retrieved successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid ID or teacher not found", content = @Content)
+            }
+    )
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<TeacherDto>> getTeacherById(@PathVariable Long id)
+    public ResponseEntity<RestResponse<TeacherDto>> getTeacherById(@PathVariable Long id)
     {
         log.info("Fetching teacher with ID: {}", id);
         TeacherDto teacher = teacherService.getTeacherById(id);
         return ResponseEntity.ok(
-                ApiResponse.<TeacherDto>builder()
+                RestResponse.<TeacherDto>builder()
                         .data(teacher)
                         .message("Teacher retrieved successfully")
                         .status(HttpStatus.OK.value())
@@ -51,9 +73,17 @@ public class TeacherController
         );
     }
 
+    @Operation(
+            summary = "Get current logged-in teacher",
+            description = "Retrieves the currently authenticated teacher by email.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Teacher retrieved successfully"),
+                    @ApiResponse(responseCode = "400", description = "Unauthorized or teacher not found", content = @Content)
+            }
+    )
     @GetMapping("/me")
     @PreAuthorize("hasRole('ROLE_TEACHER')")
-    public ResponseEntity<ApiResponse<TeacherDto>> getCurrentTeacher()
+    public ResponseEntity<RestResponse<TeacherDto>> getCurrentTeacher()
     {
         String email = SecurityContextHolder
                 .getContext()
@@ -63,7 +93,7 @@ public class TeacherController
         log.info("Fetching teacher with Email: {}", email);
         TeacherDto teacher = teacherService.getTeacherByEmail(email);
         return ResponseEntity.ok(
-                ApiResponse.<TeacherDto>builder()
+                RestResponse.<TeacherDto>builder()
                         .data(teacher)
                         .message("Teacher retrieved successfully")
                         .status(HttpStatus.OK.value())
@@ -71,14 +101,21 @@ public class TeacherController
         );
     }
 
-
+    @Operation(
+            summary = "Get all teachers",
+            description = "Retrieves all teachers.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "All teachers retrieved successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content)
+            }
+    )
     @GetMapping
-    public ResponseEntity<ApiResponse<List<TeacherDto>>> getAllTeachers()
+    public ResponseEntity<RestResponse<List<TeacherDto>>> getAllTeachers()
     {
         log.info("Fetching all teachers...");
         List<TeacherDto> teachers = teacherService.getAllTeachers();
         return ResponseEntity.ok(
-                ApiResponse.<List<TeacherDto>>builder()
+                RestResponse.<List<TeacherDto>>builder()
                         .data(teachers)
                         .message("All teachers retrieved successfully")
                         .status(HttpStatus.OK.value())
@@ -86,14 +123,22 @@ public class TeacherController
         );
     }
 
+    @Operation(
+            summary = "Get active teachers",
+            description = "Retrieves all active teachers.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Active teachers retrieved successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content)
+            }
+    )
     @GetMapping("/active")
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER')")
-    public ResponseEntity<ApiResponse<List<TeacherDto>>> getActiveTeachers()
+    public ResponseEntity<RestResponse<List<TeacherDto>>> getActiveTeachers()
     {
         log.info("Fetching all active teachers...");
         List<TeacherDto> teachers = teacherService.getActiveTeachers();
         return ResponseEntity.ok(
-                ApiResponse.<List<TeacherDto>>builder()
+                RestResponse.<List<TeacherDto>>builder()
                         .data(teachers)
                         .message("Active teachers retrieved successfully")
                         .status(HttpStatus.OK.value())
@@ -101,13 +146,21 @@ public class TeacherController
         );
     }
 
+    @Operation(
+            summary = "Deactivate teacher",
+            description = "Marks a teacher as inactive by ID.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Teacher deactivated successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid ID or teacher already inactive", content = @Content)
+            }
+    )
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> inActiveTeacher(@PathVariable Long id)
+    public ResponseEntity<RestResponse<Void>> inActiveTeacher(@PathVariable Long id)
     {
-        log.info("InActive teacher with ID: {}", id);
+        log.info("Inactivating teacher with ID: {}", id);
         teacherService.inActiveTeacher(id);
         return ResponseEntity.ok(
-                ApiResponse.<Void>builder()
+                RestResponse.<Void>builder()
                         .message("Teacher deleted successfully")
                         .status(HttpStatus.OK.value())
                         .build()

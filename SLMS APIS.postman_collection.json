@@ -212,6 +212,35 @@
 						}
 					},
 					"response": []
+				},
+				{
+					"name": "Get Student's Present Today By Class",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/students/present-today/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"students",
+								"present-today",
+								"1"
+							]
+						}
+					},
+					"response": []
 				}
 			]
 		},
@@ -1399,7 +1428,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"classId\": 1,\r\n  \"reason\": \"Leaving school due to relocation\"\r\n}\r\n",
+							"raw": "{\r\n  \"reason\": \"Leaving school due to relocation\"\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1549,16 +1578,6 @@
 				{
 					"name": "markAttendance Of Today",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBQkMxNDIiLCJyb2xlcyI6WyJST0xFX1NUVURFTlQiXSwiaWF0IjoxNzU1OTM0MTU1LCJleHAiOjE3NTU5Mzc3NTV9.cmSP6x8tNLtCt6jaLxV38h5FYnKB7fAv08qgMO_EDVc",
-									"type": "string"
-								}
-							]
-						},
 						"method": "POST",
 						"header": [],
 						"body": {
@@ -1713,6 +1732,139 @@
 					"response": []
 				}
 			]
+		},
+		{
+			"name": "TimeTable",
+			"item": [
+				{
+					"name": "Create TimeTable",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"classId\": 1,\r\n  \"subjectId\": 2,\r\n  \"day\": \"TUESDAY\",\r\n  \"startTime\": \"10:00\",\r\n  \"endTime\": \"11:00\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/timetables",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"timetables"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "getTimetableByTeacherId",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"classId\": 1,\r\n  \"subjectId\": 2,\r\n  \"day\": \"TUESDAY\",\r\n  \"startTime\": \"10:00\",\r\n  \"endTime\": \"11:00\"\r\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/timetables/teacher/3",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"timetables",
+								"teacher",
+								"3"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "getTimeTableByClassAndDay",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"classId\": 1,\r\n  \"subjectId\": 2,\r\n  \"day\": \"TUESDAY\",\r\n  \"startTime\": \"10:00\",\r\n  \"endTime\": \"11:00\"\r\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/timetables/class/2/day/MONDAY",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"timetables",
+								"class",
+								"2",
+								"day",
+								"MONDAY"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Timetable",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"classId\": 1,\r\n  \"subjectId\": 3,\r\n  \"day\": \"TUESDAY\",\r\n  \"startTime\": \"15:00\",\r\n  \"endTime\": \"18:00\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/timetables/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"timetables",
+								"1"
+							]
+						}
+					},
+					"response": []
+				}
+			]
 		}
 	],
 	"auth": {
@@ -1720,7 +1872,7 @@
 		"bearer": [
 			{
 				"key": "token",
-				"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU1ODcyMDgwLCJleHAiOjE3NTU4NzU2ODB9.w9tsSwgQRvU1ctoXKAAREu61X3ksUtHM9FE9l71uZFs",
+				"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU2NDkwNzY2LCJleHAiOjE3NTY0OTQzNjZ9.RXLVnhHAxAP4S-hVHzPWXaPlVJRf7xYh3H_Rm2SfyZQ",
 				"type": "string"
 			}
 		]

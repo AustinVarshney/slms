@@ -1,6 +1,7 @@
 package com.java.slms.service;
 
 import com.java.slms.dto.PasswordDto;
+import com.java.slms.dto.UpdateUserDetails;
 import com.java.slms.dto.UserRequest;
 
 public interface UserService
@@ -9,7 +10,7 @@ public interface UserService
 
     void deleteUser(Long userId);
 
-    UserRequest updateUserDetails(Long userId, UserRequest userRequest);
+    UserRequest updateUserDetails(Long userId, UpdateUserDetails updateUserDetails);
 
 }
 

@@ -1,10 +1,10 @@
 package com.java.slms.serviceImpl;
 
+import com.java.slms.dto.TCReasonDto;
 import com.java.slms.dto.TransferCertificateRequestDto;
 import com.java.slms.exception.AlreadyExistException;
 import com.java.slms.exception.ResourceNotFoundException;
 import com.java.slms.exception.WrongArgumentException;
-import com.java.slms.model.ClassEntity;
 import com.java.slms.model.Session;
 import com.java.slms.model.Student;
 import com.java.slms.model.TransferCertificateRequest;
@@ -34,9 +34,9 @@ public class TransferCertificateServiceImpl implements TransferCertificateReques
     private final SessionRepository sessionRepository;
     private final ClassEntityRepository classEntityRepository;
 
-    @Override
     @Transactional
-    public TransferCertificateRequestDto createTransferCertificateRequest(String studentPan, TransferCertificateRequestDto requestDto)
+    @Override
+    public TransferCertificateRequestDto createTransferCertificateRequest(String studentPan, TCReasonDto reasonDto)
     {
         // Fetch student entity
         Student student = studentRepository.findById(studentPan)
@@ -53,22 +53,15 @@ public class TransferCertificateServiceImpl implements TransferCertificateReques
         Session activeSession = sessionRepository.findByActiveTrue()
                 .orElseThrow(() -> new ResourceNotFoundException("No active session found"));
 
-        // Validate classId from DTO and fetch ClassEntity
-        if (requestDto.getClassId() == null)
-        {
-            throw new WrongArgumentException("Class ID must be provided");
-        }
-        ClassEntity classEntity = classEntityRepository.findById(requestDto.getClassId())
-                .orElseThrow(() -> new ResourceNotFoundException("Class not found with id: " + requestDto.getClassId()));
 
         // Map requestDto to entity
         TransferCertificateRequest tcRequest = new TransferCertificateRequest();
         tcRequest.setStudent(student);
         tcRequest.setSession(activeSession);
-        tcRequest.setLastClass(classEntity);
+        tcRequest.setLastClass(student.getCurrentClass());
         tcRequest.setRequestDate(LocalDate.now());
         tcRequest.setStatus(RequestStatus.PENDING);
-        tcRequest.setReason(requestDto.getReason());
+        tcRequest.setReason(reasonDto.getReason());
 
         // Save the request entity
         TransferCertificateRequest savedRequest = tcRequestRepository.save(tcRequest);
@@ -79,8 +72,8 @@ public class TransferCertificateServiceImpl implements TransferCertificateReques
         responseDto.setStudentName(student.getName());
         responseDto.setSessionId(activeSession.getId());
         responseDto.setSessionName(activeSession.getName());
-        responseDto.setClassId(classEntity.getId());
-        responseDto.setClassName(classEntity.getClassName());
+        responseDto.setClassId(student.getCurrentClass().getId());
+        responseDto.setClassName(student.getCurrentClass().getClassName());
 
         return responseDto;
     }

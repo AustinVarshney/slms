@@ -19,6 +19,8 @@ public interface ClassEntityRepository extends JpaRepository<ClassEntity, Long>
 
     Optional<ClassEntity> findByIdAndSessionId(Long classId, Long sessionId);
 
+    Optional<ClassEntity> findByIdAndSession_Active(Long classId, boolean isActive);
+
     List<ClassEntity> findBySession_Id(Long sessionId);
 
     boolean existsByIdAndSessionId(Long classId, Long sessionId);

@@ -1,8 +1,7 @@
 package com.java.slms.controller;
 
 import com.java.slms.dto.*;
-import com.java.slms.model.Session;
-import com.java.slms.payload.ApiResponse;
+import com.java.slms.payload.RestResponse;
 import com.java.slms.service.AttendanceService;
 import com.java.slms.service.SessionService;
 import com.java.slms.util.FeeMonth;
@@ -17,20 +16,35 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/attendance")
+@Tag(name = "Attendance Controller", description = "APIs for managing attendance records")
 public class AttendanceController
 {
     private final AttendanceService attendanceService;
     private final SessionService sessionService;
 
+    @Operation(
+            summary = "Mark today's attendance",
+            description = "Allows admin or teacher to mark attendance for students on the current date.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Attendance marked successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid attendance data or missing class ID", content = @Content)
+            }
+    )
     @PostMapping()
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER')")
-    public ResponseEntity<ApiResponse<?>> markAttendance(@RequestBody AttendanceDto attendanceDto)
+    public ResponseEntity<RestResponse<?>> markAttendance(@RequestBody AttendanceDto attendanceDto)
     {
         attendanceService.markTodaysAttendance(attendanceDto);
-        ApiResponse<?> response = ApiResponse.builder()
+        RestResponse<?> response = RestResponse.builder()
                 .data(null)
                 .message("Attendance marked successfully ")
                 .status(HttpStatus.OK.value())
@@ -39,9 +53,20 @@ public class AttendanceController
         return ResponseEntity.ok(response);
     }
 
+    @Operation(
+            summary = "Update attendance for a specific date",
+            description = "Allows admin to update attendance records for a given date.",
+            parameters = {
+                    @Parameter(name = "date", description = "Date of attendance in YYYY-MM-DD format", required = true)
+            },
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Attendance updated successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid input or date out of session range", content = @Content)
+            }
+    )
     @PutMapping("/{date}")
     @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
-    public ResponseEntity<ApiResponse<AttendanceUpdateResult>> updateAttendanceForAdmin(
+    public ResponseEntity<RestResponse<AttendanceUpdateResult>> updateAttendanceForAdmin(
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestBody AttendanceDto attendanceDto)
     {
@@ -49,7 +74,7 @@ public class AttendanceController
         AttendanceUpdateResult attendanceUpdateResult = attendanceService.updateAttendanceForAdmin(attendanceDto, date);
 
         return ResponseEntity.ok(
-                ApiResponse.<AttendanceUpdateResult>builder()
+                RestResponse.<AttendanceUpdateResult>builder()
                         .data(attendanceUpdateResult)
                         .message("Attendance updated successfully for date: " + date)
                         .status(HttpStatus.OK.value())
@@ -57,9 +82,22 @@ public class AttendanceController
         );
     }
 
+    @Operation(
+            summary = "Get attendance records by student PAN, session, and optionally by month",
+            description = "Fetch attendance records for a student in a specified session and optional month filter.",
+            parameters = {
+                    @Parameter(name = "pan", description = "PAN number of the student", required = true),
+                    @Parameter(name = "sessionId", description = "ID of the session", required = true),
+                    @Parameter(name = "month", description = "Month for attendance filter (optional)")
+            },
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Attendance records fetched successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid input parameters", content = @Content)
+            }
+    )
     @GetMapping("student/{pan}/session/{sessionId}")
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER')")
-    public ResponseEntity<ApiResponse<List<AttendanceInfoDto>>> getAllAttendanceByPanAndSessionIdAndMonth(
+    public ResponseEntity<RestResponse<List<AttendanceInfoDto>>> getAllAttendanceByPanAndSessionIdAndMonth(
             @PathVariable String pan,
             @PathVariable Long sessionId,
             @RequestParam(required = false) FeeMonth month)
@@ -68,7 +106,7 @@ public class AttendanceController
         List<AttendanceInfoDto> attendanceInfoList = attendanceService.getAllAttendanceByPanAndSessionId(pan, sessionId, month);
 
         return ResponseEntity.ok(
-                ApiResponse.<List<AttendanceInfoDto>>builder()
+                RestResponse.<List<AttendanceInfoDto>>builder()
                         .data(attendanceInfoList)
                         .message("Attendance records fetched successfully")
                         .status(HttpStatus.OK.value())
@@ -77,9 +115,20 @@ public class AttendanceController
 
     }
 
+    @Operation(
+            summary = "Get attendance records of the current student by month",
+            description = "Fetch attendance records for the logged-in student filtered by optional month.",
+            parameters = {
+                    @Parameter(name = "month", description = "Month for attendance filter (optional)")
+            },
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Attendance records fetched successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid input parameters", content = @Content)
+            }
+    )
     @GetMapping("/me")
     @PreAuthorize("hasRole('ROLE_STUDENT')")
-    public ResponseEntity<ApiResponse<List<AttendanceInfoDto>>> getAttendanceOfCurrentStudentByMonth(
+    public ResponseEntity<RestResponse<List<AttendanceInfoDto>>> getAttendanceOfCurrentStudentByMonth(
             @RequestParam(required = false) FeeMonth month)
     {
 
@@ -90,6 +139,7 @@ public class AttendanceController
 
         if (currentMonth == null && activeSession != null && activeSession.getStartDate() != null)
         {
+            // Determine current month only if within session range
             LocalDate now = LocalDate.now();
             if (!now.isBefore(activeSession.getStartDate()) && !now.isAfter(activeSession.getEndDate()))
             {
@@ -101,7 +151,7 @@ public class AttendanceController
                 panNumber, activeSession.getId(), currentMonth);
 
         return ResponseEntity.ok(
-                ApiResponse.<List<AttendanceInfoDto>>builder()
+                RestResponse.<List<AttendanceInfoDto>>builder()
                         .data(records)
                         .message("Attendance records fetched for PAN: " + panNumber)
                         .status(HttpStatus.OK.value())
@@ -109,9 +159,22 @@ public class AttendanceController
         );
     }
 
+    @Operation(
+            summary = "Get attendance records by class, session, and optional month",
+            description = "Fetch attendance records for a class during a session filtered by optional month.",
+            parameters = {
+                    @Parameter(name = "classId", description = "Class ID", required = true),
+                    @Parameter(name = "sessionId", description = "Session ID", required = true),
+                    @Parameter(name = "month", description = "Month for attendance filter (optional)")
+            },
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Attendance records fetched successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid input parameters", content = @Content)
+            }
+    )
     @GetMapping("/class/{classId}/session/{sessionId}")
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER')")
-    public ResponseEntity<ApiResponse<List<AttendanceByClassDto>>> getAttendanceByClassAndSessionAndMonth(
+    public ResponseEntity<RestResponse<List<AttendanceByClassDto>>> getAttendanceByClassAndSessionAndMonth(
             @PathVariable Long classId,
             @PathVariable Long sessionId,
             @RequestParam(required = false) FeeMonth month)
@@ -120,13 +183,11 @@ public class AttendanceController
         List<AttendanceByClassDto> attendanceList = attendanceService.getAttendanceByClassAndSession(classId, sessionId, month);
 
         return ResponseEntity.ok(
-                ApiResponse.<List<AttendanceByClassDto>>builder()
+                RestResponse.<List<AttendanceByClassDto>>builder()
                         .data(attendanceList)
                         .message("Attendance records fetched successfully")
                         .status(HttpStatus.OK.value())
                         .build()
         );
     }
-
-
 }

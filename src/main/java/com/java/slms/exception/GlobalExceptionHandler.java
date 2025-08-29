@@ -1,6 +1,6 @@
 package com.java.slms.exception;
 
-import com.java.slms.payload.ApiResponse;
+import com.java.slms.payload.RestResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -16,9 +16,9 @@ import java.util.Map;
 public class GlobalExceptionHandler
 {
     @ExceptionHandler(AlreadyExistException.class)
-    public ResponseEntity<ApiResponse<String>> handleStudentAlreadyExist(AlreadyExistException ex)
+    public ResponseEntity<RestResponse<String>> handleStudentAlreadyExist(AlreadyExistException ex)
     {
-        ApiResponse<String> response = ApiResponse.<String>builder()
+        RestResponse<String> response = RestResponse.<String>builder()
                 .data(null).message(ex.getMessage()).status(HttpStatus.CONFLICT.value()).build();
         return new ResponseEntity<>(response, HttpStatus.CONFLICT);
     }
@@ -64,9 +64,9 @@ public class GlobalExceptionHandler
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ApiResponse<?>> handleResourceNotFound(ResourceNotFoundException ex)
+    public ResponseEntity<RestResponse<?>> handleResourceNotFound(ResourceNotFoundException ex)
     {
-        ApiResponse<?> response = ApiResponse.builder()
+        RestResponse<?> response = RestResponse.builder()
                 .data(null)
                 .message(ex.getMessage())
                 .status(HttpStatus.BAD_REQUEST.value())
@@ -75,9 +75,9 @@ public class GlobalExceptionHandler
     }
 
     @ExceptionHandler(WrongArgumentException.class)
-    public ResponseEntity<ApiResponse<?>> handleWrongArgument(WrongArgumentException ex)
+    public ResponseEntity<RestResponse<?>> handleWrongArgument(WrongArgumentException ex)
     {
-        ApiResponse<?> response = ApiResponse.builder()
+        RestResponse<?> response = RestResponse.builder()
                 .data(null)
                 .message(ex.getMessage())
                 .status(HttpStatus.BAD_REQUEST.value())

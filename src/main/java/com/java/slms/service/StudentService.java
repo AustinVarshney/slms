@@ -1,13 +1,11 @@
 package com.java.slms.service;
 
-import com.java.slms.dto.StudentRequestDto;
-import com.java.slms.dto.StudentAttendance;
-import com.java.slms.dto.StudentResponseDto;
-import com.java.slms.dto.UpdateStudentInfo;
+import com.java.slms.dto.*;
 import com.java.slms.util.UserStatus;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface StudentService
 {
@@ -24,9 +22,7 @@ public interface StudentService
 
     StudentResponseDto updateStudent(String pan, UpdateStudentInfo updateStudentInfo);
 
-    List<StudentAttendance> getStudentsPresentToday();
-
-    List<StudentAttendance> getStudentsPresentTodayByClass(Long classId);
+    CurrentDayAttendance getStudentsPresentToday(Optional<Long> classId);
 
     List<StudentResponseDto> getStudentsByClassId(Long classId);
 }

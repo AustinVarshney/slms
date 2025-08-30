@@ -11,5 +11,5 @@ public class ClassRequestDto
     private String className;
     private Long sessionId;
     private Double feesAmount;
-
+    private Long classTeacherId;
 }

@@ -15,9 +15,7 @@ public class ClassResponseDto
     private Long sessionId;
     private String sessionName;
     private Double feesAmount;
-    private List<StudentResponseDto> students;
-    private List<SubjectDto> subjects;
-    private List<ExamDto> exams;
+    private Long classTeacherId;
+    private String classTeacherName;
     private int totalStudents;
-
 }

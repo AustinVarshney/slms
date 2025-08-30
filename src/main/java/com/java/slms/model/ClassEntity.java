@@ -47,7 +47,9 @@ public class ClassEntity extends BaseEntity
     @JoinColumn(name = "session_id")
     private Session session;
 
+    @OneToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "class_teacher_id", unique = true)
+    @JsonManagedReference
+    private Teacher classTeacher;
 
-//    @OneToMany(mappedBy = "classEntity")
-//    private List<FeeStructure> feeStructures;
 }

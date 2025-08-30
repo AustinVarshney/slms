@@ -11,6 +11,8 @@ public class ClassInfoResponse
 {
     private Long id;
     private String className;
+    private Long classTeacherId;
+    private String classTeacherName;
     private Long sessionId;
     private String sessionName;
     private Double feesAmount;

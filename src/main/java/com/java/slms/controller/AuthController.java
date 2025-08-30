@@ -53,6 +53,7 @@ public class AuthController
 
     @PostMapping("/register/staff")
     @Transactional
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<RestResponse<Void>> registerStaff(@RequestBody StaffRegisterRequest req)
     {
         // Check if user already exists

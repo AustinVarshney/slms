@@ -22,7 +22,6 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@PreAuthorize("hasAnyRole('ROLE_ADMIN')")
 public class UserServiceImpl implements UserService
 {
     private final UserRepository userRepository;

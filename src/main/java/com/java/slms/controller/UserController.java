@@ -8,6 +8,7 @@ import com.java.slms.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -61,6 +62,7 @@ public class UserController
             }
     )
     @PutMapping("/{userId}/update")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<RestResponse<UserRequest>> updateUserDetails(
             @PathVariable Long userId,
             @RequestBody UpdateUserDetails updateUserDetails
@@ -86,6 +88,7 @@ public class UserController
             }
     )
     @DeleteMapping("/{userId}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<RestResponse<Void>> deleteUser(@PathVariable Long userId)
     {
         userService.deleteUser(userId);

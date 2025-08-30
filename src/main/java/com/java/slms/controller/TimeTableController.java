@@ -1,8 +1,13 @@
 package com.java.slms.controller;
 
+import com.java.slms.dto.StudentResponseDto;
+import com.java.slms.dto.TeacherDto;
 import com.java.slms.dto.TimetableRequestDTO;
 import com.java.slms.dto.TimetableResponseDTO;
+import com.java.slms.model.User;
 import com.java.slms.payload.RestResponse;
+import com.java.slms.service.StudentService;
+import com.java.slms.service.TeacherService;
 import com.java.slms.service.TimeTableService;
 import com.java.slms.util.DayOfWeek;
 import io.swagger.v3.oas.annotations.Operation;
@@ -15,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -28,6 +34,8 @@ import java.util.List;
 public class TimeTableController
 {
     private final TimeTableService timetableService;
+    private final TeacherService teacherService;
+    private final StudentService studentService;
 
     @Operation(
             summary = "Create a new timetable entry",
@@ -38,7 +46,7 @@ public class TimeTableController
             }
     )
     @PostMapping
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<RestResponse<TimetableResponseDTO>> createTimetable(
             @RequestBody TimetableRequestDTO dto)
     {
@@ -82,6 +90,44 @@ public class TimeTableController
                 .build());
     }
 
+    /**
+     * Get the timetable for the currently logged-in student.
+     */
+    @Operation(
+            summary = "Get current student's timetable",
+            description = "Retrieves the timetable for the current student in the authenticated session, optionally filtered by day.",
+            parameters = {
+                    @Parameter(name = "day", description = "Optional day of the week for which to filter the timetable (e.g., MONDAY, TUESDAY)", required = false)
+            },
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Timetable fetched successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid request or student not found", content = @Content)
+            }
+    )
+    @GetMapping("/student/me")
+    @PreAuthorize("hasRole('ROLE_STUDENT')")
+    public ResponseEntity<RestResponse<List<TimetableResponseDTO>>> getTimetableByCurrentStudent(
+            @RequestParam(value = "day", required = false) DayOfWeek day
+    )
+    {
+        String panNumber = SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getName();
+
+        StudentResponseDto student = studentService.getStudentByPAN(panNumber);
+
+        log.info("Fetching timetable for classId={}{}", student.getClassId(), day != null ? " on day=" + day : "");
+
+        List<TimetableResponseDTO> data = timetableService.getTimetableByClassAndOptionalDay(student.getClassId(), day);
+
+        return ResponseEntity.ok(RestResponse.<List<TimetableResponseDTO>>builder()
+                .data(data)
+                .message("Timetable fetched successfully")
+                .status(HttpStatus.OK.value())
+                .build());
+    }
+
     @Operation(
             summary = "Get timetable by teacher ID",
             description = "Retrieves timetable entries of a teacher for the current session.",
@@ -105,6 +151,38 @@ public class TimeTableController
                 .build());
     }
 
+
+    /**
+     * Get timetable of the currently logged-in teacher.
+     */
+    @Operation(
+            summary = "Get current teacher's timetable",
+            description = "Retrieves the timetable for the currently authenticated teacher in the current academic session using JWT authentication.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Timetable fetched successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid request or teacher not found", content = @Content)
+            }
+    )
+    @GetMapping("/teacher/me")
+    @PreAuthorize("hasRole('ROLE_TEACHER')")
+    public ResponseEntity<RestResponse<List<TimetableResponseDTO>>> getByTimeTableOfCurrentTeacher()
+    {
+        String email = SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getName();
+
+        TeacherDto teacher = teacherService.getTeacherByEmail(email);
+
+        log.info("Fetching timetable for teacherId={}", teacher.getId());
+        List<TimetableResponseDTO> data = timetableService.getTimetableByTeacherIdInCurrentSession(teacher.getId());
+        return ResponseEntity.ok(RestResponse.<List<TimetableResponseDTO>>builder()
+                .data(data)
+                .message("Timetable fetched successfully")
+                .status(HttpStatus.OK.value())
+                .build());
+    }
+
     @Operation(
             summary = "Update timetable entry",
             description = "Updates an existing timetable entry by ID.",
@@ -117,7 +195,7 @@ public class TimeTableController
             }
     )
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<RestResponse<TimetableResponseDTO>> updateTimetable(
             @PathVariable Long id, @RequestBody TimetableRequestDTO dto)
     {
@@ -142,7 +220,7 @@ public class TimeTableController
             }
     )
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<RestResponse<Void>> deleteTimetable(@PathVariable Long id)
     {
         log.info("Deleting timetable with id={}", id);

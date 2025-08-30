@@ -36,7 +36,7 @@ public class ClassEntityController
             }
     )
     @PostMapping
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<RestResponse<ClassResponseDto>> addClass(@RequestBody ClassRequestDto classRequestDto)
     {
         ClassResponseDto createdClass = classEntityService.addClass(classRequestDto);
@@ -58,7 +58,7 @@ public class ClassEntityController
             }
     )
     @GetMapping
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<RestResponse<List<ClassInfoResponse>>> getAllClasses()
     {
         List<ClassInfoResponse> classes = classEntityService.getAllClassInActiveSession();
@@ -84,7 +84,7 @@ public class ClassEntityController
             }
     )
     @GetMapping("/{classId}/session/{sessionId}")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<RestResponse<ClassInfoResponse>> getClassByName(@PathVariable Long classId, @PathVariable Long sessionId)
     {
         ClassInfoResponse classDto = classEntityService.getClassByClassIdAndSessionId(classId, sessionId);
@@ -109,7 +109,7 @@ public class ClassEntityController
             }
     )
     @PatchMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<RestResponse<ClassInfoResponse>> updateClassName(
             @PathVariable Long id,
             @RequestBody ClassRequestDto classRequestDto
@@ -138,7 +138,7 @@ public class ClassEntityController
             }
     )
     @DeleteMapping("/{classId}/session/{sessionId}")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<RestResponse<String>> deleteClass(@PathVariable Long classId, @PathVariable Long sessionId)
     {
         classEntityService.deleteClassByIdAndSessionId(classId, sessionId);

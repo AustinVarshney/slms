@@ -19,7 +19,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/admins")
-@PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+@PreAuthorize("hasRole('ROLE_ADMIN')")
 @Tag(name = "Admin Controller", description = "APIs for managing admins")
 public class AdminController
 {

@@ -24,7 +24,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @RestController
 @RequestMapping("/api/fee-structures")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+@PreAuthorize("hasRole('ROLE_ADMIN')")
 @Slf4j
 @Tag(name = "Fee Structure Controller", description = "APIs to manage fee structures")
 public class FeeStructureController

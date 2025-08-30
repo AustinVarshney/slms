@@ -23,7 +23,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/students")
-@PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+@PreAuthorize("hasRole('ROLE_ADMIN')")
 @Tag(name = "Student Controller", description = "APIs for managing students")
 public class StudentController
 {
@@ -84,6 +84,7 @@ public class StudentController
             }
     )
     @GetMapping("/{panNumber}")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER')")
     public ResponseEntity<RestResponse<StudentResponseDto>> getStudentByPAN(@PathVariable String panNumber)
     {
         RestResponse<StudentResponseDto> response = RestResponse.<StudentResponseDto>builder()
@@ -214,7 +215,7 @@ public class StudentController
             }
     )
     @PutMapping("/status")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<RestResponse<Void>> updateStudentsStatus(
             @RequestBody UpdateStudentStatusRequest request)
     {

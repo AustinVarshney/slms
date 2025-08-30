@@ -44,11 +44,17 @@ public class SecurityConfig
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/v3/api-docs/**", "/swagger-ui/**").permitAll()
+                        .requestMatchers(
+                                "/api/auth/login",
+                                "/api/auth/student/login",
+                                "/api/users/*/change-password",
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint(jwtAuthEntryPoint)  // Important to handle auth exceptions properly
+                        .authenticationEntryPoint(jwtAuthEntryPoint)
                 )
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
@@ -56,4 +62,5 @@ public class SecurityConfig
 
         return http.build();
     }
+
 }

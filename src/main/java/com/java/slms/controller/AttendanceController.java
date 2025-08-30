@@ -65,7 +65,7 @@ public class AttendanceController
             }
     )
     @PutMapping("/{date}")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<RestResponse<AttendanceUpdateResult>> updateAttendanceForAdmin(
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestBody AttendanceDto attendanceDto)

@@ -76,6 +76,16 @@ public class TeacherServiceImpl implements TeacherService
     }
 
     @Override
+    public Teacher getActiveTeacherByEmail(String email)
+    {
+        log.info("Fetching active teacher by email: {}", email);
+
+        return teacherRepository.findByEmailIgnoreCaseAndStatus(email, UserStatus.ACTIVE)
+                .orElseThrow(() -> new ResourceNotFoundException("Teacher not found with email: " + email));
+    }
+
+
+    @Override
     @Transactional
     public void inActiveTeacher(Long id)
     {

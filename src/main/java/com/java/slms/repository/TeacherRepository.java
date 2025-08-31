@@ -15,6 +15,8 @@ public interface TeacherRepository extends JpaRepository<Teacher, Long>
 
     List<Teacher> findByStatus(UserStatus userStatus);
 
+    Optional<Teacher> findByEmailIgnoreCaseAndStatus(String email, UserStatus status);
+
     boolean existsByEmail(String email);
     void deleteByEmail(String email);
 }

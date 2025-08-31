@@ -1,6 +1,7 @@
 package com.java.slms.service;
 
 import com.java.slms.dto.TeacherDto;
+import com.java.slms.model.Teacher;
 
 import java.util.List;
 
@@ -13,6 +14,8 @@ public interface TeacherService
     List<TeacherDto> getAllTeachers();
 
     List<TeacherDto> getActiveTeachers();
+
+    Teacher getActiveTeacherByEmail(String email);
 
     void inActiveTeacher(Long id);
 

@@ -79,6 +79,17 @@ public class AdminServiceImpl implements AdminService
     }
 
     @Override
+    public Admin getActiveAdminByEmail(String email)
+    {
+        log.info("Fetching active admin by email: {}", email);
+
+        return adminRepository.findByEmailIgnoreCaseAndStatus(email, UserStatus.ACTIVE)
+                .orElseThrow(() -> new ResourceNotFoundException("Admin not found with email: " + email));
+
+    }
+
+
+    @Override
     public UserRequest updateAdmin(Long id, UserRequest adminDto)
     {
         return null;

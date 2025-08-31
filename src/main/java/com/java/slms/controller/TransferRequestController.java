@@ -1,12 +1,17 @@
 package com.java.slms.controller;
 
-import com.java.slms.dto.ProcessRequestDto;
-import com.java.slms.dto.TCReasonDto;
-import com.java.slms.dto.TransferCertificateRequestDto;
+import com.java.slms.dto.*;
+import com.java.slms.model.Admin;
+import com.java.slms.model.Teacher;
 import com.java.slms.payload.RestResponse;
+import com.java.slms.service.AdminService;
+import com.java.slms.service.TeacherService;
 import com.java.slms.service.TransferCertificateRequestService;
 import com.java.slms.util.RequestStatus;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -23,10 +28,13 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @RestController
 @RequestMapping("/api/tc")
 @RequiredArgsConstructor
+@Slf4j
 @Tag(name = "Transfer Certificate Requests", description = "APIs to manage transfer certificate requests")
 public class TransferRequestController
 {
     private final TransferCertificateRequestService transferCertificateService;
+    private final AdminService adminService;
+    private final TeacherService teacherService;
 
     @Operation(
             summary = "Submit a transfer certificate request",
@@ -174,4 +182,99 @@ public class TransferRequestController
                         .build()
         );
     }
+
+    @Operation(
+            summary = "Forward TC request to class teacher",
+            description = "Allows admin to forward a transfer certificate request to the respective class teacher.",
+            parameters = {
+                    @Parameter(name = "tcRequestId", description = "ID of the TC request", required = true)
+            },
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "Message from admin to class teacher",
+                    required = true,
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = AdminToTeacherDto.class)
+                    )
+            ),
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "TC request successfully forwarded to class teacher"),
+                    @ApiResponse(responseCode = "400", description = "Invalid request (e.g., already approved or not found)", content = @Content)
+            }
+    )
+    @PutMapping("/{tcRequestId}/forward-to-teacher")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<RestResponse<Void>> forwardTCRequestToTeacher(
+            @PathVariable Long tcRequestId,
+            @RequestBody AdminToTeacherDto adminToTeacherDto)
+    {
+        String email = SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getName();
+
+        Admin admin = adminService.getActiveAdminByEmail(email);
+
+        log.info("Forwarding TC request ID {} to class teacher", tcRequestId);
+
+        transferCertificateService.forwardTCRequestToClassTeacher(tcRequestId, admin, adminToTeacherDto);
+
+        log.info("Successfully forwarded TC request ID {}", tcRequestId);
+
+        return ResponseEntity.ok(
+                RestResponse.<Void>builder()
+                        .status(HttpStatus.OK.value())
+                        .message("TC request forwarded to class teacher successfully")
+                        .build()
+        );
+    }
+
+    @Operation(
+            summary = "Reply to a transfer certificate request from teacher to admin",
+            description = "Allows a class teacher to respond (approve or reject) to a TC request forwarded by the admin.",
+            parameters = {
+                    @Parameter(name = "tcRequestId", description = "ID of the TC request", required = true)
+            },
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "Response from class teacher with message and decision",
+                    required = true,
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = TeacherToAdminDto.class)
+                    )
+            ),
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Response submitted successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid request (e.g., not assigned to teacher or already responded)", content = @Content)
+            }
+    )
+    @PreAuthorize("hasRole('ROLE_TEACHER')")
+    @PutMapping("/{tcRequestId}/reply-to-admin")
+    public ResponseEntity<RestResponse<Void>> replyToTCRequestFromTeacher(
+            @PathVariable Long tcRequestId,
+            @RequestBody TeacherToAdminDto teacherToAdminDto)
+    {
+
+        log.info("Teacher replying to TC request ID {} with decision: {}", tcRequestId, teacherToAdminDto.getTeacherReplyToAdmin());
+
+        String email = SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getName();
+
+        Teacher teacher = teacherService.getActiveTeacherByEmail(email);
+
+        transferCertificateService.replyTCRequestToAdmin(tcRequestId, teacher, teacherToAdminDto);
+
+        log.info("Reply submitted successfully for TC request ID {}", tcRequestId);
+
+        return ResponseEntity.ok(
+                RestResponse.<Void>builder()
+                        .status(HttpStatus.OK.value())
+                        .message("Teacher response submitted successfully.")
+                        .build()
+        );
+    }
+
+
 }

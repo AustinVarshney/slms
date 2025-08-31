@@ -16,6 +16,8 @@ public interface AdminRepository extends JpaRepository<Admin, Long>
 
     Optional<Admin> findByEmailIgnoreCase(String email);
 
+    Optional<Admin> findByEmailIgnoreCaseAndStatus(String email, UserStatus status);
+
     List<Admin> findByEmailIn(List<String> emails);
 
     List<Admin> findByStatus(UserStatus userStatus);

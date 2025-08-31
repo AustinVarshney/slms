@@ -250,11 +250,21 @@
 				{
 					"name": "Add New Class With SessionId",
 					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU2NTczNzM5LCJleHAiOjE3NTY1NzczMzl9.Ev0u_in6vhmF0FxzE14g1qhn0Mkp4Z78ambv8EJoXFk",
+									"type": "string"
+								}
+							]
+						},
 						"method": "POST",
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"className\" : \"8V\",\r\n    \"sessionId\": 1,\r\n    \"feesAmount\":7000\r\n}",
+							"raw": "{\r\n    \"className\" : \"8A\",\r\n    \"sessionId\": 1,\r\n    \"feesAmount\":8000,\r\n    \"classTeacherId\":3\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -394,6 +404,38 @@
 						}
 					},
 					"response": []
+				}
+			],
+			"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+						"key": "token",
+						"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU2NTczNzM5LCJleHAiOjE3NTY1NzczMzl9.Ev0u_in6vhmF0FxzE14g1qhn0Mkp4Z78ambv8EJoXFk",
+						"type": "string"
+					}
+				]
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"exec": [
+							""
+						]
+					}
 				}
 			]
 		},
@@ -1454,6 +1496,16 @@
 				{
 					"name": "Approve TC Request By Admin",
 					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU2NjQ5NjE5LCJleHAiOjE3NTY2NTMyMTl9.AidcBh84ZvfVgnXbOkR2ZOO8GuGZxo8jzb2m7J_e70I",
+									"type": "string"
+								}
+							]
+						},
 						"method": "PUT",
 						"header": [],
 						"body": {
@@ -1565,6 +1617,79 @@
 									"key": "status",
 									"value": "APPROVED"
 								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Admin Forward Request To Teacher",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJUZWFjaGVyQW5kQWRtaW4xMTExMUBleGFtcGxlLmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iLCJST0xFX1RFQUNIRVIiXSwiaWF0IjoxNzU2NjQ0NTMyLCJleHAiOjE3NTY2NDgxMzJ9.1CNvwkyzktFg0RjKYRM0rsnwz0n9ZdkNlbsQuO-_n8o",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"adminMessageToTeacher\":\"Please review this transfer certificate request.\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/tc/1/forward-to-teacher",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"tc",
+								"1",
+								"forward-to-teacher"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Teacher Reply to Admin",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZWFjaGVyM0BleGFtcGxlLmNvbSIsInJvbGVzIjpbIlJPTEVfVEVBQ0hFUiJdLCJpYXQiOjE3NTY2NDkzMDQsImV4cCI6MTc1NjY1MjkwNH0.qf3B7JQg1PAN2PPuKruVonbeTeB8LUGqndY8yvjSMAs",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/tc/1/forward-to-teacher",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"tc",
+								"1",
+								"forward-to-teacher"
 							]
 						}
 					},
@@ -1929,6 +2054,156 @@
 					"response": []
 				}
 			]
+		},
+		{
+			"name": "Event",
+			"item": [
+				{
+					"name": "Create Event By Admin",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"title\": \"Annual Sports Day\",\r\n  \"description\": \"Annual sports competition for all classes\",\r\n  \"type\": \"sports\",\r\n  \"startDate\": \"2024-02-15\",\r\n  \"endDate\": \"2024-02-16\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/events",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"events"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Event",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"title\": \"Updated Sports Day\",\r\n  \"description\": \"Updated description for the sports event\",\r\n  \"type\": \"sports\",\r\n  \"startDate\": \"2024-02-15\",\r\n  \"endDate\": \"2024-02-16\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/events/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"events",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Event By ID",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/events/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"events",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Events in current Session",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/events?sessionId=1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"events"
+							],
+							"query": [
+								{
+									"key": "sessionId",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Event",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/events/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"events",
+								"1"
+							]
+						}
+					},
+					"response": []
+				}
+			]
 		}
 	],
 	"auth": {
@@ -1936,7 +2211,7 @@
 		"bearer": [
 			{
 				"key": "token",
-				"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU2NDkwNzY2LCJleHAiOjE3NTY0OTQzNjZ9.RXLVnhHAxAP4S-hVHzPWXaPlVJRf7xYh3H_Rm2SfyZQ",
+				"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU2NTc2MjM0LCJleHAiOjE3NTY1Nzk4MzR9.RHWy-SdxIDsDfJYZFSyko5sBsb9UJdKKE8cZRejPfHE",
 				"type": "string"
 			}
 		]

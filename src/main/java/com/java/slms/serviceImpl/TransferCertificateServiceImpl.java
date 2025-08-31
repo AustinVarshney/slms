@@ -1,13 +1,13 @@
 package com.java.slms.serviceImpl;
 
+import com.java.slms.dto.AdminToTeacherDto;
 import com.java.slms.dto.TCReasonDto;
+import com.java.slms.dto.TeacherToAdminDto;
 import com.java.slms.dto.TransferCertificateRequestDto;
 import com.java.slms.exception.AlreadyExistException;
 import com.java.slms.exception.ResourceNotFoundException;
 import com.java.slms.exception.WrongArgumentException;
-import com.java.slms.model.Session;
-import com.java.slms.model.Student;
-import com.java.slms.model.TransferCertificateRequest;
+import com.java.slms.model.*;
 import com.java.slms.repository.ClassEntityRepository;
 import com.java.slms.repository.SessionRepository;
 import com.java.slms.repository.StudentRepository;
@@ -62,6 +62,7 @@ public class TransferCertificateServiceImpl implements TransferCertificateReques
         tcRequest.setRequestDate(LocalDate.now());
         tcRequest.setStatus(RequestStatus.PENDING);
         tcRequest.setReason(reasonDto.getReason());
+        tcRequest.setClassTeacherApprovalStatus(RequestStatus.PENDING);
 
         // Save the request entity
         TransferCertificateRequest savedRequest = tcRequestRepository.save(tcRequest);
@@ -110,7 +111,7 @@ public class TransferCertificateServiceImpl implements TransferCertificateReques
         }
 
         request.setStatus(decision);
-        request.setAdminReply(adminReply);
+        request.setAdminReplyToStudent(adminReply);
         request.setAdminActionDate(LocalDate.now());
 
         TransferCertificateRequest updatedRequest = tcRequestRepository.save(request);
@@ -137,6 +138,43 @@ public class TransferCertificateServiceImpl implements TransferCertificateReques
         return requests.stream()
                 .map(tcRequest -> modelMapper.map(tcRequest, TransferCertificateRequestDto.class))
                 .toList();
+    }
+
+    @Override
+    public void forwardTCRequestToClassTeacher(Long tcRequestId, Admin admin, AdminToTeacherDto adminToTeacherDto)
+    {
+        TransferCertificateRequest request = tcRequestRepository.findById(tcRequestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Request not found with id: " + tcRequestId));
+
+        if (request.getStatus().equals(RequestStatus.APPROVED))
+        {
+            throw new WrongArgumentException("Request Already Approved with id " + request.getId());
+        }
+
+        request.setAdminMessageToTeacher(adminToTeacherDto.getAdminMessageToTeacher());
+        request.setApprovedByClassTeacher(request.getLastClass().getClassTeacher());
+        request.setStatus(RequestStatus.PROCESSING);
+        request.setApprovedByAdmin(admin);
+
+        tcRequestRepository.save(request);
+    }
+
+    @Override
+    public void replyTCRequestToAdmin(Long tcRequestId, Teacher teacher, TeacherToAdminDto teacherToAdminDto)
+    {
+        TransferCertificateRequest request = tcRequestRepository.findById(tcRequestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Request not found with id: " + tcRequestId));
+
+        if (!teacher.getId().equals(request.getApprovedByClassTeacher().getId()))
+        {
+            throw new WrongArgumentException("You are not authorized to respond to this TC request.");
+        }
+
+        request.setClassTeacherApprovalStatus(teacherToAdminDto.getStatus());
+        request.setTeacherReplyToAdmin(teacherToAdminDto.getTeacherReplyToAdmin());
+        request.setTeacherActionDate(LocalDate.now());
+        tcRequestRepository.save(request);
+
     }
 
 

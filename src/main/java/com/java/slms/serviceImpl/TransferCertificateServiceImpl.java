@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -38,77 +39,41 @@ public class TransferCertificateServiceImpl implements TransferCertificateReques
     @Override
     public TransferCertificateRequestDto createTransferCertificateRequest(String studentPan, TCReasonDto reasonDto)
     {
-        // Fetch student entity
-        Student student = studentRepository.findById(studentPan)
-                .orElseThrow(() -> new ResourceNotFoundException("Student not found with PAN: " + studentPan));
+        Student student = fetchStudentByPan(studentPan);
 
-        // Check for existing pending or approved request for this student
-        boolean exists = tcRequestRepository.existsByStudentAndStatusIn(student, List.of(RequestStatus.PENDING, RequestStatus.APPROVED));
-        if (exists)
-        {
-            throw new AlreadyExistException("Transfer Certificate request already exists or approved for this student.");
-        }
+        checkExistingPendingOrApprovedRequest(student);
 
-        // Fetch active session
-        Session activeSession = sessionRepository.findByActiveTrue()
-                .orElseThrow(() -> new ResourceNotFoundException("No active session found"));
+        Session activeSession = fetchActiveSession();
 
+        TransferCertificateRequest tcRequest = buildTransferCertificateRequest(student, activeSession, reasonDto);
 
-        // Map requestDto to entity
-        TransferCertificateRequest tcRequest = new TransferCertificateRequest();
-        tcRequest.setStudent(student);
-        tcRequest.setSession(activeSession);
-        tcRequest.setLastClass(student.getCurrentClass());
-        tcRequest.setRequestDate(LocalDate.now());
-        tcRequest.setStatus(RequestStatus.PENDING);
-        tcRequest.setReason(reasonDto.getReason());
-        tcRequest.setClassTeacherApprovalStatus(RequestStatus.PENDING);
-
-        // Save the request entity
         TransferCertificateRequest savedRequest = tcRequestRepository.save(tcRequest);
 
-        // Map to DTO and populate additional fields for response
-        TransferCertificateRequestDto responseDto = modelMapper.map(savedRequest, TransferCertificateRequestDto.class);
-        responseDto.setStudentPanNumber(student.getPanNumber());
-        responseDto.setStudentName(student.getName());
-        responseDto.setSessionId(activeSession.getId());
-        responseDto.setSessionName(activeSession.getName());
-        responseDto.setClassId(student.getCurrentClass().getId());
-        responseDto.setClassName(student.getCurrentClass().getClassName());
-
-        return responseDto;
+        return mapToDto(savedRequest);
     }
 
-    @Override
     @Transactional(readOnly = true)
+    @Override
     public List<TransferCertificateRequestDto> getAllRequestsByStudentPan(String studentPan)
     {
-        Student student = studentRepository.findById(studentPan)
-                .orElseThrow(() -> new ResourceNotFoundException("Student not found with PAN: " + studentPan));
+        Student student = fetchStudentByPan(studentPan);
 
         List<TransferCertificateRequest> tcRequests = tcRequestRepository.findByStudent(student);
 
         return tcRequests.stream()
-                .map(tcRequest -> modelMapper.map(tcRequest, TransferCertificateRequestDto.class))
-                .toList();
+                .map(this::mapToDto)
+                .collect(Collectors.toList());
     }
 
     @Transactional
     @Override
     public TransferCertificateRequestDto processRequestDecision(Long requestId, String adminReply, RequestStatus decision)
     {
-        if (decision != RequestStatus.APPROVED && decision != RequestStatus.REJECTED)
-        {
-            throw new WrongArgumentException("Decision must be either APPROVED or REJECTED");
-        }
+        validateDecision(decision);
 
-        TransferCertificateRequest request = tcRequestRepository.findById(requestId)
-                .orElseThrow(() -> new ResourceNotFoundException("Request not found with id: " + requestId));
+        TransferCertificateRequest request = fetchRequestById(requestId);
 
-        if (request.getStatus() != RequestStatus.PENDING)
-        {
-            throw new WrongArgumentException("Only pending requests can be processed.");
-        }
+        validateRequestPending(request);
 
         request.setStatus(decision);
         request.setAdminReplyToStudent(adminReply);
@@ -116,7 +81,7 @@ public class TransferCertificateServiceImpl implements TransferCertificateReques
 
         TransferCertificateRequest updatedRequest = tcRequestRepository.save(request);
 
-        return modelMapper.map(updatedRequest, TransferCertificateRequestDto.class);
+        return mapToDto(updatedRequest);
     }
 
     @Transactional(readOnly = true)
@@ -124,36 +89,42 @@ public class TransferCertificateServiceImpl implements TransferCertificateReques
     public List<TransferCertificateRequestDto> getAllRequests(RequestStatus status)
     {
         Sort sortByRequestDateDesc = Sort.by(Sort.Direction.DESC, "requestDate");
-        List<TransferCertificateRequest> requests;
 
-        if (status != null)
-        {
-            requests = tcRequestRepository.findAllByStatus(status, sortByRequestDateDesc);
-        }
-        else
-        {
-            requests = tcRequestRepository.findAll(sortByRequestDateDesc);
-        }
+        List<TransferCertificateRequest> requests = (status != null) ?
+                tcRequestRepository.findAllByStatus(status, sortByRequestDateDesc) :
+                tcRequestRepository.findAll(sortByRequestDateDesc);
 
         return requests.stream()
-                .map(tcRequest -> modelMapper.map(tcRequest, TransferCertificateRequestDto.class))
-                .toList();
+                .map(this::mapToDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TransferCertificateRequestDto> getAllRequestForwardedByAdminToClassTeacher(Teacher teacher)
+    {
+        List<TransferCertificateRequest> requests = tcRequestRepository
+                .findByApprovedByClassTeacherAndStatus(teacher, RequestStatus.PROCESSING);
+
+        return requests.stream()
+                .map(this::mapToDto)
+                .collect(Collectors.toList());
     }
 
     @Override
     public void forwardTCRequestToClassTeacher(Long tcRequestId, Admin admin, AdminToTeacherDto adminToTeacherDto)
     {
-        TransferCertificateRequest request = tcRequestRepository.findById(tcRequestId)
-                .orElseThrow(() -> new ResourceNotFoundException("Request not found with id: " + tcRequestId));
+        TransferCertificateRequest request = fetchRequestById(tcRequestId);
 
         if (request.getStatus().equals(RequestStatus.APPROVED))
         {
-            throw new WrongArgumentException("Request Already Approved with id " + request.getId());
+            throw new WrongArgumentException("Request already approved with id " + request.getId());
         }
 
         request.setAdminMessageToTeacher(adminToTeacherDto.getAdminMessageToTeacher());
         request.setApprovedByClassTeacher(request.getLastClass().getClassTeacher());
         request.setStatus(RequestStatus.PROCESSING);
+        request.setClassTeacherApprovalStatus(RequestStatus.PENDING);
         request.setApprovedByAdmin(admin);
 
         tcRequestRepository.save(request);
@@ -162,8 +133,7 @@ public class TransferCertificateServiceImpl implements TransferCertificateReques
     @Override
     public void replyTCRequestToAdmin(Long tcRequestId, Teacher teacher, TeacherToAdminDto teacherToAdminDto)
     {
-        TransferCertificateRequest request = tcRequestRepository.findById(tcRequestId)
-                .orElseThrow(() -> new ResourceNotFoundException("Request not found with id: " + tcRequestId));
+        TransferCertificateRequest request = fetchRequestById(tcRequestId);
 
         if (!teacher.getId().equals(request.getApprovedByClassTeacher().getId()))
         {
@@ -173,9 +143,86 @@ public class TransferCertificateServiceImpl implements TransferCertificateReques
         request.setClassTeacherApprovalStatus(teacherToAdminDto.getStatus());
         request.setTeacherReplyToAdmin(teacherToAdminDto.getTeacherReplyToAdmin());
         request.setTeacherActionDate(LocalDate.now());
-        tcRequestRepository.save(request);
 
+        tcRequestRepository.save(request);
     }
 
+    // Private helper methods
+
+    private Student fetchStudentByPan(String studentPan)
+    {
+        return studentRepository.findById(studentPan)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found with PAN: " + studentPan));
+    }
+
+    private void checkExistingPendingOrApprovedRequest(Student student)
+    {
+        boolean exists = tcRequestRepository.existsByStudentAndStatusIn(student, List.of(RequestStatus.PENDING, RequestStatus.APPROVED));
+        if (exists)
+        {
+            throw new AlreadyExistException("Transfer Certificate request already exists or approved for this student.");
+        }
+    }
+
+    private Session fetchActiveSession()
+    {
+        return sessionRepository.findByActiveTrue()
+                .orElseThrow(() -> new ResourceNotFoundException("No active session found"));
+    }
+
+    private TransferCertificateRequest buildTransferCertificateRequest(Student student, Session activeSession, TCReasonDto reasonDto)
+    {
+        TransferCertificateRequest tcRequest = new TransferCertificateRequest();
+        tcRequest.setStudent(student);
+        tcRequest.setSession(activeSession);
+        tcRequest.setLastClass(student.getCurrentClass());
+        tcRequest.setRequestDate(LocalDate.now());
+        tcRequest.setStatus(RequestStatus.PENDING);
+        tcRequest.setReason(reasonDto.getReason());
+        return tcRequest;
+    }
+
+    private TransferCertificateRequestDto mapToDto(TransferCertificateRequest tcRequest)
+    {
+        TransferCertificateRequestDto dto = modelMapper.map(tcRequest, TransferCertificateRequestDto.class);
+        dto.setStudentPanNumber(tcRequest.getStudent().getPanNumber());
+        dto.setStudentName(tcRequest.getStudent().getName());
+        dto.setSessionId(tcRequest.getSession().getId());
+        dto.setSessionName(tcRequest.getSession().getName());
+        dto.setClassId(tcRequest.getLastClass().getId());
+        dto.setClassName(tcRequest.getLastClass().getClassName());
+        return dto;
+    }
+
+    private void validateDecision(RequestStatus decision)
+    {
+        if (decision != RequestStatus.APPROVED && decision != RequestStatus.REJECTED)
+        {
+            throw new WrongArgumentException("Decision must be either APPROVED or REJECTED");
+        }
+    }
+
+    private TransferCertificateRequest fetchRequestById(Long requestId)
+    {
+        return tcRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Request not found with id: " + requestId));
+    }
+
+    private void validateRequestPending(TransferCertificateRequest request)
+    {
+        RequestStatus status = request.getStatus();
+        RequestStatus teacherStatus = request.getClassTeacherApprovalStatus();
+
+        if (status == RequestStatus.APPROVED || status == RequestStatus.REJECTED)
+        {
+            throw new WrongArgumentException("Request has already been processed by admin.");
+        }
+
+        if (teacherStatus == null || teacherStatus == RequestStatus.PENDING)
+        {
+            throw new WrongArgumentException("Class teacher has not yet responded to the request.");
+        }
+
+    }
 
 }

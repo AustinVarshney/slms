@@ -12,6 +12,12 @@ import java.time.LocalDate;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Table(
+        name = "transfer_certificate_request",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"student_pan_number", "session_id"})
+        }
+)
 public class TransferCertificateRequest extends BaseEntity
 {
     @Id

@@ -18,12 +18,14 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
 @Slf4j
 public class TimeTableServiceImpl implements TimeTableService
 {
+
     private final ClassEntityRepository classEntityRepository;
     private final SubjectRepository subjectRepository;
     private final TimetableRepository timetableRepository;
@@ -33,74 +35,28 @@ public class TimeTableServiceImpl implements TimeTableService
     @Override
     public TimetableResponseDTO createTimetable(TimetableRequestDTO dto)
     {
-        ClassEntity classEntity = classEntityRepository.findById(dto.getClassId())
-                .orElseThrow(() -> new ResourceNotFoundException("Class not found"));
-
-        Subject subject = subjectRepository.findById(dto.getSubjectId())
-                .orElseThrow(() -> new ResourceNotFoundException("Subject not found"));
+        ClassEntity classEntity = fetchActiveClass(dto.getClassId());
+        Subject subject = fetchSubject(dto.getSubjectId());
+        validateSubjectBelongsToClass(subject, dto.getClassId());
 
         Teacher teacher = subject.getTeacher();
 
-        // Check that subject belongs to the given class
-        if (!subject.getClassEntity().getId().equals(dto.getClassId()))
-        {
-            throw new WrongArgumentException("Subject does not belong to the selected class.");
-        }
+        preventOverlappingForClass(dto, classEntity.getId());
+        preventTeacherDoubleBooking(dto, teacher.getId());
 
-        if (!classEntity.getSession().isActive())
-        {
-            throw new WrongArgumentException("Class does not belong to active session");
-        }
-
-        // Prevent overlapping time for the same class
-        List<TimeTable> existingClassSlots = timetableRepository.findByClassEntity_IdAndDay(dto.getClassId(), dto.getDay());
-        for (TimeTable slot : existingClassSlots)
-        {
-            if (isTimeOverlap(slot.getStartTime(), slot.getEndTime(), dto.getStartTime(), dto.getEndTime()))
-            {
-                throw new WrongArgumentException("Class already has a timetable slot that overlaps with this time.");
-            }
-        }
-
-        // Prevent teacher double-booking
-        List<TimeTable> existingTeacherSlots = timetableRepository.findByTeacher_IdAndDay(teacher.getId(), dto.getDay());
-        for (TimeTable slot : existingTeacherSlots)
-        {
-            if (isTimeOverlap(slot.getStartTime(), slot.getEndTime(), dto.getStartTime(), dto.getEndTime()))
-            {
-                throw new WrongArgumentException("Teacher is already assigned to another class during this time.");
-            }
-        }
-
-        // Manually map DTO fields
-        TimeTable timetable = new TimeTable();
-        timetable.setClassEntity(classEntity);
-        timetable.setSession(classEntity.getSession());
-        timetable.setSubject(subject);
-        timetable.setTeacher(teacher);
-        timetable.setDay(dto.getDay());
-        timetable.setStartTime(dto.getStartTime());
-        timetable.setEndTime(dto.getEndTime());
+        TimeTable timetable = buildTimeTableEntity(dto, classEntity, subject, teacher);
 
         TimeTable saved = timetableRepository.save(timetable);
-        TimetableResponseDTO timetableResponseDTO = modelMapper.map(saved, TimetableResponseDTO.class);
-        timetableResponseDTO.setClassId(classEntity.getId());
-        timetableResponseDTO.setClassName(classEntity.getClassName());
-        timetableResponseDTO.setSubjectId(subject.getId());
-        timetableResponseDTO.setTeacherId(teacher.getId());
-        return timetableResponseDTO;
+        return mapToResponseDTO(saved, classEntity, subject, teacher);
     }
 
     @Override
     public List<TimetableResponseDTO> getTimetableByTeacherIdInCurrentSession(Long teacherId)
     {
-        // Ensure teacher exists
-        if (!teacherRepository.existsById(teacherId))
-        {
-            throw new ResourceNotFoundException("Teacher not found with ID: " + teacherId);
-        }
+        ensureTeacherExists(teacherId);
 
         List<TimeTable> timetables = timetableRepository.findByTeacher_IdAndSession_Active(teacherId, true);
+
         if (timetables.isEmpty())
         {
             throw new ResourceNotFoundException("No timetable found for teacher ID: " + teacherId);
@@ -108,18 +64,15 @@ public class TimeTableServiceImpl implements TimeTableService
 
         return timetables.stream()
                 .map(t -> modelMapper.map(t, TimetableResponseDTO.class))
-                .toList();
+                .collect(Collectors.toList());
     }
 
     @Override
     public List<TimetableResponseDTO> getTimetableByClassAndOptionalDay(Long classId, DayOfWeek day)
     {
-        // Ensure class exists and belongs to active session
-        ClassEntity classEntity = classEntityRepository.findByIdAndSession_Active(classId, true)
-                .orElseThrow(() -> new ResourceNotFoundException("Class not found or not in active session: " + classId));
+        ClassEntity classEntity = fetchActiveClass(classId);
 
         List<TimeTable> timetables;
-
         if (day != null)
         {
             timetables = timetableRepository.findByClassEntity_IdAndDay(classId, day);
@@ -139,7 +92,7 @@ public class TimeTableServiceImpl implements TimeTableService
 
         return timetables.stream()
                 .map(t -> modelMapper.map(t, TimetableResponseDTO.class))
-                .toList();
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -148,44 +101,19 @@ public class TimeTableServiceImpl implements TimeTableService
         TimeTable existing = timetableRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Timetable not found with ID: " + id));
 
-        // Validate class
-        if (!existing.getClassEntity().getId().equals(dto.getClassId()))
-        {
-            throw new WrongArgumentException("Cannot change class for timetable entry.");
-        }
+        validateClassUnchanged(existing, dto.getClassId());
+        ClassEntity classEntity = fetchActiveClass(dto.getClassId());
 
-        ClassEntity classEntity = classEntityRepository.findByIdAndSession_Active(dto.getClassId(), true)
-                .orElseThrow(() -> new ResourceNotFoundException("Class not found or not in active session: " + dto.getClassId()));
+        Subject subject = fetchSubject(dto.getSubjectId());
+        validateSubjectBelongsToClass(subject, dto.getClassId());
 
-
-        // Validate subject belongs to class
-        Subject subject = subjectRepository.findById(dto.getSubjectId())
-                .orElseThrow(() -> new ResourceNotFoundException("Subject not found with ID: " + dto.getSubjectId()));
-
-        if (!subject.getClassEntity().getSession().isActive())
-        {
-            throw new WrongArgumentException("Subject does not below to the active Session " + subject.getId());
-        }
-
-        if (!subject.getClassEntity().getId().equals(dto.getClassId()))
-        {
-            throw new WrongArgumentException("Subject does not belong to the given class.");
-        }
-
-        // Validate teacher
         Teacher teacher = subject.getTeacher();
         if (teacher == null)
         {
             throw new WrongArgumentException("No teacher assigned to this subject.");
         }
 
-        // Check time overlap excluding current timetable entry
-        boolean overlapExists = timetableRepository.existsByClassEntity_IdAndDayAndStartTimeLessThanEqualAndEndTimeGreaterThanEqualAndIdNot(
-                dto.getClassId(), dto.getDay(), dto.getEndTime(), dto.getStartTime(), id);
-        if (overlapExists)
-        {
-            throw new WrongArgumentException("Time slot overlaps with an existing timetable entry for this class.");
-        }
+        validateNoOverlapExcludingCurrent(dto, id);
 
         existing.setSubject(subject);
         existing.setTeacher(teacher);
@@ -206,10 +134,107 @@ public class TimeTableServiceImpl implements TimeTableService
         timetableRepository.delete(timetable);
     }
 
+    private ClassEntity fetchActiveClass(Long classId)
+    {
+        return classEntityRepository.findByIdAndSession_Active(classId, true)
+                .orElseThrow(() -> new ResourceNotFoundException("Class not found or not in active session: " + classId));
+    }
+
+    private Subject fetchSubject(Long subjectId)
+    {
+        return subjectRepository.findById(subjectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Subject not found with ID: " + subjectId));
+    }
+
+    private void validateSubjectBelongsToClass(Subject subject, Long classId)
+    {
+        if (!subject.getClassEntity().getId().equals(classId))
+        {
+            throw new WrongArgumentException("Subject does not belong to the selected class.");
+        }
+        if (!subject.getClassEntity().getSession().isActive())
+        {
+            throw new WrongArgumentException("Subject does not belong to the active session.");
+        }
+    }
+
+    private void preventOverlappingForClass(TimetableRequestDTO dto, Long classId)
+    {
+        List<TimeTable> existingSlots = timetableRepository.findByClassEntity_IdAndDay(classId, dto.getDay());
+        for (TimeTable slot : existingSlots)
+        {
+            if (isTimeOverlap(slot.getStartTime(), slot.getEndTime(), dto.getStartTime(), dto.getEndTime()))
+            {
+                throw new WrongArgumentException("Class already has a timetable slot that overlaps with this time.");
+            }
+        }
+    }
+
+    private void preventTeacherDoubleBooking(TimetableRequestDTO dto, Long teacherId)
+    {
+        List<TimeTable> existingSlots = timetableRepository.findByTeacher_IdAndDay(teacherId, dto.getDay());
+        for (TimeTable slot : existingSlots)
+        {
+            if (isTimeOverlap(slot.getStartTime(), slot.getEndTime(), dto.getStartTime(), dto.getEndTime()))
+            {
+                throw new WrongArgumentException("Teacher is already assigned to another class during this time.");
+            }
+        }
+    }
+
+    private TimeTable buildTimeTableEntity(TimetableRequestDTO dto, ClassEntity classEntity, Subject subject, Teacher teacher)
+    {
+        TimeTable timetable = new TimeTable();
+        timetable.setClassEntity(classEntity);
+        timetable.setSession(classEntity.getSession());
+        timetable.setSubject(subject);
+        timetable.setTeacher(teacher);
+        timetable.setDay(dto.getDay());
+        timetable.setStartTime(dto.getStartTime());
+        timetable.setEndTime(dto.getEndTime());
+        return timetable;
+    }
+
+    private TimetableResponseDTO mapToResponseDTO(TimeTable timetable, ClassEntity classEntity, Subject subject, Teacher teacher)
+    {
+        TimetableResponseDTO dto = modelMapper.map(timetable, TimetableResponseDTO.class);
+        dto.setClassId(classEntity.getId());
+        dto.setClassName(classEntity.getClassName());
+        dto.setSubjectId(subject.getId());
+        dto.setTeacherId(teacher.getId());
+        return dto;
+    }
+
+    private void ensureTeacherExists(Long teacherId)
+    {
+        if (!teacherRepository.existsById(teacherId))
+        {
+            throw new ResourceNotFoundException("Teacher not found with ID: " + teacherId);
+        }
+    }
+
+    private void validateClassUnchanged(TimeTable existing, Long newClassId)
+    {
+        if (!existing.getClassEntity().getId().equals(newClassId))
+        {
+            throw new WrongArgumentException("Cannot change class for timetable entry.");
+        }
+    }
+
+    private void validateNoOverlapExcludingCurrent(TimetableRequestDTO dto, Long currentTimetableId)
+    {
+        boolean overlapExists = timetableRepository.existsByClassEntity_IdAndDayAndStartTimeLessThanEqualAndEndTimeGreaterThanEqualAndIdNot(
+                dto.getClassId(), dto.getDay(), dto.getEndTime(), dto.getStartTime(), currentTimetableId);
+        if (overlapExists)
+        {
+            throw new WrongArgumentException("Time slot overlaps with an existing timetable entry for this class.");
+        }
+    }
+
     private boolean isTimeOverlap(LocalTime existingStart, LocalTime existingEnd,
                                   LocalTime newStart, LocalTime newEnd)
     {
-        return (newStart.isBefore(existingEnd) && newEnd.isAfter(existingStart));
+        // Overlap exists if new start is before existing end and new end is after existing start
+        return newStart.isBefore(existingEnd) && newEnd.isAfter(existingStart);
     }
-
 }

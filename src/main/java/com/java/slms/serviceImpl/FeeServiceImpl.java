@@ -24,9 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -45,21 +43,22 @@ public class FeeServiceImpl implements FeeService
     {
         Student student = EntityFetcher.fetchByIdOrThrow(studentRepository, feeRequestDTO.getStudentPanNumber(), EntityNames.STUDENT);
         FeeStructure feeStructure = student.getCurrentClass().getFeeStructures();
-        Session activeSession = sessionRepository.findByActiveTrue()
-                .orElseThrow(() -> new ResourceNotFoundException("No active session found"));
+        Session activeSession = getActiveSession();
 
-        // Check if the student belongs to the active session
         if (!student.getSession().getId().equals(activeSession.getId()))
         {
             throw new WrongArgumentException("Student does not belong to the active session");
         }
 
-        // Check if the fee structure belongs to the active session
         if (!feeStructure.getSession().getId().equals(activeSession.getId()))
         {
             throw new WrongArgumentException("FeeStructure does not belong to the active session");
         }
-        List<Fee> fees = feeRepository.findByStudent_PanNumberAndMonth(feeRequestDTO.getStudentPanNumber(), feeRequestDTO.getMonth());
+
+        List<Fee> fees = feeRepository.findByStudent_PanNumberAndMonth(
+                feeRequestDTO.getStudentPanNumber(), feeRequestDTO.getMonth()
+        );
+
         if (fees.isEmpty())
         {
             throw new ResourceNotFoundException("Fee entry not found for given student and month");
@@ -68,6 +67,7 @@ public class FeeServiceImpl implements FeeService
         {
             throw new WrongArgumentException("More than one fee entry found for student and month");
         }
+
         Fee fee = fees.get(0);
 
         if (FeeStatus.PAID.equals(fee.getStatus()))
@@ -80,31 +80,24 @@ public class FeeServiceImpl implements FeeService
             throw new WrongArgumentException("Payment amount does not match the required fee amount.");
         }
 
-        fee.setAmount(fee.getAmount());
         fee.setFeeStructure(feeStructure);
         fee.setStatus(FeeStatus.PAID);
         fee.setStudent(student);
         fee.setPaymentDate(LocalDate.now());
         fee.setReceiptNumber(feeRequestDTO.getReceiptNumber());
+
         feeRepository.save(fee);
     }
 
     @Override
     public List<FeeCatalogDto> getAllFeeCatalogsInActiveSesssion()
     {
-        Session activeSession = sessionRepository.findByActiveTrue()
-                .orElseThrow(() -> new ResourceNotFoundException("No active session found"));
-
+        Session activeSession = getActiveSession();
         List<Student> students = studentRepository.findBySession_Id(activeSession.getId());
 
-        List<FeeCatalogDto> feeCatalogs = new ArrayList<>();
-
-        for (Student student : students)
-        {
-            feeCatalogs.add(buildFeeCatalogForStudent(student));
-        }
-
-        return feeCatalogs;
+        return students.stream()
+                .map(this::buildCatalogForStudent)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -113,10 +106,10 @@ public class FeeServiceImpl implements FeeService
         Student student = studentRepository.findById(panNumber)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found with PAN: " + panNumber));
 
-        return buildFeeCatalogForStudent(student);
+        return buildCatalogForStudent(student);
     }
 
-    private FeeCatalogDto buildFeeCatalogForStudent(Student student)
+    private FeeCatalogDto buildCatalogForStudent(Student student)
     {
         List<Fee> fees = feeRepository.findByStudent_PanNumberOrderByYearAscMonthAsc(student.getPanNumber());
 
@@ -132,20 +125,18 @@ public class FeeServiceImpl implements FeeService
         double totalPending = 0;
         double totalOverdue = 0;
 
-        // Get session start month; assuming you have method getStartMonth() in Session returning FeeMonth enum
-        FeeMonth sessionStartMonth = student.getSession() != null ? student.getSession().getStartMonth() : FeeMonth.JANUARY;
+        FeeMonth sessionStartMonth = Optional.ofNullable(student.getSession())
+                .map(Session::getStartMonth)
+                .orElse(FeeMonth.JANUARY);
 
         FeeMonth[] allMonths = FeeMonth.values();
         int startIndex = sessionStartMonth.ordinal();
-        int totalMonths = allMonths.length;
 
-        // Iterate months starting from session start month, wrapping through year end
-        for (int i = 0; i < totalMonths; i++)
+        for (int i = 0; i < allMonths.length; i++)
         {
-            int monthIndex = (startIndex + i) % totalMonths;
-            FeeMonth month = allMonths[monthIndex];
-
+            FeeMonth month = allMonths[(startIndex + i) % allMonths.length];
             Fee fee = feeMap.get(month);
+
             if (fee != null)
             {
                 MonthlyFeeDto mFee = new MonthlyFeeDto();
@@ -158,19 +149,13 @@ public class FeeServiceImpl implements FeeService
                 mFee.setReceiptNumber(fee.getReceiptNumber());
 
                 monthlyFees.add(mFee);
-
                 totalAmount += fee.getAmount();
+
                 switch (fee.getStatus())
                 {
-                    case PAID:
-                        totalPaid += fee.getAmount();
-                        break;
-                    case PENDING:
-                        totalPending += fee.getAmount();
-                        break;
-                    case OVERDUE:
-                        totalOverdue += fee.getAmount();
-                        break;
+                    case PAID -> totalPaid += fee.getAmount();
+                    case PENDING -> totalPending += fee.getAmount();
+                    case OVERDUE -> totalOverdue += fee.getAmount();
                 }
             }
         }
@@ -184,24 +169,28 @@ public class FeeServiceImpl implements FeeService
         return catalog;
     }
 
-    //    @Scheduled(cron = "0 0 0 15 * ?")  // Runs at midnight on the 15th day of every month
     @Transactional
     @Override
     public void markPendingFeesAsOverdue()
     {
         LocalDate today = LocalDate.now();
-        // Get current session
-        Session session = sessionRepository.findByActiveTrue()
-                .orElseThrow(() -> new ResourceNotFoundException("No active session found")); // Query only fees from current session
-        List<Fee> feesToUpdate = feeRepository
+        Session activeSession = getActiveSession();
+
+        List<Fee> overdueFees = feeRepository
                 .findByStatusAndDueDateLessThanEqualAndFeeStructure_Session_Id(
-                        FeeStatus.PENDING, today, session.getId()
+                        FeeStatus.PENDING, today, activeSession.getId()
                 );
 
-        for (Fee fee : feesToUpdate)
-        {
-            fee.setStatus(FeeStatus.OVERDUE);
-            feeRepository.save(fee);
-        }
+        overdueFees.forEach(fee -> fee.setStatus(FeeStatus.OVERDUE));
+        feeRepository.saveAll(overdueFees); // Batch update
+
+        log.info("Marked {} pending fees as OVERDUE as of {}", overdueFees.size(), today);
+    }
+
+    // Helper
+    private Session getActiveSession()
+    {
+        return sessionRepository.findByActiveTrue()
+                .orElseThrow(() -> new ResourceNotFoundException("No active session found"));
     }
 }

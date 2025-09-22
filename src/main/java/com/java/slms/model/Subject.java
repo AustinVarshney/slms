@@ -14,6 +14,12 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Table(
+        name = "subject",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"subjectName", "class_id"})
+        }
+)
 public class Subject extends BaseEntity
 {
     @Id

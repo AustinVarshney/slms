@@ -59,7 +59,7 @@ public class StudentController
             }
     )
     @GetMapping("/active")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_NON_TEACHING_STAFF')")
     public ResponseEntity<RestResponse<List<StudentResponseDto>>> getActiveStudents()
     {
         List<StudentResponseDto> students = studentService.getActiveStudents();
@@ -161,7 +161,7 @@ public class StudentController
             }
     )
     @GetMapping("/present-today")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_NON_TEACHING_STAFF')")
     public ResponseEntity<RestResponse<CurrentDayAttendance>> getPresentToday(
             @RequestParam(required = false) Long classId)
     {
@@ -193,7 +193,7 @@ public class StudentController
             }
     )
     @GetMapping("/class/{classId}")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_STUDENT', 'ROLE_NON_TEACHING_STAFF')")
     public ResponseEntity<RestResponse<List<StudentResponseDto>>> getStudentByClassId(@PathVariable Long classId)
     {
         List<StudentResponseDto> list = studentService.getStudentsByClassId(classId);

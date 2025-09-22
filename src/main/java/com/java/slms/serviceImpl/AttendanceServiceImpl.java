@@ -42,8 +42,8 @@ public class AttendanceServiceImpl implements AttendanceService
     @Transactional
     public void markTodaysAttendance(AttendanceDto attendanceDto)
     {
-        LocalDate todayStart = LocalDate.now();
-        LocalDateTime dayStart = todayStart.atStartOfDay();
+        LocalDate today = LocalDate.now();
+        LocalDateTime dayStart = today.atStartOfDay();
         LocalDateTime dayEnd = dayStart.plusDays(1);
 
         List<StudentAttendance> inputAttendances = attendanceDto.getStudentAttendances();
@@ -58,7 +58,6 @@ public class AttendanceServiceImpl implements AttendanceService
             throw new WrongArgumentException("Class ID must be provided");
         }
 
-        // Get the active session
         Session activeSession = sessionRepository.findByActiveTrue()
                 .orElseThrow(() -> new ResourceNotFoundException("No active session found"));
 
@@ -68,53 +67,53 @@ public class AttendanceServiceImpl implements AttendanceService
             throw new WrongArgumentException("Class ID " + classId + " does not belong to the active session");
         }
 
+        // Fetch all relevant students once to avoid multiple DB calls
+        Set<String> panNumbers = inputAttendances.stream()
+                .map(StudentAttendance::getPanNumber)
+                .collect(Collectors.toSet());
+
+        List<Student> students = studentRepository.findAllById(panNumbers);
+
+        Map<String, Student> studentMap = students.stream()
+                .collect(Collectors.toMap(Student::getPanNumber, s -> s));
+
         for (StudentAttendance sa : inputAttendances)
         {
             String panNumber = sa.getPanNumber();
+            Student student = studentMap.get(panNumber);
 
-            // Fetch student info
-            StudentResponseDto studentResponseDto = studentService.getStudentByPAN(panNumber);
-
-            if (studentResponseDto.getStatus().equals(UserStatus.INACTIVE) ||
-                    studentResponseDto.getStatus().equals(UserStatus.GRADUATED))
-            {
-                log.error("Student with PAN '{}' has status: {}", panNumber, studentResponseDto.getStatus());
-                throw new WrongArgumentException("Student with PAN '" + panNumber + "' has status '" + studentResponseDto.getStatus() + "' and cannot be marked for attendance");
-            }
-
-            if (studentResponseDto == null)
+            if (student == null)
             {
                 log.error("Student with PAN '{}' not found", panNumber);
                 throw new ResourceNotFoundException("Student with PAN '" + panNumber + "' not found");
             }
 
-            // Check if student belongs to active session
-            if (!studentResponseDto.getSessionId().equals(activeSession.getId()))
+            if (student.getStatus() == UserStatus.INACTIVE || student.getStatus() == UserStatus.GRADUATED)
+            {
+                log.error("Student with PAN '{}' has status: {}", panNumber, student.getStatus());
+                throw new WrongArgumentException("Student with PAN '" + panNumber + "' has status '" + student.getStatus() + "' and cannot be marked for attendance");
+            }
+
+            if (!student.getSession().getId().equals(activeSession.getId()))
             {
                 log.error("Student with PAN '{}' does not belong to the active session", panNumber);
                 throw new WrongArgumentException("Student with PAN '" + panNumber + "' does not belong to the active session");
             }
 
-            // Check if student belongs to the specified class
-            if (!studentResponseDto.getClassId().equals(classId))
+            if (!student.getCurrentClass().getId().equals(classId))
             {
                 log.error("Student with PAN '{}' does not belong to class ID {}", panNumber, classId);
                 throw new WrongArgumentException("Student with PAN '" + panNumber + "' does not belong to class ID " + classId);
             }
 
-            // Map to entity
-            Student student = modelMapper.map(studentResponseDto, Student.class);
-
-            // Check if attendance for today already exists for this student and class
             Optional<Attendance> existingAttendanceOpt = attendanceRepository.findByStudentAndDateBetween(student, dayStart, dayEnd);
 
             if (existingAttendanceOpt.isPresent())
             {
                 log.error("Attendance already marked for today for PAN: {}", panNumber);
-                continue;
+                continue;  // Or collect to return info about skipped entries
             }
 
-            // Create and save attendance
             Attendance attendance = new Attendance();
             attendance.setDate(LocalDateTime.now());
             attendance.setStudent(student);
@@ -123,7 +122,6 @@ public class AttendanceServiceImpl implements AttendanceService
 
             attendanceRepository.save(attendance);
         }
-
     }
 
     @Override

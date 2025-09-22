@@ -104,7 +104,7 @@ public class TransferRequestController
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request", content = @Content)
             }
     )
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasRole('ROLE_ADMIN', 'ROLE_TEACHER')")
     @GetMapping("/requests/{studentPan}")
     public ResponseEntity<RestResponse<List<TransferCertificateRequestDto>>> getAllRequestsByStudentPan(
             @PathVariable String studentPan)
@@ -272,6 +272,37 @@ public class TransferRequestController
                 RestResponse.<Void>builder()
                         .status(HttpStatus.OK.value())
                         .message("Teacher response submitted successfully.")
+                        .build()
+        );
+    }
+
+    @Operation(
+            summary = "Get all TC requests forwarded to class teacher",
+            description = "Returns a list of all transfer certificate requests that have been forwarded by the admin to the currently logged-in class teacher.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "List fetched successfully"),
+                    @ApiResponse(responseCode = "403", description = "Unauthorized access", content = @Content)
+            }
+    )
+    @PreAuthorize("hasRole('ROLE_TEACHER')")
+    @GetMapping("/forwarded-to-class-teacher")
+    public ResponseEntity<RestResponse<List<TransferCertificateRequestDto>>> getAllRequestsForwardedToClassTeacher()
+    {
+        String email = SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getName();
+
+        Teacher teacher = teacherService.getActiveTeacherByEmail(email);
+
+        List<TransferCertificateRequestDto> forwardedRequests =
+                transferCertificateService.getAllRequestForwardedByAdminToClassTeacher(teacher);
+
+        return ResponseEntity.ok(
+                RestResponse.<List<TransferCertificateRequestDto>>builder()
+                        .status(HttpStatus.OK.value())
+                        .message("Forwarded TC requests fetched successfully.")
+                        .data(forwardedRequests)
                         .build()
         );
     }

@@ -14,7 +14,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/feestaff")
+@RequestMapping("/api/nts")
 @PreAuthorize("hasRole('ROLE_ADMIN')")
 @Tag(name = "Non Teaching Staff Controller", description = "APIs for managing non-teaching staff")
 public class NonTeachingStaffController

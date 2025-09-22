@@ -1,6 +1,7 @@
 package com.java.slms.repository;
 
 import com.java.slms.model.Student;
+import com.java.slms.model.Teacher;
 import com.java.slms.model.TransferCertificateRequest;
 import com.java.slms.util.RequestStatus;
 import org.springframework.data.domain.Sort;
@@ -20,4 +21,7 @@ public interface TransferCertificateRequestRepository extends JpaRepository<Tran
     List<TransferCertificateRequest> findAllByStatus(RequestStatus status, Sort sort);
 
     List<TransferCertificateRequest> findAll(Sort sort);
+
+    List<TransferCertificateRequest> findByApprovedByClassTeacherAndStatus(Teacher teacher, RequestStatus status);
+
 }

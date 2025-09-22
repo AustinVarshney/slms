@@ -58,7 +58,7 @@ public class ClassEntityController
             }
     )
     @GetMapping
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasRole('ROLE_ADMIN', 'ROLE_NON_TEACHING_STAFF', 'ROLE_TEACHER')")
     public ResponseEntity<RestResponse<List<ClassInfoResponse>>> getAllClasses()
     {
         List<ClassInfoResponse> classes = classEntityService.getAllClassInActiveSession();
@@ -84,8 +84,8 @@ public class ClassEntityController
             }
     )
     @GetMapping("/{classId}/session/{sessionId}")
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public ResponseEntity<RestResponse<ClassInfoResponse>> getClassByName(@PathVariable Long classId, @PathVariable Long sessionId)
+    @PreAuthorize("hasRole('ROLE_ADMIN', 'ROLE_NON_TEACHING_STAFF', 'ROLE_TEACHER')")
+    public ResponseEntity<RestResponse<ClassInfoResponse>> getClassBySession(@PathVariable Long classId, @PathVariable Long sessionId)
     {
         ClassInfoResponse classDto = classEntityService.getClassByClassIdAndSessionId(classId, sessionId);
         RestResponse<ClassInfoResponse> response = RestResponse.<ClassInfoResponse>builder()

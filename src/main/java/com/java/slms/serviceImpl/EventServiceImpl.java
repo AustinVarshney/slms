@@ -21,26 +21,19 @@ public class EventServiceImpl implements EventService
 {
 
     private final EventRepository eventRepository;
-    private final ModelMapper modelMapper;
     private final SessionRepository sessionRepository;
+    private final ModelMapper modelMapper;
 
     @Override
     public EventDto createEvent(CreateOrUpdateEventRequest request)
     {
         Event event = modelMapper.map(request, Event.class);
-
-        // Get the active session
-        Session activeSession = sessionRepository.findByActiveTrue()
-                .orElseThrow(() -> new ResourceNotFoundException("No active session found"));
+        Session activeSession = getActiveSession();
 
         event.setSession(activeSession);
-        Event saved = eventRepository.save(event);
-        EventDto dto = modelMapper.map(saved, EventDto.class);
+        Event savedEvent = eventRepository.save(event);
 
-        dto.setSessionId(activeSession.getId());
-        dto.setSessionName(activeSession.getName());
-
-        return dto;
+        return mapToDtoWithSession(savedEvent, activeSession);
     }
 
     @Override
@@ -55,26 +48,17 @@ public class EventServiceImpl implements EventService
         event.setStartDate(request.getStartDate());
         event.setEndDate(request.getEndDate());
 
-        Session activeSession = sessionRepository.findByActiveTrue()
-                .orElseThrow(() -> new ResourceNotFoundException("No active session found"));
-
+        Session activeSession = getActiveSession();
         event.setSession(activeSession);
 
-        Event saved = eventRepository.save(event);
-        EventDto dto = modelMapper.map(saved, EventDto.class);
-
-        // Set session info in DTO
-        dto.setSessionId(activeSession.getId());
-        dto.setSessionName(activeSession.getName());
-
-        return dto;
+        Event updatedEvent = eventRepository.save(event);
+        return mapToDtoWithSession(updatedEvent, activeSession);
     }
 
     @Override
     public void deleteEvent(Long id)
     {
-        Session activeSession = sessionRepository.findByActiveTrue()
-                .orElseThrow(() -> new ResourceNotFoundException("No active session found"));
+        Session activeSession = getActiveSession();
 
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with ID: " + id));
@@ -93,30 +77,18 @@ public class EventServiceImpl implements EventService
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with ID: " + id));
 
-        EventDto dto = modelMapper.map(event, EventDto.class);
-        if (event.getSession() != null)
-        {
-            dto.setSessionId(event.getSession().getId());
-            dto.setSessionName(event.getSession().getName());
-        }
-        return dto;
+        Session session = event.getSession();
+        return mapToDtoWithSession(event, session);
     }
 
     @Override
     public List<EventDto> getAllEvents()
     {
-        Session activeSession = sessionRepository.findByActiveTrue()
-                .orElseThrow(() -> new ResourceNotFoundException("No active session found"));
+        Session activeSession = getActiveSession();
 
-        // Fetch events only for the active session
-        return eventRepository.findBySession_Id(activeSession.getId()).stream()
-                .map(event ->
-                {
-                    EventDto dto = modelMapper.map(event, EventDto.class);
-                    dto.setSessionId(activeSession.getId());
-                    dto.setSessionName(activeSession.getName());
-                    return dto;
-                })
+        return eventRepository.findBySession_Id(activeSession.getId())
+                .stream()
+                .map(event -> mapToDtoWithSession(event, activeSession))
                 .collect(Collectors.toList());
     }
 
@@ -126,16 +98,26 @@ public class EventServiceImpl implements EventService
         Session session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Session not found with ID: " + sessionId));
 
-        return eventRepository.findBySession_Id(sessionId).stream()
-                .map(event ->
-                {
-                    EventDto dto = modelMapper.map(event, EventDto.class);
-                    dto.setSessionId(session.getId());
-                    dto.setSessionName(session.getName());
-                    return dto;
-                })
+        return eventRepository.findBySession_Id(sessionId)
+                .stream()
+                .map(event -> mapToDtoWithSession(event, session))
                 .collect(Collectors.toList());
     }
 
+    private Session getActiveSession()
+    {
+        return sessionRepository.findByActiveTrue()
+                .orElseThrow(() -> new ResourceNotFoundException("No active session found"));
+    }
 
+    private EventDto mapToDtoWithSession(Event event, Session session)
+    {
+        EventDto dto = modelMapper.map(event, EventDto.class);
+        if (session != null)
+        {
+            dto.setSessionId(session.getId());
+            dto.setSessionName(session.getName());
+        }
+        return dto;
+    }
 }

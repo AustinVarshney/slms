@@ -24,6 +24,8 @@ public interface TransferCertificateRequestService
     @Transactional(readOnly = true)
     List<TransferCertificateRequestDto> getAllRequests(RequestStatus status);
 
+    List<TransferCertificateRequestDto> getAllRequestForwardedByAdminToClassTeacher(Teacher teacher);
+
     void forwardTCRequestToClassTeacher(Long tcRequestId, Admin admin, AdminToTeacherDto adminToTeacherDto);
 
     void replyTCRequestToAdmin(Long tcRequestId, Teacher teacher, TeacherToAdminDto teacherToAdminDto);

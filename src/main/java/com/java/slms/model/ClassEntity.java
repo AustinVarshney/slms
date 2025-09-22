@@ -14,6 +14,12 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Table(
+        name = "class_entity",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"session_id", "className"})
+        }
+)
 public class ClassEntity extends BaseEntity
 {
     @Id

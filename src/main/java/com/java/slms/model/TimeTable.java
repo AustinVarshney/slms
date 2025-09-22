@@ -14,6 +14,13 @@ import java.time.LocalTime;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+@Table(
+        name = "time_table",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"teacher_id", "session_id", "day", "start_time"}),
+                @UniqueConstraint(columnNames = {"class_id", "session_id", "day", "start_time"})
+        }
+)
 public class TimeTable extends BaseEntity
 {
     @Id

@@ -33,30 +33,24 @@ public class SubjectServiceImpl implements SubjectService
     private final ModelMapper modelMapper;
     private final TeacherRepository teacherRepository;
 
+    @Override
     public SubjectDto addSubject(SubjectDto subjectDto)
     {
         ClassEntity classEntity = classEntityRepository.findById(subjectDto.getClassId())
                 .orElseThrow(() -> new ResourceNotFoundException("Class not found with ID: " + subjectDto.getClassId()));
 
-        if (!classEntity.getSession().isActive())
+        ensureActiveSession(classEntity);
+
+        if (subjectRepository.existsBySubjectNameIgnoreCaseAndClassEntity_Id(
+                subjectDto.getSubjectName(), subjectDto.getClassId()))
         {
-            log.error("Cannot add Subject to class '{}' because the session with ID {} is inactive",
-                    classEntity.getClassName(), classEntity.getSession().getId());
-            throw new WrongArgumentException("Cannot add subject to a class in an inactive session");
+            throw new AlreadyExistException("Subject '" + subjectDto.getSubjectName() +
+                    "' already exists in class with ID '" + subjectDto.getClassId() + "'.");
         }
 
-        if (subjectRepository.existsBySubjectNameIgnoreCaseAndClassEntity_Id(subjectDto.getSubjectName(), subjectDto.getClassId()))
-        {
-            throw new AlreadyExistException("Subject '" + subjectDto.getSubjectName() + "' already exists in class with ID '" + subjectDto.getClassId() + "'.");
-        }
+        validateTeacherStatus(subjectDto.getTeacherId());
 
-        Teacher teacher = teacherRepository.findById(subjectDto.getTeacherId())
-                .orElseThrow(() -> new ResourceNotFoundException("Teacher not found with ID: " + subjectDto.getTeacherId()));
-
-        if (teacher.getStatus().equals(UserStatus.INACTIVE))
-        {
-            throw new AlreadyExistException("Teacher is already inactive");
-        }
+        Teacher teacher = teacherRepository.findById(subjectDto.getTeacherId()).get(); // already validated
 
         Subject subject = new Subject();
         subject.setSubjectName(subjectDto.getSubjectName());
@@ -64,12 +58,7 @@ public class SubjectServiceImpl implements SubjectService
         subject.setTeacher(teacher);
 
         Subject saved = subjectRepository.save(subject);
-
-        SubjectDto savedDto = modelMapper.map(saved, SubjectDto.class);
-        savedDto.setClassId(classEntity.getId());
-        savedDto.setTeacherId(teacher.getId());
-        savedDto.setSessionId(classEntity.getSession().getId());
-        return savedDto;
+        return mapToDto(saved);
     }
 
     @Override
@@ -121,6 +110,7 @@ public class SubjectServiceImpl implements SubjectService
         subjectRepository.delete(subject);
     }
 
+    @Override
     public SubjectDto updateSubjectInfoById(Long subjectId, SubjectDto subjectDto)
     {
         Subject existing = subjectRepository.findById(subjectId)
@@ -129,38 +119,26 @@ public class SubjectServiceImpl implements SubjectService
         ClassEntity classEntity = classEntityRepository.findById(subjectDto.getClassId())
                 .orElseThrow(() -> new ResourceNotFoundException("Class not found with ID: " + subjectDto.getClassId()));
 
-        if (!classEntity.getSession().isActive())
-        {
-            log.error("Cannot update Subject because the session with ID {} is inactive", classEntity.getSession().getId());
-            throw new WrongArgumentException("Cannot update subject in a class with an inactive session");
-        }
+        ensureActiveSession(classEntity);
+        validateTeacherStatus(subjectDto.getTeacherId());
 
-        boolean subjectExists = subjectRepository.existsBySubjectNameIgnoreCaseAndClassEntity_Id(subjectDto.getSubjectName(), subjectDto.getClassId());
+        boolean subjectExists = subjectRepository.existsBySubjectNameIgnoreCaseAndClassEntity_Id(
+                subjectDto.getSubjectName(), subjectDto.getClassId());
+
         if (!existing.getSubjectName().equalsIgnoreCase(subjectDto.getSubjectName()) && subjectExists)
         {
-            throw new AlreadyExistException("Subject '" + subjectDto.getSubjectName() + "' already exists in class with ID: " + subjectDto.getClassId());
+            throw new AlreadyExistException("Subject '" + subjectDto.getSubjectName() +
+                    "' already exists in class with ID: " + subjectDto.getClassId());
         }
 
-        Teacher teacher = teacherRepository.findById(subjectDto.getTeacherId())
-                .orElseThrow(() -> new ResourceNotFoundException("Teacher not found with ID: " + subjectDto.getTeacherId()));
-
-        if (teacher.getStatus().equals(UserStatus.INACTIVE))
-        {
-            throw new AlreadyExistException("Teacher is already inactive");
-        }
+        Teacher teacher = teacherRepository.findById(subjectDto.getTeacherId()).get(); // already validated
 
         existing.setSubjectName(subjectDto.getSubjectName());
         existing.setClassEntity(classEntity);
         existing.setTeacher(teacher);
 
         Subject updated = subjectRepository.save(existing);
-
-        SubjectDto updatedDto = modelMapper.map(updated, SubjectDto.class);
-        updatedDto.setClassName(classEntity.getClassName());
-        updatedDto.setTeacherId(teacher.getId());
-        updatedDto.setSessionId(classEntity.getSession().getId());
-
-        return updatedDto;
+        return mapToDto(updated);
     }
 
     @Override
@@ -240,4 +218,35 @@ public class SubjectServiceImpl implements SubjectService
                 .toList();
 
     }
+
+    private void ensureActiveSession(ClassEntity classEntity)
+    {
+        if (!classEntity.getSession().isActive())
+        {
+            throw new WrongArgumentException("Cannot perform operation. Session for class '" +
+                    classEntity.getClassName() + "' is inactive.");
+        }
+    }
+
+    private SubjectDto mapToDto(Subject subject)
+    {
+        SubjectDto dto = modelMapper.map(subject, SubjectDto.class);
+        dto.setClassId(subject.getClassEntity().getId());
+        dto.setClassName(subject.getClassEntity().getClassName());
+        dto.setTeacherId(subject.getTeacher().getId());
+        dto.setSessionId(subject.getClassEntity().getSession().getId());
+        return dto;
+    }
+
+    private void validateTeacherStatus(Long teacherId)
+    {
+        Teacher teacher = teacherRepository.findById(teacherId)
+                .orElseThrow(() -> new ResourceNotFoundException("Teacher not found with ID: " + teacherId));
+
+        if (teacher.getStatus() == UserStatus.INACTIVE)
+        {
+            throw new AlreadyExistException("Teacher is already inactive");
+        }
+    }
+
 }

@@ -13,6 +13,12 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @Entity
 @Builder
+@Table(
+        name = "admin",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"user_id"})
+        }
+)
 public class Admin extends BaseEntity
 {
     @Id

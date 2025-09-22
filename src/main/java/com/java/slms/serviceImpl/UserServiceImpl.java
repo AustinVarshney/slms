@@ -15,7 +15,6 @@ import com.java.slms.util.UserStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -61,7 +60,6 @@ public class UserServiceImpl implements UserService
     public UserRequest updateUserDetails(Long userId, UpdateUserDetails updateUserDetails)
     {
         log.info("Updating user details for ID: {}", userId);
-
         User user = EntityFetcher.fetchUserByUserId(userRepository, userId);
 
         if (!user.isEnabled())
@@ -69,68 +67,83 @@ public class UserServiceImpl implements UserService
             throw new WrongArgumentException("Cannot change details: user account is disabled");
         }
 
-        modelMapper.getConfiguration().setSkipNullEnabled(true);
-        modelMapper.map(updateUserDetails, user);
-
-        UserRequest updatedUser = null;
-
         if (user.getPanNumber() != null)
         {
             log.info("User ID {} is a Student. Details update skipped; use Student API to update student details.", userId);
             throw new WrongArgumentException("Student details can only be updated via the Student API.");
         }
-        else
-        {
-            updatedUser = modelMapper.map(user, UserRequest.class);
 
-            if (user.getAdmin() != null)
-            {
-                Admin admin = user.getAdmin();
-                if (admin.getStatus() == UserStatus.INACTIVE)
-                {
-                    log.info("User ID {} Admin is inactive; skipping admin update", userId);
-                }
-                else
-                {
-                    log.info("User ID {} is an Admin", userId);
-                    modelMapper.map(updateUserDetails, admin);
-                    updatedUser = modelMapper.map(adminRepository.save(admin), UserRequest.class);
-                }
-            }
+        // Enable skipping null properties for partial update
+        modelMapper.getConfiguration().setSkipNullEnabled(true);
 
-            if (user.getTeacher() != null)
-            {
-                Teacher teacher = user.getTeacher();
-                if (teacher.getStatus() == UserStatus.INACTIVE)
-                {
-                    log.info("User ID {} Teacher is inactive; skipping teacher update", userId);
-                }
-                else
-                {
-                    log.info("User ID {} is a Teacher", userId);
-                    modelMapper.map(updateUserDetails, teacher);
-                    updatedUser = modelMapper.map(teacherRepository.save(teacher), UserRequest.class);
-                }
-            }
+        // Update basic user fields
+        modelMapper.map(updateUserDetails, user);
 
-            if (user.getNonTeachingStaff() != null)
-            {
-                NonTeachingStaff nts = user.getNonTeachingStaff();
-                if (nts.getStatus() == UserStatus.INACTIVE)
-                {
-                    log.info("User ID {} NonTeachingStaff is inactive; skipping fee staff update", userId);
-                }
-                else
-                {
-                    log.info("User ID {} is a Fee Staff", userId);
-                    modelMapper.map(updateUserDetails, nts);
-                    updatedUser = modelMapper.map(nonTeachingStaffRepository.save(nts), UserRequest.class);
-                }
-            }
-        }
+        // Update roles if active, collect changes
+        updateAdminDetailsIfActive(user, updateUserDetails, userId);
+        updateTeacherDetailsIfActive(user, updateUserDetails, userId);
+        updateNonTeachingStaffDetailsIfActive(user, updateUserDetails, userId);
+
+        // Save user entity after role updates if necessary
+        User savedUser = userRepository.save(user);
+
+        UserRequest updatedUserRequest = modelMapper.map(savedUser, UserRequest.class);
 
         log.info("User updated successfully for ID: {}", userId);
-        return updatedUser;
+        return updatedUserRequest;
     }
 
+    private void updateAdminDetailsIfActive(User user, UpdateUserDetails updateUserDetails, Long userId)
+    {
+        Admin admin = user.getAdmin();
+        if (admin != null)
+        {
+            if (admin.getStatus() == UserStatus.INACTIVE)
+            {
+                log.info("User ID {} Admin is inactive; skipping admin update", userId);
+            }
+            else
+            {
+                log.info("User ID {} is an Admin, updating details", userId);
+                modelMapper.map(updateUserDetails, admin);
+                adminRepository.save(admin);
+            }
+        }
+    }
+
+    private void updateTeacherDetailsIfActive(User user, UpdateUserDetails updateUserDetails, Long userId)
+    {
+        Teacher teacher = user.getTeacher();
+        if (teacher != null)
+        {
+            if (teacher.getStatus() == UserStatus.INACTIVE)
+            {
+                log.info("User ID {} Teacher is inactive; skipping teacher update", userId);
+            }
+            else
+            {
+                log.info("User ID {} is a Teacher, updating details", userId);
+                modelMapper.map(updateUserDetails, teacher);
+                teacherRepository.save(teacher);
+            }
+        }
+    }
+
+    private void updateNonTeachingStaffDetailsIfActive(User user, UpdateUserDetails updateUserDetails, Long userId)
+    {
+        NonTeachingStaff nts = user.getNonTeachingStaff();
+        if (nts != null)
+        {
+            if (nts.getStatus() == UserStatus.INACTIVE)
+            {
+                log.info("User ID {} NonTeachingStaff is inactive; skipping non-teaching staff update", userId);
+            }
+            else
+            {
+                log.info("User ID {} is NonTeachingStaff, updating details", userId);
+                modelMapper.map(updateUserDetails, nts);
+                nonTeachingStaffRepository.save(nts);
+            }
+        }
+    }
 }

@@ -23,7 +23,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @RequestMapping("/api/fees")
 @RequiredArgsConstructor
 @Slf4j
-@PreAuthorize("hasRole('ROLE_ADMIN')")
+@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_NON_TEACHING_STAFF')")
 @Tag(name = "Fee Controller", description = "APIs for managing fee payments and fee catalogs")
 public class FeeController
 {

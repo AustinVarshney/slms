@@ -42,7 +42,7 @@ public class Teacher extends BaseEntity
     private List<Subject> subjects;
 
     @OneToOne
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
 }

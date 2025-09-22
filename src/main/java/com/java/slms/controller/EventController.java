@@ -105,7 +105,7 @@ public class EventController
             }
     )
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_STUDENT')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_STUDENT', 'ROLE_NON_TEACHING_STAFF')")
     public ResponseEntity<RestResponse<EventDto>> getEventById(@PathVariable Long id)
     {
         log.info("Fetching event with ID: {}", id);
@@ -128,7 +128,7 @@ public class EventController
             }
     )
     @GetMapping
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_STUDENT')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_STUDENT', 'ROLE_NON_TEACHING_STAFF')")
     public ResponseEntity<RestResponse<List<EventDto>>> getEvents(
             @RequestParam(required = false) Long sessionId
     )

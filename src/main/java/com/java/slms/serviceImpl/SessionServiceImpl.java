@@ -32,91 +32,78 @@ public class SessionServiceImpl implements SessionService
     @Override
     public SessionDto createSession(CreateOrUpdateSessionRequest dto)
     {
-        Optional<Session> activeSessionOpt = sessionRepository.findByActiveTrue();
+        log.info("Attempting to create new session from {} to {}", dto.getStartDate(), dto.getEndDate());
 
-        if (activeSessionOpt.isPresent())
+        if (sessionRepository.findByActiveTrue().isPresent())
         {
-            throw new WrongArgumentException("An active session already exists. Please close all active sessions before creating a new one.");
-        }
-        LocalDate start = dto.getStartDate();
-        LocalDate end = dto.getEndDate();
-
-        long months = ChronoUnit.MONTHS.between(
-                YearMonth.from(start),
-                YearMonth.from(end)
-        );
-
-        if (months == 12)
-        {
-            throw new WrongArgumentException("Session length must be 12 months.");
+            throw new WrongArgumentException("An active session already exists. Please deactivate it before creating a new one.");
         }
 
-        boolean overlap = sessionRepository.existsByStartDateLessThanEqualAndEndDateGreaterThanEqual(
-                end, start
-        );
-        if (overlap)
+        validateSessionLength(dto.getStartDate(), dto.getEndDate());
+
+        if (isOverlapping(dto.getStartDate(), dto.getEndDate()))
         {
-            throw new AlreadyExistException("Session period overlaps with another existing session.");
+            throw new AlreadyExistException("Session period overlaps with an existing session.");
         }
 
         Session session = modelMapper.map(dto, Session.class);
         session.setActive(true);
+
         Session saved = sessionRepository.save(session);
+        log.info("Session created successfully with ID: {}", saved.getId());
+
         return modelMapper.map(saved, SessionDto.class);
     }
 
     @Override
     public SessionDto updateSession(Long id, CreateOrUpdateSessionRequest request)
     {
+        log.info("Updating session with ID: {}", id);
+
         Session existing = sessionRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Session not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Session not found with ID: " + id));
 
         if (!existing.isActive())
         {
             throw new WrongArgumentException("Only the active session can be updated.");
         }
 
-        LocalDate start = request.getStartDate();
-        LocalDate end = request.getEndDate();
+        validateSessionLength(request.getStartDate(), request.getEndDate());
 
-        long months = ChronoUnit.MONTHS.between(
-                YearMonth.from(start),
-                YearMonth.from(end)
-        );
+        boolean isOverlapping = isOverlapping(request.getStartDate(), request.getEndDate());
+        boolean sameDates = request.getStartDate().isEqual(existing.getStartDate())
+                && request.getEndDate().isEqual(existing.getEndDate());
 
-        if (months != 12)
+        if (isOverlapping && !sameDates)
         {
-            throw new WrongArgumentException("Session length must be exactly 12 months.");
-        }
-
-        boolean overlap = sessionRepository.existsByStartDateLessThanEqualAndEndDateGreaterThanEqual(
-                end, start
-        );
-        if (overlap && !(start.isEqual(existing.getStartDate()) && end.isEqual(existing.getEndDate())))
-        {
-            throw new WrongArgumentException("Session period overlaps with another existing session.");
+            throw new WrongArgumentException("Updated session period overlaps with another existing session.");
         }
 
         modelMapper.map(request, existing);
         Session saved = sessionRepository.save(existing);
+
+        log.info("Session with ID {} updated successfully", saved.getId());
         return modelMapper.map(saved, SessionDto.class);
     }
 
     @Override
     public void deleteSession(Long id)
     {
+        log.info("Attempting to delete session with ID: {}", id);
+
         if (!sessionRepository.existsById(id))
         {
-            throw new ResourceNotFoundException("Session not found");
+            throw new ResourceNotFoundException("Session not found with ID: " + id);
         }
+
         sessionRepository.deleteById(id);
+        log.info("Session with ID {} deleted", id);
     }
 
     @Override
     public List<SessionDto> getAllSessions()
     {
-        return sessionRepository.findAll()
-                .stream()
+        return sessionRepository.findAll().stream()
                 .map(session -> modelMapper.map(session, SessionDto.class))
                 .toList();
     }
@@ -125,7 +112,7 @@ public class SessionServiceImpl implements SessionService
     public SessionDto getSessionById(Long id)
     {
         Session session = sessionRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Session not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Session not found with ID: " + id));
         return modelMapper.map(session, SessionDto.class);
     }
 
@@ -139,7 +126,8 @@ public class SessionServiceImpl implements SessionService
 
     @Transactional
     @Override
-    public void deactivateCurrentSession() {
+    public void deactivateCurrentSession()
+    {
         Session activeSession = sessionRepository.findByActiveTrue()
                 .orElseThrow(() -> new ResourceNotFoundException("No active session found to deactivate"));
 
@@ -149,5 +137,16 @@ public class SessionServiceImpl implements SessionService
         log.info("Deactivated session with ID: {}", activeSession.getId());
     }
 
+    private void validateSessionLength(LocalDate start, LocalDate end)
+    {
+        if (!end.equals(start.plusYears(1).minusDays(1)))
+        {
+            throw new WrongArgumentException("Session length must be exactly 12 months.");
+        }
+    }
 
+    private boolean isOverlapping(LocalDate start, LocalDate end)
+    {
+        return sessionRepository.existsByStartDateLessThanEqualAndEndDateGreaterThanEqual(end, start);
+    }
 }

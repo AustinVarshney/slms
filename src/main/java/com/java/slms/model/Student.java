@@ -15,11 +15,16 @@ import java.util.List;
 
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 @Entity
-@Table(name = "student")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Table(
+        name = "student",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"class_roll_number", "class_id", "session_id"})
+        }
+)
 public class Student extends BaseEntity
 {
 
@@ -27,7 +32,7 @@ public class Student extends BaseEntity
     @EqualsAndHashCode.Include
     private String panNumber;
 
-    @Column(name = "class_roll_number")
+    @Column(name = "class_roll_number", unique = true)
     private Integer classRollNumber;
     private String name;
     private String photo;
@@ -77,7 +82,7 @@ public class Student extends BaseEntity
     private ClassEntity currentClass;
 
     @OneToOne
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", unique = true)
     private User user;
 
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

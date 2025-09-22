@@ -77,20 +77,12 @@ public class ClassEntityServiceImpl implements ClassEntityService
             {
                 throw new WrongArgumentException("Teacher with id " + classRequestDto.getClassTeacherId() + " is inactive.");
             }
+
+            if (isTeacherAssignedToAnotherClass(classRequestDto.getClassTeacherId()))
+            {
+                throw new WrongArgumentException("Teacher with id " + classRequestDto.getClassTeacherId() + " is already assigned to another class.");
+            }
         }
-
-        List<ClassInfoResponse> activeClasses = getAllClassInActiveSession();
-        boolean isTeacherAssignedToAnotherClass = activeClasses.stream()
-                .anyMatch(classInfo ->
-                        classInfo.getClassTeacherId() != null &&
-                                classInfo.getClassTeacherId().equals(classRequestDto.getClassTeacherId())
-                );
-
-        if (isTeacherAssignedToAnotherClass)
-        {
-            throw new WrongArgumentException("Teacher with id " + classRequestDto.getClassTeacherId() + " is already assigned to another class.");
-        }
-
 
         ClassEntity classEntity = modelMapper.map(classRequestDto, ClassEntity.class);
         classEntity.setSession(session);
@@ -100,18 +92,35 @@ public class ClassEntityServiceImpl implements ClassEntityService
 
         FeeStructure feeStructure = FeeStructure.builder()
                 .feesAmount(classRequestDto.getFeesAmount())
-                .session(session).classEntity(classEntity)
+                .session(session)
+                .classEntity(savedEntity)
                 .build();
 
         feeStructureRepository.save(feeStructure);
-        ClassResponseDto savedClassDto = modelMapper.map(savedEntity, ClassResponseDto.class);
-        if (savedEntity.getStudents() != null && !savedEntity.getStudents().isEmpty())
-            savedClassDto.setTotalStudents(savedEntity.getStudents().size());
 
-        var response = modelMapper.map(savedEntity, ClassResponseDto.class);
+        ClassResponseDto response = modelMapper.map(savedEntity, ClassResponseDto.class);
         response.setFeesAmount(classRequestDto.getFeesAmount());
-        response.setClassTeacherId(savedEntity.getClassTeacher().getId());
-        response.setClassTeacherName(savedEntity.getClassTeacher().getName());
+
+        if (savedEntity.getClassTeacher() != null)
+        {
+            response.setClassTeacherId(savedEntity.getClassTeacher().getId());
+            response.setClassTeacherName(savedEntity.getClassTeacher().getName());
+        }
+        else
+        {
+            response.setClassTeacherId(null);
+            response.setClassTeacherName(null);
+        }
+
+        if (savedEntity.getStudents() != null && !savedEntity.getStudents().isEmpty())
+        {
+            response.setTotalStudents(savedEntity.getStudents().size());
+        }
+        else
+        {
+            response.setTotalStudents(0);
+        }
+
         return response;
     }
 
@@ -215,14 +224,12 @@ public class ClassEntityServiceImpl implements ClassEntityService
         ClassEntity existingClass = classEntityRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Class not found with ID: " + id));
 
-        // Fetch the session
         Session session = EntityFetcher.fetchByIdOrThrow(
                 sessionRepository,
                 classRequestDto.getSessionId(),
                 EntityNames.SESSION
         );
 
-        // Check if another class with same name and session already exists
         Optional<ClassEntity> duplicateClass = classEntityRepository
                 .findByClassNameIgnoreCaseAndSessionId(classRequestDto.getClassName(), classRequestDto.getSessionId());
 
@@ -238,22 +245,28 @@ public class ClassEntityServiceImpl implements ClassEntityService
             throw new WrongArgumentException("Cannot update class due to inactive session");
         }
 
-        List<ClassInfoResponse> activeClasses = getAllClassInActiveSession();
-
-        boolean isTeacherAssignedToAnotherClass = activeClasses.stream()
-                .anyMatch(classInfo ->
-                        classInfo.getClassTeacherId() != null &&
-                                classInfo.getClassTeacherId().equals(classRequestDto.getClassTeacherId())
-                );
-
-        if (isTeacherAssignedToAnotherClass)
+        // Check if teacher is valid and assigned properly
+        Teacher teacher = null;
+        if (classRequestDto.getClassTeacherId() != null)
         {
-            throw new WrongArgumentException("Teacher with id " + classRequestDto.getClassTeacherId() + " is already assigned to another class.");
+            teacher = teacherRepository.findById(classRequestDto.getClassTeacherId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Teacher not present with id " + classRequestDto.getClassTeacherId()));
+
+            if (teacher.getStatus().equals(UserStatus.INACTIVE))
+            {
+                throw new WrongArgumentException("Teacher with id " + classRequestDto.getClassTeacherId() + " is inactive.");
+            }
+
+            if (isTeacherAssignedToAnotherClass(classRequestDto.getClassTeacherId()) &&
+                    (existingClass.getClassTeacher() == null || !existingClass.getClassTeacher().getId().equals(classRequestDto.getClassTeacherId())))
+            {
+                throw new WrongArgumentException("Teacher with id " + classRequestDto.getClassTeacherId() + " is already assigned to another class.");
+            }
         }
 
-        // Update the class
         existingClass.setClassName(classRequestDto.getClassName());
         existingClass.setSession(session);
+        existingClass.setClassTeacher(teacher);
 
         FeeStructure feeStructure = feeStructureRepository.findByClassEntity_IdAndSession_Id(id, classRequestDto.getSessionId())
                 .orElseThrow(() -> new ResourceNotFoundException("Fee structure not found for class and session"));
@@ -261,18 +274,27 @@ public class ClassEntityServiceImpl implements ClassEntityService
         feeStructure.setFeesAmount(classRequestDto.getFeesAmount());
         feeStructure.setSession(session);
         feeStructure.setClassEntity(existingClass);
+        feeStructureRepository.save(feeStructure);  // Explicit save for clarity
 
         ClassEntity updatedClass = classEntityRepository.save(existingClass);
 
         ClassInfoResponse dto = modelMapper.map(updatedClass, ClassInfoResponse.class);
         dto.setTotalStudents(updatedClass.getStudents() != null ? updatedClass.getStudents().size() : 0);
+
         if (updatedClass.getClassTeacher() != null)
         {
             dto.setClassTeacherId(updatedClass.getClassTeacher().getId());
             dto.setClassTeacherName(updatedClass.getClassTeacher().getName());
         }
+        else
+        {
+            dto.setClassTeacherId(null);
+            dto.setClassTeacherName(null);
+        }
+
         return dto;
     }
+
 
     private double calculateFeeCollectionRate(List<StudentResponseDto> students)
     {
@@ -312,5 +334,21 @@ public class ClassEntityServiceImpl implements ClassEntityService
 
         return bd.doubleValue();
     }
+
+    /**
+     * Helper method to check if a teacher is already assigned to another class
+     * in the active session.
+     */
+    private boolean isTeacherAssignedToAnotherClass(Long teacherId)
+    {
+        if (teacherId == null)
+        {
+            return false;
+        }
+        List<ClassInfoResponse> activeClasses = getAllClassInActiveSession();
+        return activeClasses.stream()
+                .anyMatch(classInfo -> teacherId.equals(classInfo.getClassTeacherId()));
+    }
+
 
 }

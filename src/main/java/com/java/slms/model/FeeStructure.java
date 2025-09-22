@@ -16,6 +16,12 @@ import java.util.List;
 @AllArgsConstructor
 @Entity
 @Builder
+@Table(
+        name = "fee_structure",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"class_id", "session_id"})
+        }
+)
 public class FeeStructure extends BaseEntity
 {
     @Id

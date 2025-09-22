@@ -15,6 +15,12 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+@Table(
+        name = "non_teaching_staff",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"user_id"})
+        }
+)
 public class NonTeachingStaff extends BaseEntity
 {
     @Id

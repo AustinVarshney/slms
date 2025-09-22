@@ -1,6 +1,7 @@
 package com.java.slms.exception;
 
 import com.java.slms.payload.RestResponse;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -83,6 +84,31 @@ public class GlobalExceptionHandler
                 .status(HttpStatus.BAD_REQUEST.value())
                 .build();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(DuplicateEntryException.class)
+    public ResponseEntity<RestResponse<?>> handleDuplicateEntryException(DuplicateEntryException ex)
+    {
+        RestResponse<?> response = RestResponse.builder()
+                .data(null)
+                .message(ex.getMessage())
+                .status(HttpStatus.CONFLICT.value())
+                .build();
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<RestResponse<?>> handleDuplicateEntry(DataIntegrityViolationException ex)
+    {
+        String message = "Duplicate entry detected.";
+
+        RestResponse<?> response = RestResponse.builder()
+                .data(null)
+                .message(message)
+                .status(HttpStatus.CONFLICT.value())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
 
 

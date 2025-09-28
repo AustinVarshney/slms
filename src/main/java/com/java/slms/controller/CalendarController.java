@@ -1,0 +1,150 @@
+package com.java.slms.controller;
+
+import org.springframework.web.bind.annotation.RestController;
+
+import com.java.slms.dto.CalendarRequestDto;
+import com.java.slms.dto.CalendarResponseDto;
+import com.java.slms.payload.RestResponse;
+import com.java.slms.service.CalendarService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
+@RestController
+@RequestMapping("/api/calendar")
+@RequiredArgsConstructor
+@Tag(name = "Calendar Controller", description = "APIs for managing calendar events")
+public class CalendarController
+{
+
+    private final CalendarService calendarService;
+
+    @Operation(
+            summary = "Add a new calendar event",
+            description = "Creates a new calendar entry for a specific session (e.g., class, exam, holiday).",
+            responses = {
+                    @ApiResponse(responseCode = "201", description = "Calendar event created successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content)
+            }
+    )
+    @PostMapping
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<RestResponse<CalendarResponseDto>> addCalendarEvent(@RequestBody CalendarRequestDto calendarRequestDto)
+    {
+        CalendarResponseDto created = calendarService.addCalendarEvent(calendarRequestDto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                RestResponse.<CalendarResponseDto>builder()
+                        .data(created)
+                        .message("Calendar event created")
+                        .status(HttpStatus.CREATED.value())
+                        .build()
+        );
+    }
+
+    @Operation(
+            summary = "Get all calendar events",
+            description = "Fetches all calendar events.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Calendar events retrieved successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content)
+            }
+    )
+    @GetMapping
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_STUDENT', 'ROLE_NON_TEACHING_STAFF')")
+    public ResponseEntity<RestResponse<List<CalendarResponseDto>>> getAllCalendarEvents()
+    {
+        List<CalendarResponseDto> list = calendarService.getAllCalendarEvents();
+        return ResponseEntity.ok(
+                RestResponse.<List<CalendarResponseDto>>builder()
+                        .data(list)
+                        .message("Total calendar events: " + list.size())
+                        .status(HttpStatus.OK.value())
+                        .build()
+        );
+    }
+
+    @Operation(
+            summary = "Get calendar event by ID",
+            description = "Fetches a particular calendar event by its ID.",
+            parameters = {
+                    @Parameter(name = "id", description = "ID of the calendar event", required = true)
+            },
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Calendar event found"),
+                    @ApiResponse(responseCode = "400", description = "Invalid event ID or event not found", content = @Content)
+            }
+    )
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_STUDENT', 'ROLE_NON_TEACHING_STAFF')")
+    public ResponseEntity<RestResponse<CalendarResponseDto>> getCalendarEventById(@PathVariable Long id)
+    {
+        CalendarResponseDto dto = calendarService.getCalendarEventById(id);
+        return ResponseEntity.ok(
+                RestResponse.<CalendarResponseDto>builder()
+                        .data(dto)
+                        .message("Calendar event found")
+                        .status(HttpStatus.OK.value())
+                        .build()
+        );
+    }
+
+    @Operation(
+            summary = "Update calendar event",
+            description = "Updates a calendar event by its ID.",
+            parameters = {
+                    @Parameter(name = "id", description = "ID of the calendar event", required = true)
+            },
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Calendar event updated successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid request or event not found", content = @Content)
+            }
+    )
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<RestResponse<CalendarResponseDto>> updateCalendarEvent(@PathVariable Long id, @RequestBody CalendarRequestDto calendarRequestDto)
+    {
+        CalendarResponseDto updated = calendarService.updateCalendarEvent(id, calendarRequestDto);
+        return ResponseEntity.ok(
+                RestResponse.<CalendarResponseDto>builder()
+                        .data(updated)
+                        .message("Calendar event updated")
+                        .status(HttpStatus.OK.value())
+                        .build()
+        );
+    }
+
+    @Operation(
+            summary = "Delete calendar event",
+            description = "Deletes a calendar event by its ID.",
+            parameters = {
+                    @Parameter(name = "id", description = "ID of the calendar event", required = true)
+            },
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Calendar event deleted successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid event ID or event not found", content = @Content)
+            }
+    )
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<RestResponse<String>> deleteCalendarEvent(@PathVariable Long id)
+    {
+        calendarService.deleteCalendarEvent(id);
+        return ResponseEntity.ok(
+                RestResponse.<String>builder()
+                        .data(null)
+                        .message("Calendar event deleted")
+                        .status(HttpStatus.OK.value())
+                        .build()
+        );
+    }
+}

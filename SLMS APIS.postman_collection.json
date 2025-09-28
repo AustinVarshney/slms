@@ -10,8 +10,18 @@
 			"name": "Student",
 			"item": [
 				{
-					"name": "Get All Students",
+					"name": "Get All Students - Admin",
 					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU4OTg5NjM0LCJleHAiOjE3NTg5OTMyMzR9.NuWSU_of9yl-Jgz6HvQogRafCxGdNo8euy9WX9UCfWo",
+									"type": "string"
+								}
+							]
+						},
 						"method": "GET",
 						"header": [],
 						"url": {
@@ -30,7 +40,7 @@
 					"response": []
 				},
 				{
-					"name": "Get Student By PAN",
+					"name": "Get Student By PAN - Admin, Teacher",
 					"request": {
 						"method": "GET",
 						"header": [],
@@ -51,7 +61,7 @@
 					"response": []
 				},
 				{
-					"name": "Get Current Student",
+					"name": "Get Current Student - Student",
 					"request": {
 						"method": "GET",
 						"header": [],
@@ -72,7 +82,7 @@
 					"response": []
 				},
 				{
-					"name": "Get Active Students",
+					"name": "Get Active Students - Admin, Teacher, NonTeachingStaff",
 					"request": {
 						"method": "GET",
 						"header": [],
@@ -93,7 +103,7 @@
 					"response": []
 				},
 				{
-					"name": "Get Active Students by classId",
+					"name": "Get Active Students by classId - All",
 					"request": {
 						"method": "GET",
 						"header": [],
@@ -115,7 +125,7 @@
 					"response": []
 				},
 				{
-					"name": "Mark Student Graduate Or Inactive",
+					"name": "Mark Student Graduate Or Inactive - Admin",
 					"request": {
 						"method": "PUT",
 						"header": [],
@@ -145,7 +155,7 @@
 					"response": []
 				},
 				{
-					"name": "Update Student Details",
+					"name": "Update Student Details - Admin",
 					"request": {
 						"method": "PUT",
 						"header": [],
@@ -175,7 +185,7 @@
 					"response": []
 				},
 				{
-					"name": "Fee Catelog of Current Student",
+					"name": "Fee Catelog of Current Student - Student",
 					"protocolProfileBehavior": {
 						"disableBodyPruning": true
 					},
@@ -214,7 +224,7 @@
 					"response": []
 				},
 				{
-					"name": "Get Student's Present Today By Class",
+					"name": "Get Student's Present Today By Class - Admin, Teacher, NonTeachingStaff",
 					"protocolProfileBehavior": {
 						"disableBodyPruning": true
 					},
@@ -248,23 +258,13 @@
 			"name": "Class",
 			"item": [
 				{
-					"name": "Add New Class With SessionId",
+					"name": "Add New Class With SessionId - Admin",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU2NTczNzM5LCJleHAiOjE3NTY1NzczMzl9.Ev0u_in6vhmF0FxzE14g1qhn0Mkp4Z78ambv8EJoXFk",
-									"type": "string"
-								}
-							]
-						},
 						"method": "POST",
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"className\" : \"8A\",\r\n    \"sessionId\": 1,\r\n    \"feesAmount\":8000,\r\n    \"classTeacherId\":3\r\n}",
+							"raw": "{\r\n    \"className\" : \"8A-2025\",\r\n    \"sessionId\": 1,\r\n    \"feesAmount\":8000,\r\n    \"classTeacherId\":3\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -287,7 +287,7 @@
 					"response": []
 				},
 				{
-					"name": "All Classes with students in active session",
+					"name": "All Classes with students in active session - Admin, Teacher, NTS",
 					"protocolProfileBehavior": {
 						"disableBodyPruning": true
 					},
@@ -314,7 +314,7 @@
 					"response": []
 				},
 				{
-					"name": "getClassByIdAndSessionId",
+					"name": "getClassByIdAndSessionId - Admin, Teacher, NTS",
 					"protocolProfileBehavior": {
 						"disableBodyPruning": true
 					},
@@ -344,7 +344,7 @@
 					"response": []
 				},
 				{
-					"name": "UpdateClassNameByClassIdAndSessionid",
+					"name": "UpdateClassNameByClassIdAndSessionid - Admin",
 					"request": {
 						"method": "PATCH",
 						"header": [],
@@ -374,7 +374,7 @@
 					"response": []
 				},
 				{
-					"name": "Delete By ClassId and SessionId",
+					"name": "Delete By ClassId and SessionId - Admin",
 					"request": {
 						"method": "DELETE",
 						"header": [],
@@ -443,7 +443,7 @@
 			"name": "Subjects",
 			"item": [
 				{
-					"name": "Create & Assign Subjects to Teachers",
+					"name": "Create & Assign Subjects to Teachers - Admin",
 					"request": {
 						"auth": {
 							"type": "noauth"
@@ -476,7 +476,7 @@
 					"response": []
 				},
 				{
-					"name": "Create & Assign Subject to Teacher",
+					"name": "Create & Assign Subject to Teacher - Admin",
 					"request": {
 						"auth": {
 							"type": "noauth"
@@ -508,7 +508,7 @@
 					"response": []
 				},
 				{
-					"name": "All Subjects",
+					"name": "All Subjects - Admin, Teacher",
 					"request": {
 						"auth": {
 							"type": "noauth"
@@ -531,7 +531,7 @@
 					"response": []
 				},
 				{
-					"name": "Get Subject by ID",
+					"name": "Get Subject by ID - Admin, Teacher, Student",
 					"request": {
 						"auth": {
 							"type": "noauth"
@@ -555,7 +555,7 @@
 					"response": []
 				},
 				{
-					"name": "Get Subjects by ClassId",
+					"name": "Get Subjects by ClassId - Admin, Teacher, Student",
 					"request": {
 						"method": "GET",
 						"header": [],
@@ -577,7 +577,7 @@
 					"response": []
 				},
 				{
-					"name": "Update Subject by Id",
+					"name": "Update Subject by Id - Admin",
 					"request": {
 						"method": "PUT",
 						"header": [],
@@ -607,7 +607,7 @@
 					"response": []
 				},
 				{
-					"name": "Delete Subject by ClassId",
+					"name": "Delete Subject by ClassId - Admin",
 					"request": {
 						"auth": {
 							"type": "noauth"
@@ -639,7 +639,7 @@
 			"name": "Teacher",
 			"item": [
 				{
-					"name": "GetTeacherById",
+					"name": "GetTeacherById - Admin",
 					"protocolProfileBehavior": {
 						"disableBodyPruning": true
 					},
@@ -667,7 +667,7 @@
 					"response": []
 				},
 				{
-					"name": "Get ALL Teachers",
+					"name": "Get ALL Teachers - Admin\\",
 					"protocolProfileBehavior": {
 						"disableBodyPruning": true
 					},
@@ -694,7 +694,7 @@
 					"response": []
 				},
 				{
-					"name": "Inactive Teacher",
+					"name": "Inactive Teacher - Admin",
 					"request": {
 						"method": "PUT",
 						"header": [],
@@ -719,7 +719,7 @@
 					"response": []
 				},
 				{
-					"name": "Get Active Teachers",
+					"name": "Get Active Teachers- Admin, Teacher",
 					"protocolProfileBehavior": {
 						"disableBodyPruning": true
 					},
@@ -747,7 +747,7 @@
 					"response": []
 				},
 				{
-					"name": "GetCurrentTeacher",
+					"name": "GetCurrentTeacher - Teacher",
 					"protocolProfileBehavior": {
 						"disableBodyPruning": true
 					},
@@ -790,7 +790,7 @@
 			"name": "Fee",
 			"item": [
 				{
-					"name": "PayFees",
+					"name": "PayFees - Admin, NTS",
 					"request": {
 						"method": "PUT",
 						"header": [],
@@ -820,7 +820,7 @@
 					"response": []
 				},
 				{
-					"name": "Fee Catelog",
+					"name": "Fee Catelog - Admin, NTS",
 					"protocolProfileBehavior": {
 						"disableBodyPruning": true
 					},
@@ -848,7 +848,7 @@
 					"response": []
 				},
 				{
-					"name": "updateOverdueFees",
+					"name": "updateOverdueFees - Admin, NTS",
 					"request": {
 						"method": "PUT",
 						"header": [],
@@ -873,7 +873,7 @@
 					"response": []
 				},
 				{
-					"name": "get FeeCatelog by Student Pan",
+					"name": "get FeeCatelog by Student Pan - Admin, NTS",
 					"protocolProfileBehavior": {
 						"disableBodyPruning": true
 					},
@@ -907,13 +907,13 @@
 			"name": "Auth",
 			"item": [
 				{
-					"name": "RegisterStaff",
+					"name": "RegisterStaff - Admin",
 					"request": {
 						"method": "POST",
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"name\": \"Teacher and Admin\",\r\n  \"email\": \"TeacherAndAdmin11111@example.com\",\r\n  \"qualification\": \"MSc\",\r\n  \"salaryGrade\": \"A1\",\r\n  \"contactNumber\": \"+1234567890\",\r\n  \"roles\": [\"ROLE_TEACHER\", \"ROLE_ADMIN\"],\r\n  \"password\": \"securePassword123\",\r\n  \"designation\": \"Senior Teacher\",\r\n   \"joiningDate\": \"2025-08-21\"\r\n}\r\n",
+							"raw": "{\r\n  \"name\": \"Teacher and Admin\",\r\n  \"email\": \"TeacherAndAdmin11111@example.com\",\r\n  \"qualification\": \"MSc\",\r\n  \"salaryGrade\": \"A1\",\r\n  \"contactNumber\": \"+1234567890\",\r\n  \"roles\": [\"ROLE_TEACHER\"],\r\n  \"password\": \"securePassword123\",\r\n  \"designation\": \"Senior Teacher\",\r\n   \"joiningDate\": \"2025-08-21\"\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -938,7 +938,7 @@
 					"response": []
 				},
 				{
-					"name": "LoginStaff",
+					"name": "LoginStaff - No Auth",
 					"request": {
 						"auth": {
 							"type": "noauth"
@@ -971,13 +971,13 @@
 					"response": []
 				},
 				{
-					"name": "RegisterStudent",
+					"name": "RegisterStudent - Admin",
 					"request": {
 						"method": "POST",
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"panNumber\": \"ABC135\",\r\n  \"name\": \"Rahul Kumar\",\r\n  \"photo\": \"rahul_kumar.jpg\",\r\n  \"password\": \"securePassword123\",\r\n  \r\n  \"feeStatus\": \"PAID\",\r\n  \"feeCatalogStatus\": \"UP_TO_DATE\",\r\n\r\n  \"parentName\": \"Rajesh Kumar\",\r\n  \"mobileNumber\": \"9876543210\",\r\n\r\n  \"dateOfBirth\": \"2008-05-15\",\r\n  \"gender\": \"MALE\",\r\n\r\n  \"address\": \"123 Main Street, New Delhi, India\",\r\n  \"emergencyContact\": \"9876543211\",\r\n  \"bloodGroup\": \"B+\",\r\n\r\n  \"admissionDate\": \"2020-04-01\",\r\n  \"previousSchool\": \"Delhi Public School\",\r\n\r\n  \"classId\": 1,\r\n  \"sessionId\":1\r\n}\r\n",
+							"raw": "{\r\n  \"panNumber\": \"ABC135\",\r\n  \"name\": \"Rahul Kumar\",\r\n  \"photo\": \"rahul_kumar.jpg\",\r\n  \"password\": \"securePassword123\",\r\n\r\n  \"parentName\": \"Rajesh Kumar\",\r\n  \"mobileNumber\": \"9876543210\",\r\n\r\n  \"dateOfBirth\": \"2008-05-15\",\r\n  \"gender\": \"MALE\",\r\n\r\n  \"address\": \"123 Main Street, New Delhi, India\",\r\n  \"emergencyContact\": \"9876543211\",\r\n  \"bloodGroup\": \"B+\",\r\n\r\n  \"admissionDate\": \"2020-04-01\",\r\n  \"previousSchool\": \"Delhi Public School\",\r\n\r\n  \"classId\": 1,\r\n  \"sessionId\":1\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1002,7 +1002,7 @@
 					"response": []
 				},
 				{
-					"name": "LoginStudent",
+					"name": "LoginStudent - No Auth",
 					"request": {
 						"auth": {
 							"type": "noauth"
@@ -1034,6 +1034,54 @@
 						}
 					},
 					"response": []
+				},
+				{
+					"name": "Upload Student Via Excel - Admin",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU4OTg5NjM0LCJleHAiOjE3NTg5OTMyMzR9.NuWSU_of9yl-Jgz6HvQogRafCxGdNo8euy9WX9UCfWo",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": "/C:/Users/Shiv/Downloads/student.xlsx"
+								}
+							]
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/auth/upload-students",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"auth",
+								"upload-students"
+							],
+							"query": [
+								{
+									"key": "file",
+									"value": "",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
 				}
 			]
 		},
@@ -1041,7 +1089,7 @@
 			"name": "Admin",
 			"item": [
 				{
-					"name": "Get Active Admins",
+					"name": "Get Active Admins - Admin",
 					"request": {
 						"method": "GET",
 						"header": [],
@@ -1062,7 +1110,7 @@
 					"response": []
 				},
 				{
-					"name": "Get all Admins",
+					"name": "Get all Admins - Admin",
 					"request": {
 						"method": "GET",
 						"header": [],
@@ -1082,7 +1130,7 @@
 					"response": []
 				},
 				{
-					"name": "Get a single Admin by ID",
+					"name": "Get a single Admin by ID - Admin",
 					"request": {
 						"method": "GET",
 						"header": [],
@@ -1103,7 +1151,7 @@
 					"response": []
 				},
 				{
-					"name": "Deactivate Admin",
+					"name": "Deactivate Admin - Admin",
 					"request": {
 						"method": "PUT",
 						"header": [],
@@ -1129,12 +1177,12 @@
 			"name": "NonTeachingStaff",
 			"item": [
 				{
-					"name": "Get Active Staff",
+					"name": "Get Active NTS - Admin",
 					"request": {
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "http://localhost:8080/api/feestaff/active",
+							"raw": "http://localhost:8080/api/nts/active",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -1142,7 +1190,7 @@
 							"port": "8080",
 							"path": [
 								"api",
-								"feestaff",
+								"nts",
 								"active"
 							]
 						}
@@ -1150,12 +1198,12 @@
 					"response": []
 				},
 				{
-					"name": "Get all FeeStaff",
+					"name": "Get all NTS - Admin",
 					"request": {
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "http://localhost:8080/api/feestaff",
+							"raw": "http://localhost:8080/api/nts",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -1163,19 +1211,19 @@
 							"port": "8080",
 							"path": [
 								"api",
-								"feestaff"
+								"nts"
 							]
 						}
 					},
 					"response": []
 				},
 				{
-					"name": "Get a single feestaff by ID",
+					"name": "Get a single NTS by ID - Admin",
 					"request": {
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "http://localhost:8080/api/feestaff/1",
+							"raw": "http://localhost:8080/api/nts/1",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -1183,7 +1231,7 @@
 							"port": "8080",
 							"path": [
 								"api",
-								"feestaff",
+								"nts",
 								"1"
 							]
 						}
@@ -1191,7 +1239,7 @@
 					"response": []
 				},
 				{
-					"name": "InactiveStaff",
+					"name": "InactiveStaff - Admin",
 					"request": {
 						"method": "PUT",
 						"header": [],
@@ -1205,7 +1253,7 @@
 							}
 						},
 						"url": {
-							"raw": "http://localhost:8080/api/feestaff/1",
+							"raw": "http://localhost:8080/api/nts/1",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -1213,7 +1261,7 @@
 							"port": "8080",
 							"path": [
 								"api",
-								"feestaff",
+								"nts",
 								"1"
 							]
 						}
@@ -1226,7 +1274,7 @@
 			"name": "User",
 			"item": [
 				{
-					"name": "Change Password of Any User",
+					"name": "Change Password of Any User - No Auth",
 					"request": {
 						"auth": {
 							"type": "bearer",
@@ -1267,7 +1315,7 @@
 					"response": []
 				},
 				{
-					"name": "Update User By UserId",
+					"name": "Update any User By UserId - Admin",
 					"request": {
 						"method": "PUT",
 						"header": [],
@@ -1298,7 +1346,7 @@
 					"response": []
 				},
 				{
-					"name": "Delete User",
+					"name": "Delete User - Admin",
 					"request": {
 						"method": "DELETE",
 						"header": [],
@@ -1321,16 +1369,26 @@
 			]
 		},
 		{
-			"name": "Session",
+			"name": "Session - Admin",
 			"item": [
 				{
 					"name": "Create Session",
 					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU2OTc3MjA0LCJleHAiOjE3NTY5ODA4MDR9.s6BtXFqidNiHvWOjG0qamOWixppHuJvPSE5pA_GKAAA",
+									"type": "string"
+								}
+							]
+						},
 						"method": "POST",
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"name\": \"2026-27\",\r\n  \"startDate\": \"2026-04-01\",\r\n  \"endDate\": \"2027-03-31\"\r\n}",
+							"raw": "{\r\n  \"name\": \"2025-2026\",\r\n  \"startDate\": \"2025-04-01\",\r\n  \"endDate\": \"2026-03-31\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1454,7 +1512,7 @@
 			"name": "TCRequest",
 			"item": [
 				{
-					"name": "Raise TC Request By Student",
+					"name": "Raise TC Request By Student - Student",
 					"request": {
 						"auth": {
 							"type": "bearer",
@@ -1494,14 +1552,14 @@
 					"response": []
 				},
 				{
-					"name": "Approve TC Request By Admin",
+					"name": "Approve TC Request By Admin - Admin",
 					"request": {
 						"auth": {
 							"type": "bearer",
 							"bearer": [
 								{
 									"key": "token",
-									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU2NjQ5NjE5LCJleHAiOjE3NTY2NTMyMTl9.AidcBh84ZvfVgnXbOkR2ZOO8GuGZxo8jzb2m7J_e70I",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBtYWlsLmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU2OTg3NjgyLCJleHAiOjE3NTY5OTEyODJ9.C5H815Vg49j1zWtmMe_9YJXMdyuPSur0_M2n7U57fcY",
 									"type": "string"
 								}
 							]
@@ -1518,7 +1576,7 @@
 							}
 						},
 						"url": {
-							"raw": "http://localhost:8080/api/tc/process/1",
+							"raw": "http://localhost:8080/api/tc/process/3",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -1528,14 +1586,14 @@
 								"api",
 								"tc",
 								"process",
-								"1"
+								"3"
 							]
 						}
 					},
 					"response": []
 				},
 				{
-					"name": "Get Request Raise By Student",
+					"name": "Get Requests Raise By Student - Admin, Teacher",
 					"protocolProfileBehavior": {
 						"disableBodyPruning": true
 					},
@@ -1564,7 +1622,7 @@
 					"response": []
 				},
 				{
-					"name": "Get All Requests of Current Student",
+					"name": "Get All Requests of Current Student - Student",
 					"request": {
 						"auth": {
 							"type": "bearer",
@@ -1596,7 +1654,7 @@
 					"response": []
 				},
 				{
-					"name": "Get All requests for student sort with Status",
+					"name": "Get All requests for student sort with Status - Admin",
 					"request": {
 						"method": "GET",
 						"header": [],
@@ -1623,14 +1681,14 @@
 					"response": []
 				},
 				{
-					"name": "Admin Forward Request To Teacher",
+					"name": "Admin Forward Request To Teacher - Admin",
 					"request": {
 						"auth": {
 							"type": "bearer",
 							"bearer": [
 								{
 									"key": "token",
-									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJUZWFjaGVyQW5kQWRtaW4xMTExMUBleGFtcGxlLmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iLCJST0xFX1RFQUNIRVIiXSwiaWF0IjoxNzU2NjQ0NTMyLCJleHAiOjE3NTY2NDgxMzJ9.1CNvwkyzktFg0RjKYRM0rsnwz0n9ZdkNlbsQuO-_n8o",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBtYWlsLmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU2OTg3NTMzLCJleHAiOjE3NTY5OTExMzN9.rGhZ83WldbocZ5sb_yWoQ69G_smUyQ2Dtwh_67LnqDU",
 									"type": "string"
 								}
 							]
@@ -1647,7 +1705,7 @@
 							}
 						},
 						"url": {
-							"raw": "http://localhost:8080/api/tc/1/forward-to-teacher",
+							"raw": "http://localhost:8080/api/tc/3/forward-to-teacher",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -1656,7 +1714,7 @@
 							"path": [
 								"api",
 								"tc",
-								"1",
+								"3",
 								"forward-to-teacher"
 							]
 						}
@@ -1664,22 +1722,31 @@
 					"response": []
 				},
 				{
-					"name": "Teacher Reply to Admin",
+					"name": "Teacher Reply to Admin - Teacher",
 					"request": {
 						"auth": {
 							"type": "bearer",
 							"bearer": [
 								{
 									"key": "token",
-									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZWFjaGVyM0BleGFtcGxlLmNvbSIsInJvbGVzIjpbIlJPTEVfVEVBQ0hFUiJdLCJpYXQiOjE3NTY2NDkzMDQsImV4cCI6MTc1NjY1MjkwNH0.qf3B7JQg1PAN2PPuKruVonbeTeB8LUGqndY8yvjSMAs",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJUZWFjaGVyQW5kQWRtaW4xQGV4YW1wbGUuY29tIiwicm9sZXMiOlsiUk9MRV9URUFDSEVSIl0sImlhdCI6MTc1Njk4NzYxNCwiZXhwIjoxNzU2OTkxMjE0fQ.fItfYP8FY5ALXsiUhqT-hvlxYDKoBrvHffzV-gu6oeE",
 									"type": "string"
 								}
 							]
 						},
 						"method": "PUT",
 						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"teacherReplyToAdmin\": \"The student has cleared all dues and is eligible for TC.\",\r\n  \"status\": \"APPROVED\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
 						"url": {
-							"raw": "http://localhost:8080/api/tc/1/forward-to-teacher",
+							"raw": "http://localhost:8080/api/tc/3/reply-to-admin",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -1688,8 +1755,46 @@
 							"path": [
 								"api",
 								"tc",
-								"1",
-								"forward-to-teacher"
+								"3",
+								"reply-to-admin"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "All RequestFrowarded By Admin to ClassTeacher - Teacher",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU2NjQ5NjE5LCJleHAiOjE3NTY2NTMyMTl9.AidcBh84ZvfVgnXbOkR2ZOO8GuGZxo8jzb2m7J_e70I",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"adminReply\": \"All documents verified, approved.\",\r\n  \"decision\": \"APPROVED\"\r\n}\r\n"
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/tc/forwarded-to-class-teacher",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"tc",
+								"forwarded-to-class-teacher"
 							]
 						}
 					},
@@ -1701,7 +1806,7 @@
 			"name": "Attendance",
 			"item": [
 				{
-					"name": "markAttendance Of Today",
+					"name": "markAttendance Of Today - Admin, Teacher",
 					"request": {
 						"method": "POST",
 						"header": [],
@@ -1730,7 +1835,7 @@
 					"response": []
 				},
 				{
-					"name": "Update Attendance For Specific Date",
+					"name": "Update Attendance For Specific Date - Admin",
 					"request": {
 						"method": "PUT",
 						"header": [],
@@ -1760,7 +1865,7 @@
 					"response": []
 				},
 				{
-					"name": "Get Attendance By Pan and SessiomId",
+					"name": "Get Attendance By Pan and SessiomId - Admin, Teacher",
 					"request": {
 						"method": "GET",
 						"header": [],
@@ -1790,7 +1895,7 @@
 					"response": []
 				},
 				{
-					"name": "Get Attendance of Current Student",
+					"name": "Get Attendance of Current Student - Student",
 					"request": {
 						"auth": {
 							"type": "bearer",
@@ -1827,7 +1932,7 @@
 					"response": []
 				},
 				{
-					"name": "Get Attendance By classId and sessionId",
+					"name": "Get Attendance By classId and sessionId - Admin, Teacher",
 					"request": {
 						"method": "GET",
 						"header": [],
@@ -1862,7 +1967,7 @@
 			"name": "TimeTable",
 			"item": [
 				{
-					"name": "Create TimeTable",
+					"name": "Create TimeTable - Admin",
 					"request": {
 						"auth": {
 							"type": "noauth"
@@ -1894,19 +1999,16 @@
 					"response": []
 				},
 				{
-					"name": "getTimetableByTeacherId",
+					"name": "getTimetableByTeacherId- Admin",
 					"protocolProfileBehavior": {
 						"disableBodyPruning": true
 					},
 					"request": {
-						"auth": {
-							"type": "noauth"
-						},
 						"method": "GET",
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"classId\": 1,\r\n  \"subjectId\": 2,\r\n  \"day\": \"TUESDAY\",\r\n  \"startTime\": \"10:00\",\r\n  \"endTime\": \"11:00\"\r\n}"
+							"raw": ""
 						},
 						"url": {
 							"raw": "http://localhost:8080/api/timetables/teacher/3",
@@ -1926,7 +2028,7 @@
 					"response": []
 				},
 				{
-					"name": "getTimeTableByClassAndDay",
+					"name": "getTimeTableByClassAndDay - Teacher, Student, Admin",
 					"protocolProfileBehavior": {
 						"disableBodyPruning": true
 					},
@@ -1960,7 +2062,7 @@
 					"response": []
 				},
 				{
-					"name": "Update Timetable",
+					"name": "Update Timetable - Admin",
 					"request": {
 						"method": "PUT",
 						"header": [],
@@ -1990,7 +2092,7 @@
 					"response": []
 				},
 				{
-					"name": "Get Timetable of Current Student",
+					"name": "Get Timetable of Current Student - Student",
 					"request": {
 						"auth": {
 							"type": "bearer",
@@ -2022,7 +2124,7 @@
 					"response": []
 				},
 				{
-					"name": "Get Timetable of Current Teacher",
+					"name": "Get Timetable of Current Teacher - Teacher",
 					"request": {
 						"auth": {
 							"type": "bearer",
@@ -2059,7 +2161,7 @@
 			"name": "Event",
 			"item": [
 				{
-					"name": "Create Event By Admin",
+					"name": "Create Event By Admin - Admin",
 					"request": {
 						"method": "POST",
 						"header": [],
@@ -2088,7 +2190,7 @@
 					"response": []
 				},
 				{
-					"name": "Update Event",
+					"name": "Update Event - Admin",
 					"request": {
 						"method": "PUT",
 						"header": [],
@@ -2118,7 +2220,7 @@
 					"response": []
 				},
 				{
-					"name": "Get Event By ID",
+					"name": "Get Event By ID - ALL",
 					"protocolProfileBehavior": {
 						"disableBodyPruning": true
 					},
@@ -2146,7 +2248,7 @@
 					"response": []
 				},
 				{
-					"name": "Get All Events in current Session",
+					"name": "Get All Events in current Session - All",
 					"protocolProfileBehavior": {
 						"disableBodyPruning": true
 					},
@@ -2179,7 +2281,7 @@
 					"response": []
 				},
 				{
-					"name": "Delete Event",
+					"name": "Delete Event - Admin",
 					"request": {
 						"method": "DELETE",
 						"header": [],
@@ -2204,6 +2306,57 @@
 					"response": []
 				}
 			]
+		},
+		{
+			"name": "Calendar",
+			"item": [
+				{
+					"name": "Add Holiday",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU5MDY1NjI4LCJleHAiOjE3NTkwNjkyMjh9.tBMhPCLMOgVsCSQjVG8nLX0Lt3EhtliNTSi-e88Rk6Q",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"startDate\": \"2025-10-01\",\r\n  \"endDate\": \"2025-10-02\",\r\n  \"occasion\": \"School Holiday\",\r\n  \"sessionId\": 1\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/calendar",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"calendar"
+							],
+							"query": [
+								{
+									"key": "file",
+									"value": "",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
 		}
 	],
 	"auth": {
@@ -2211,7 +2364,7 @@
 		"bearer": [
 			{
 				"key": "token",
-				"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU2NTc2MjM0LCJleHAiOjE3NTY1Nzk4MzR9.RHWy-SdxIDsDfJYZFSyko5sBsb9UJdKKE8cZRejPfHE",
+				"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU4NTI1NTk5LCJleHAiOjE3NTg1MjkxOTl9.I1DVoGZ3IYeCNWNr0kN0ehXSQiUYxq55IerM9ZRoY3Q",
 				"type": "string"
 			}
 		]

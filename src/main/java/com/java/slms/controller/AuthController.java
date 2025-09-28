@@ -5,10 +5,7 @@ import com.java.slms.model.User;
 import com.java.slms.payload.RestResponse;
 import com.java.slms.repository.UserRepository;
 import com.java.slms.security.CustomUserDetailsService;
-import com.java.slms.service.AdminService;
-import com.java.slms.service.NonTeachingStaffService;
-import com.java.slms.service.StudentService;
-import com.java.slms.service.TeacherService;
+import com.java.slms.service.*;
 import com.java.slms.util.JwtUtil;
 import com.java.slms.util.RoleEnum;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,10 +19,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -50,6 +45,7 @@ public class AuthController
     private final StudentService studentService;
     private final NonTeachingStaffService nonTeachingStaffService;
     private final ModelMapper modelMapper;
+    private final ExcelStudentParseService excelStudentParseService;
 
     @PostMapping("/register/staff")
     @Transactional
@@ -179,6 +175,56 @@ public class AuthController
                         .status(HttpStatus.OK.value())
                         .build()
         );
+    }
+
+
+    @PostMapping("/upload-students")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<?> uploadStudents(@RequestParam("file") MultipartFile file)
+    {
+        try
+        {
+            String filename = file.getOriginalFilename();
+            if (filename == null || !(filename.endsWith(".xlsx") || filename.endsWith(".xls") || filename.endsWith(".csv")))
+            {
+                return ResponseEntity.badRequest().body("Please upload an Excel or CSV file");
+            }
+
+            List<StudentRequestDto> students = excelStudentParseService.uploadStudents(file);
+            List<StudentResponseDto> responses = new ArrayList<>();
+
+            for (StudentRequestDto studentDto : students)
+            {
+                if (userRepository.findByPanNumberIgnoreCase(studentDto.getPanNumber()).isPresent())
+                {
+                    continue; // Or log + add to error list
+                }
+
+                User user = User.builder()
+                        .panNumber(studentDto.getPanNumber())
+                        .password(passwordEncoder.encode(studentDto.getPassword() == null ? "default123" : studentDto.getPassword()))
+                        .roles(Set.of(RoleEnum.ROLE_STUDENT))
+                        .enabled(true)
+                        .build();
+                userRepository.save(user);
+
+                studentDto.setUserId(user.getId());
+
+                StudentResponseDto response = studentService.createStudent(studentDto);
+                responses.add(response);
+            }
+
+            return ResponseEntity.ok(RestResponse.<List<StudentResponseDto>>builder()
+                    .data(responses)
+                    .message("Students uploaded successfully")
+                    .status(HttpStatus.OK.value())
+                    .build());
+
+        } catch (Exception e)
+        {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Failed to upload file: " + e.getMessage());
+        }
     }
 
     @PostMapping("/login")

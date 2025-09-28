@@ -1,0 +1,6 @@
+﻿pan_number,address,admission_date,blood_group,class_roll_number,date_of_birth,emergency_contact,gender,mobile_number,name,parent_name,photo,previous_school,status,class_id,session_id,user_id
+ABC142,"456 Park Lane, Mumbai, India",12-06-2021,O+,3,10-10-2009,9123456780,MALE,9123456789,Aman Verma,Sunil Verma,https://example.com/photos/aman_verma.jpg,St. Xavier's School,ACTIVE,1,1,6
+ABC143,"789 Hill Road, Pune, India",05-07-2021,A-,4,22-07-2009,9234567890,FEMALE,9234567891,Neha Sharma,Ravi Sharma,https://example.com/photos/neha_sharma.jpg,Loyola High School,INACTIVE,1,1,7
+ABC144,"321 Ocean Drive, Chennai, India",20-03-2022,B-,5,30-08-2010,9345678901,FEMALE,9345678902,Priya Iyer,Suresh Iyer,https://example.com/photos/priya_iyer.jpg,Baldwin Girls' School,ACTIVE,1,1,8
+ABC145,"654 Lake View, Bengaluru, India",15-05-2022,AB+,6,14-01-2011,9456789012,MALE,9456789013,Vikram Nair,Rajan Nair,https://example.com/photos/vikram_nair.jpg,NPS Koramangala,ACTIVE,1,1,9
+ABC146,"789 Sunrise Avenue, Hyderabad, India",01-06-2022,O-,7,02-03-2011,9567890123,FEMALE,9567890124,Ananya Reddy,Satish Reddy,https://example.com/photos/ananya_reddy.jpg,Chirec International,INACTIVE,1,1,10

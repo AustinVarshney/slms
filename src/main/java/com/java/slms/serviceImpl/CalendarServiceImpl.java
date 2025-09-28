@@ -1,0 +1,97 @@
+package com.java.slms.serviceImpl;
+
+import com.java.slms.dto.CalendarRequestDto;
+import com.java.slms.dto.CalendarResponseDto;
+import com.java.slms.exception.ResourceNotFoundException;
+import com.java.slms.exception.WrongArgumentException;
+import com.java.slms.model.CalendarEntity;
+import com.java.slms.model.Session;
+import com.java.slms.repository.CalendarRepository;
+import com.java.slms.repository.SessionRepository;
+import com.java.slms.service.CalendarService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.modelmapper.ModelMapper;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class CalendarServiceImpl implements CalendarService
+{
+    private final CalendarRepository calendarRepository;
+    private final ModelMapper modelMapper;
+    private final SessionRepository sessionRepository;
+
+    @Override
+    public CalendarResponseDto addCalendarEvent(CalendarRequestDto calendarRequestDto)
+    {
+        Session session = sessionRepository.findById(calendarRequestDto.getSessionId())
+                .orElseThrow(() -> new ResourceNotFoundException("Session not found with id: " + calendarRequestDto.getSessionId()));
+
+        if (!session.isActive())
+        {
+            log.warn("Cannot add event to inactive session with ID {}", calendarRequestDto.getSessionId());
+            throw new WrongArgumentException("Cannot add event to an inactive session");
+        }
+
+        CalendarEntity calendarEntity = modelMapper.map(calendarRequestDto, CalendarEntity.class);
+        calendarEntity.setSession(session);
+        calendarEntity = calendarRepository.save(calendarEntity);
+        CalendarResponseDto calendarResponseDto = modelMapper.map(calendarEntity, CalendarResponseDto.class);
+        calendarResponseDto.setSessionId(session.getId());
+        return calendarResponseDto;
+    }
+
+    @Override
+    public List<CalendarResponseDto> getAllCalendarEvents()
+    {
+        List<CalendarEntity> calendarEntityList = calendarRepository.findAll();
+        return calendarEntityList.stream().map(calendarEntity -> modelMapper.map(calendarEntity, CalendarResponseDto.class)).collect(Collectors.toList());
+    }
+
+    @Override
+    public CalendarResponseDto getCalendarEventById(Long id)
+    {
+        CalendarEntity calendarEntity = calendarRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Calendar event not found"));
+        return modelMapper.map(calendarEntity, CalendarResponseDto.class);
+    }
+
+    @Override
+    public CalendarResponseDto updateCalendarEvent(Long id, CalendarRequestDto calendarRequestDto)
+    {
+        CalendarEntity calendarEntity = calendarRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Calendar event not found with id: " + id));
+
+        Session session = sessionRepository.findById(calendarRequestDto.getSessionId())
+                .orElseThrow(() -> new ResourceNotFoundException("Session not found with id: " + calendarRequestDto.getSessionId()));
+
+        if (!session.isActive())
+        {
+            log.warn("Cannot update event for inactive session with ID {}", calendarRequestDto.getSessionId());
+            throw new WrongArgumentException("Cannot update event for an inactive session");
+        }
+
+        modelMapper.map(calendarRequestDto, calendarEntity);
+
+        calendarEntity.setSession(session);
+
+        calendarEntity = calendarRepository.save(calendarEntity);
+
+        CalendarResponseDto calendarResponseDto = modelMapper.map(calendarEntity, CalendarResponseDto.class);
+
+        calendarResponseDto.setSessionId(session.getId());
+
+        return calendarResponseDto;
+    }
+
+    @Override
+    public void deleteCalendarEvent(Long id)
+    {
+        CalendarEntity calendarEntity = calendarRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Calendar event not found"));
+        calendarRepository.delete(calendarEntity);
+    }
+}

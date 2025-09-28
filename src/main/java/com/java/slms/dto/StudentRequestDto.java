@@ -3,6 +3,7 @@ package com.java.slms.dto;
 import com.java.slms.util.FeeCatalogStatus;
 import com.java.slms.util.FeeStatus;
 import com.java.slms.util.Gender;
+import com.java.slms.util.UserStatus;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -39,6 +40,7 @@ public class StudentRequestDto
 
     private LocalDate admissionDate;
     private String previousSchool;
+    private UserStatus status;
 
     private Long sessionId;
 

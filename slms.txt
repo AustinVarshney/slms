@@ -1,13 +1,15 @@
 # MySQL Configuration
-db.host=
-db.port=
-db.name=
-db.username=
-db.password=
+db.host=localhost
+db.port=3306
+db.name=slms
+db.username=root
+db.password=root
 
 #JWT Secret
-jwt.secret=
+jwt.secret=v8o+-7xOao&S1%KTVhY2#S_!7e_sX)FwslWnsF|_5JC9npXi?xSQ:8^ADv{GfoG_s^6iC8<?]nm&H*-nN4J>1)4?rCs/]jBqZi|VRU8cQ>9ssGUYmo1@wMk*;|%M:27raa;@nv?PJx+6$g8fE*GlO-YgZ5Q-OMRQ3H*yS7}9G|5O_uQ^+yCguO.EVVbwIL8M?rnO+RAFf!IF[S&*)}jytnh:@CE24&g1tmvg.rPdrh}$+1]d9/RV3Q-,xUO|OUkx
 
 #ADMIN DETAILS
-admin.email=
-admin.password=
+admin.email=admin@company.com
+admin.password=temporaryStrongPassword!123
+admin.contactNumber=8745126647
+admin.name=Santa Singh

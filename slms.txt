@@ -1,13 +1,13 @@
 # MySQL Configuration
-db.host=
-db.port=
-db.name=
-db.username=
-db.password=
+db.host=localhost
+db.port=8080
+db.name=slms
+db.username=root
+db.password=Austin@123
 
 #JWT Secret
-jwt.secret=
+jwt.secret=bafb904d838b7e30e783fe77e43ccec4
 
 #ADMIN DETAILS
-admin.email=
-admin.password=
+admin.email=austinvarshney@gmail.com
+admin.password=Austin

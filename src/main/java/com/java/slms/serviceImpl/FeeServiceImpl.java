@@ -156,6 +156,7 @@ public class FeeServiceImpl implements FeeService
                     case PAID -> totalPaid += fee.getAmount();
                     case PENDING -> totalPending += fee.getAmount();
                     case OVERDUE -> totalOverdue += fee.getAmount();
+                    case UNPAID -> totalPending += fee.getAmount(); // Treat UNPAID as PENDING
                 }
             }
         }

@@ -166,4 +166,25 @@ public class TeacherController
                         .build()
         );
     }
+    
+    @Operation(
+            summary = "Activate teacher",
+            description = "Marks a teacher as active by ID.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Teacher activated successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid ID or teacher not found", content = @Content)
+            }
+    )
+    @PutMapping("/activate/{id}")
+    public ResponseEntity<RestResponse<Void>> activateTeacher(@PathVariable Long id)
+    {
+        log.info("Activating teacher with ID: {}", id);
+        teacherService.activateTeacher(id);
+        return ResponseEntity.ok(
+                RestResponse.<Void>builder()
+                        .message("Teacher activated successfully")
+                        .status(HttpStatus.OK.value())
+                        .build()
+        );
+    }
 }

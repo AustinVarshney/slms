@@ -31,6 +31,8 @@ public class TimeTable extends BaseEntity
     @Enumerated(EnumType.STRING)
     private DayOfWeek day; // MONDAY, TUESDAY, etc.
 
+    private Integer period; // Period number (1, 2, 3, etc.)
+
     private LocalTime startTime;
     private LocalTime endTime;
 

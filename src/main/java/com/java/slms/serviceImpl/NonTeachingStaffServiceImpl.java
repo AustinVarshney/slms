@@ -106,7 +106,8 @@ public class NonTeachingStaffServiceImpl implements NonTeachingStaffService
 
         if (UserStatus.INACTIVE.equals(staff.getStatus()))
         {
-            throw new AlreadyExistException("NonTeachingStaff is already inactive");
+            log.warn("NonTeachingStaff with ID {} is already inactive", id);
+            return; // Return early if already inactive (idempotent)
         }
 
         staff.setStatus(UserStatus.INACTIVE);
@@ -116,6 +117,29 @@ public class NonTeachingStaffServiceImpl implements NonTeachingStaffService
         EntityFetcher.removeRoleFromUser(user.getId(), RoleEnum.ROLE_NON_TEACHING_STAFF, userRepository);
 
         log.info("NonTeachingStaff marked as inactive with ID: {}", id);
+    }
+
+    @Transactional
+    @Override
+    public void activateNonTeachingStaff(Long id)
+    {
+        log.info("Activating non-teaching staff with ID: {}", id);
+
+        NonTeachingStaff staff = fetchNonTeachingStaffById(id);
+
+        if (UserStatus.ACTIVE.equals(staff.getStatus()))
+        {
+            log.warn("NonTeachingStaff with ID {} is already active", id);
+            return; // Return early if already active (idempotent)
+        }
+
+        staff.setStatus(UserStatus.ACTIVE);
+        nonTeachingStaffRepository.save(staff);
+
+        User user = staff.getUser();
+        EntityFetcher.addRoleToUser(user.getId(), RoleEnum.ROLE_NON_TEACHING_STAFF, userRepository);
+
+        log.info("NonTeachingStaff marked as active with ID: {}", id);
     }
 
     private NonTeachingStaff fetchNonTeachingStaffById(Long id)

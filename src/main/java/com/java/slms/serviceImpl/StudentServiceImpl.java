@@ -18,7 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.Month;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -72,6 +71,12 @@ public class StudentServiceImpl implements StudentService
         return responseDto;
     }
 
+    @Override
+    public boolean existsByPanNumber(String panNumber)
+    {
+        return studentRepository.existsById(panNumber);
+    }
+
     @Transactional
     @Override
     public void markStudentsGraduateOrInActive(List<String> panNumbers, UserStatus status)
@@ -86,7 +91,8 @@ public class StudentServiceImpl implements StudentService
 
             if (user != null)
             {
-                user.setEnabled(false);
+                // Enable user only if status is ACTIVE, disable for INACTIVE/GRADUATED
+                user.setEnabled(status == UserStatus.ACTIVE);
                 users.add(user);
             }
 
@@ -102,14 +108,16 @@ public class StudentServiceImpl implements StudentService
     public List<StudentResponseDto> getStudentsByClassId(Long classId)
     {
         log.info("Fetching students by class ID: {}", classId);
-        ClassEntity classEntity = classEntityRepository.findById(classId)
-                .orElseThrow(() -> new ResourceNotFoundException("Class not found with ID: " + classId));
-
-        if (!classEntity.getSession().isActive())
+        
+        // Verify class exists
+        if (!classEntityRepository.existsById(classId))
         {
-            throw new WrongArgumentException("Current Class is already Inactive");
+            throw new ResourceNotFoundException("Class not found with ID: " + classId);
         }
 
+        // Allow fetching students regardless of session status
+        // Removed session active check to allow viewing historical data
+        
         List<Student> activeStudents = studentRepository.findByStatusAndCurrentClass_Id(UserStatus.ACTIVE, classId);
 
         return activeStudents.stream()
@@ -180,10 +188,84 @@ public class StudentServiceImpl implements StudentService
         validateStudentIsActive(fetchedStudent);
         validateSessionIsActive(fetchedStudent);
 
+        // Handle class change if className or classId is provided
+        if (updateStudentInfo.getClassId() != null || updateStudentInfo.getClassName() != null)
+        {
+            ClassEntity newClass = null;
+            
+            if (updateStudentInfo.getClassId() != null)
+            {
+                // Direct class ID provided
+                newClass = EntityFetcher.fetchByIdOrThrow(classEntityRepository, updateStudentInfo.getClassId(), EntityNames.CLASS_ENTITY);
+            }
+            else if (updateStudentInfo.getClassName() != null)
+            {
+                // Class name provided (format: "1-A", "10-B")
+                newClass = classEntityRepository.findByClassNameAndSession_Active(updateStudentInfo.getClassName(), true)
+                        .orElseThrow(() -> new ResourceNotFoundException("Active class not found with name: " + updateStudentInfo.getClassName()));
+            }
+            
+            if (newClass != null)
+            {
+                // Verify the new class belongs to the same active session
+                if (!newClass.getSession().isActive())
+                {
+                    throw new IllegalStateException("Cannot move student to inactive session");
+                }
+                
+                // Check if class actually changed
+                boolean classChanged = !fetchedStudent.getCurrentClass().getId().equals(newClass.getId());
+                
+                // Update class and get new roll number
+                fetchedStudent.setCurrentClass(newClass);
+                fetchedStudent.setClassRollNumber(getNextRollNumber(newClass.getId()));
+                
+                log.info("Student class updated from {} to {} with new roll number: {}", 
+                         fetchedStudent.getCurrentClass().getClassName(), 
+                         newClass.getClassName(), 
+                         fetchedStudent.getClassRollNumber());
+                
+                // Save student first to persist class change
+                // Then regenerate fees for new class if class actually changed
+                if (classChanged)
+                {
+                    log.info("Class changed for student {}. Will regenerate fee structure after saving...", pan);
+                    // Mark that we need to regenerate fees after saving
+                    // This will be handled after the student is saved
+                }
+            }
+        }
+
+        // Map other fields (excluding className and classId as they're already handled)
         modelMapper.map(updateStudentInfo, fetchedStudent);
         fetchedStudent.setPanNumber(pan);
 
         Student updatedStudent = studentRepository.save(fetchedStudent);
+        
+        // Regenerate fees AFTER saving the student with new class
+        if (updateStudentInfo.getClassId() != null || updateStudentInfo.getClassName() != null)
+        {
+            ClassEntity currentClass = updatedStudent.getCurrentClass();
+            if (currentClass != null)
+            {
+                // Check if we need to regenerate fees by checking if student was previously in different class
+                // We'll regenerate fees to ensure consistency
+                log.info("Regenerating fee structure for student {} in class {}...", pan, currentClass.getClassName());
+                try {
+                    // Delete old fees
+                    feeRepository.deleteByStudent_PanNumber(pan);
+                    feeRepository.flush(); // Ensure delete is committed
+                    log.info("Deleted old fees for student: {}", pan);
+                    
+                    // Generate new fees based on new class
+                    feeService.generateFeesForStudent(pan);
+                    log.info("Generated new fees for student: {} based on class: {}", pan, currentClass.getClassName());
+                } catch (Exception e) {
+                    log.error("Failed to regenerate fees for student: {}", pan, e);
+                    // Don't fail the entire update if fee regeneration fails
+                }
+            }
+        }
 
         log.info("Student updated successfully with PAN: {}", pan);
 
@@ -392,6 +474,19 @@ public class StudentServiceImpl implements StudentService
         dto.setClassId(student.getCurrentClass().getId());
         dto.setSessionId(student.getSession().getId());
         dto.setSessionName(student.getSession().getName());
+        
+        // Parse className (e.g., "1-A") into currentClass ("1") and section ("A")
+        String className = student.getCurrentClass().getClassName();
+        if (className != null && className.contains("-")) {
+            String[] parts = className.split("-");
+            dto.setCurrentClass(parts[0]); // e.g., "1", "10"
+            dto.setSection(parts.length > 1 ? parts[1] : "A"); // e.g., "A", "B"
+        } else {
+            // If no section in className, use className as currentClass
+            dto.setCurrentClass(className != null ? className : "N/A");
+            dto.setSection("A"); // Default section
+        }
+        
         return dto;
     }
 
@@ -399,64 +494,41 @@ public class StudentServiceImpl implements StudentService
     {
         FeeCatalogDto feeCatalog = feeService.getFeeCatalogByStudentPanNumber(pan);
 
-        LocalDate today = LocalDate.now();
-        Month currentMonth = today.getMonth();
-        int currentYear = today.getYear();
+        List<MonthlyFeeDto> allFees = feeCatalog.getMonthlyFees();
+        
+        // If no fees exist, set as PENDING
+        if (allFees == null || allFees.isEmpty())
+        {
+            dto.setFeeStatus(FeeStatus.PENDING);
+            dto.setFeeCatalogStatus(FeeCatalogStatus.PENDING);
+            return;
+        }
 
-        Month previousMonth = currentMonth.minus(1);
-        int previousYear = currentMonth == Month.JANUARY ? currentYear - 1 : currentYear;
+        // Check if ALL fees are paid
+        boolean allFeesPaid = allFees.stream()
+                .allMatch(fee -> "paid".equalsIgnoreCase(fee.getStatus()));
+        
+        // Check if ANY fee is overdue
+        boolean anyFeeOverdue = allFees.stream()
+                .anyMatch(fee -> "overdue".equalsIgnoreCase(fee.getStatus()));
 
-        Optional<MonthlyFeeDto> currentMonthFeeOpt = feeCatalog.getMonthlyFees().stream()
-                .filter(fee -> fee.getYear() == currentYear && fee.getMonth().equalsIgnoreCase(currentMonth.name()))
-                .findFirst();
-
-        Optional<MonthlyFeeDto> previousMonthFeeOpt = feeCatalog.getMonthlyFees().stream()
-                .filter(fee -> fee.getYear() == previousYear && fee.getMonth().equalsIgnoreCase(previousMonth.name()))
-                .findFirst();
-
-        if (currentMonthFeeOpt.isPresent() && "paid".equalsIgnoreCase(currentMonthFeeOpt.get().getStatus()))
+        // If all fees are paid, mark as PAID
+        if (allFeesPaid)
         {
             dto.setFeeStatus(FeeStatus.PAID);
             dto.setFeeCatalogStatus(FeeCatalogStatus.UP_TO_DATE);
             return;
         }
 
-        if (today.getDayOfMonth() <= 15)
+        // If any fee is overdue, mark as OVERDUE
+        if (anyFeeOverdue)
         {
-            if (previousMonthFeeOpt.isPresent() && "paid".equalsIgnoreCase(previousMonthFeeOpt.get().getStatus()))
-            {
-                dto.setFeeStatus(FeeStatus.PENDING);
-                dto.setFeeCatalogStatus(FeeCatalogStatus.PENDING);
-                return;
-            }
-            dto.setFeeStatus(FeeStatus.PENDING);
-            dto.setFeeCatalogStatus(FeeCatalogStatus.PENDING);
+            dto.setFeeStatus(FeeStatus.OVERDUE);
+            dto.setFeeCatalogStatus(FeeCatalogStatus.OVERDUE);
             return;
         }
-        else
-        {
-            if (currentMonthFeeOpt.isEmpty())
-            {
-                dto.setFeeStatus(FeeStatus.OVERDUE);
-                dto.setFeeCatalogStatus(FeeCatalogStatus.OVERDUE);
-                return;
-            }
 
-            if (previousMonthFeeOpt.isPresent() && "overdue".equalsIgnoreCase(previousMonthFeeOpt.get().getStatus()))
-            {
-                dto.setFeeStatus(FeeStatus.OVERDUE);
-                dto.setFeeCatalogStatus(FeeCatalogStatus.OVERDUE);
-                return;
-            }
-
-            if (currentMonthFeeOpt.isPresent() && !"paid".equalsIgnoreCase(currentMonthFeeOpt.get().getStatus()))
-            {
-                dto.setFeeStatus(FeeStatus.OVERDUE);
-                dto.setFeeCatalogStatus(FeeCatalogStatus.OVERDUE);
-                return;
-            }
-        }
-
+        // Otherwise, mark as PENDING
         dto.setFeeStatus(FeeStatus.PENDING);
         dto.setFeeCatalogStatus(FeeCatalogStatus.PENDING);
     }

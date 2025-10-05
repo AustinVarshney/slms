@@ -11,6 +11,8 @@ public interface StudentService
 {
     StudentResponseDto createStudent(StudentRequestDto studentRequestDto);
 
+    boolean existsByPanNumber(String panNumber);
+
     @Transactional
     void markStudentsGraduateOrInActive(List<String> panNumbers, UserStatus status);
 

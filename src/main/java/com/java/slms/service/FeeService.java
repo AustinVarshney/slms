@@ -14,6 +14,8 @@ public interface FeeService
 
     FeeCatalogDto getFeeCatalogByStudentPanNumber(String panNumber);
 
+    void generateFeesForStudent(String panNumber);
+
     //    @Scheduled(cron = "0 0 0 15 * ?")  // Runs at midnight on the 15th day of every month
         @Transactional
         void markPendingFeesAsOverdue();

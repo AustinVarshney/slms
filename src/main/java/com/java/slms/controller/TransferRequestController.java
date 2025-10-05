@@ -104,7 +104,7 @@ public class TransferRequestController
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request", content = @Content)
             }
     )
-    @PreAuthorize("hasRole('ROLE_ADMIN', 'ROLE_TEACHER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER')")
     @GetMapping("/requests/{studentPan}")
     public ResponseEntity<RestResponse<List<TransferCertificateRequestDto>>> getAllRequestsByStudentPan(
             @PathVariable String studentPan)

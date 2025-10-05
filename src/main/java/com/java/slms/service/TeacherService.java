@@ -18,6 +18,8 @@ public interface TeacherService
     Teacher getActiveTeacherByEmail(String email);
 
     void inActiveTeacher(Long id);
+    
+    void activateTeacher(Long id);
 
     TeacherDto getTeacherByEmail(String email);
 

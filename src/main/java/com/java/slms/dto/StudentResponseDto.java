@@ -4,7 +4,6 @@ import com.java.slms.util.FeeCatalogStatus;
 import com.java.slms.util.FeeStatus;
 import com.java.slms.util.Gender;
 import com.java.slms.util.UserStatus;
-import lombok.Data;
 import lombok.*;
 
 import java.time.LocalDate;
@@ -22,6 +21,8 @@ public class StudentResponseDto
 
     private Long classId;
     private String className;
+    private String currentClass; // Just the class number (e.g., "1", "10")
+    private String section; // Just the section (e.g., "A", "B")
     private Integer classRollNumber;
     private UserStatus status;
 

@@ -143,4 +143,26 @@ public class FeeController
 
         return ResponseEntity.ok(response);
     }
+
+    @Operation(
+            summary = "Generate fees for a student",
+            description = "Generates 12 months of fee records for a student who doesn't have any fees yet.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Fees generated successfully"),
+                    @ApiResponse(responseCode = "400", description = "Student not found or fees already exist", content = @Content)
+            }
+    )
+    @PostMapping("/generate/{panNumber}")
+    public ResponseEntity<RestResponse<Void>> generateFeesForStudent(@PathVariable String panNumber)
+    {
+        feeService.generateFeesForStudent(panNumber);
+
+        RestResponse<Void> response = RestResponse.<Void>builder()
+                .status(HttpStatus.OK.value())
+                .message("Fees generated successfully for student.")
+                .data(null)
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
 }

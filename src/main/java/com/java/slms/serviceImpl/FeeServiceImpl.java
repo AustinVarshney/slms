@@ -6,6 +6,7 @@ import com.java.slms.dto.MonthlyFeeDto;
 import com.java.slms.exception.AlreadyExistException;
 import com.java.slms.exception.ResourceNotFoundException;
 import com.java.slms.exception.WrongArgumentException;
+import com.java.slms.model.ClassEntity;
 import com.java.slms.model.Fee;
 import com.java.slms.model.FeeStructure;
 import com.java.slms.model.Session;
@@ -109,6 +110,57 @@ public class FeeServiceImpl implements FeeService
         return buildCatalogForStudent(student);
     }
 
+    @Transactional
+    @Override
+    public void generateFeesForStudent(String panNumber)
+    {
+        Student student = studentRepository.findById(panNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found with PAN: " + panNumber));
+
+        // Check if fees already exist for this student
+        List<Fee> existingFees = feeRepository.findByStudent_PanNumberOrderByYearAscMonthAsc(panNumber);
+        if (!existingFees.isEmpty())
+        {
+            log.info("Fees already exist for student with PAN: {}", panNumber);
+            return;
+        }
+
+        ClassEntity classEntity = student.getCurrentClass();
+        Session session = student.getSession();
+
+        if (classEntity == null || session == null)
+        {
+            throw new WrongArgumentException("Student must have a class and session assigned");
+        }
+
+        FeeStructure feeStructure = classEntity.getFeeStructures();
+        if (feeStructure == null)
+        {
+            throw new ResourceNotFoundException("No fee structure found for class: " + classEntity.getClassName());
+        }
+
+        List<Fee> feeEntries = new ArrayList<>();
+        LocalDate currentMonth = session.getStartDate().withDayOfMonth(1);
+
+        for (int i = 0; i < 12; i++)
+        {
+            Fee fee = new Fee();
+            fee.setMonth(FeeMonth.valueOf(currentMonth.getMonth().toString()));
+            fee.setYear(currentMonth.getYear());
+            fee.setStatus(FeeStatus.PENDING);
+            fee.setAmount(feeStructure.getFeesAmount());
+            fee.setFeeStructure(feeStructure);
+            fee.setDueDate(currentMonth.withDayOfMonth(15));
+            fee.setStudent(student);
+
+            feeEntries.add(fee);
+            currentMonth = currentMonth.plusMonths(1);
+        }
+
+        feeRepository.saveAll(feeEntries);
+        log.info("Generated {} fee entries for student with PAN: {}", feeEntries.size(), panNumber);
+    }
+
     private FeeCatalogDto buildCatalogForStudent(Student student)
     {
         List<Fee> fees = feeRepository.findByStudent_PanNumberOrderByYearAscMonthAsc(student.getPanNumber());
@@ -156,7 +208,7 @@ public class FeeServiceImpl implements FeeService
                     case PAID -> totalPaid += fee.getAmount();
                     case PENDING -> totalPending += fee.getAmount();
                     case OVERDUE -> totalOverdue += fee.getAmount();
-                    case UNPAID -> totalPending += fee.getAmount(); // Treat UNPAID as PENDING
+                    case UNPAID -> totalPending += fee.getAmount();
                 }
             }
         }

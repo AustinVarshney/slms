@@ -91,8 +91,12 @@ public class TeacherServiceImpl implements TeacherService
     {
         Teacher teacher = teacherRepository.findById(id).orElseThrow(() ->
                 new ResourceNotFoundException("Teacher not found with ID: " + id));
-        if (teacher.getStatus().equals(UserStatus.INACTIVE))
-            throw new AlreadyExistException("Teacher Already inactive");
+        
+        // If already inactive, just return (idempotent operation)
+        if (teacher.getStatus().equals(UserStatus.INACTIVE)) {
+            log.info("Teacher with ID {} is already inactive, skipping deactivation", id);
+            return;
+        }
 
         List<Subject> assignedSubjects = teacher.getSubjects();
         for (Subject subject : assignedSubjects)
@@ -105,6 +109,26 @@ public class TeacherServiceImpl implements TeacherService
         teacherRepository.save(teacher);
         EntityFetcher.removeRoleFromUser(teacher.getUser().getId(), RoleEnum.ROLE_TEACHER, userRepository);
 
+    }
+    
+    @Override
+    @Transactional
+    public void activateTeacher(Long id)
+    {
+        Teacher teacher = teacherRepository.findById(id).orElseThrow(() ->
+                new ResourceNotFoundException("Teacher not found with ID: " + id));
+        
+        // If already active, just return (idempotent operation)
+        if (teacher.getStatus().equals(UserStatus.ACTIVE)) {
+            log.info("Teacher with ID {} is already active, skipping activation", id);
+            return;
+        }
+
+        teacher.setStatus(UserStatus.ACTIVE);
+        teacherRepository.save(teacher);
+        EntityFetcher.addRoleToUser(teacher.getUser().getId(), RoleEnum.ROLE_TEACHER, userRepository);
+        
+        log.info("Teacher with ID {} has been reactivated", id);
     }
 
     @Override

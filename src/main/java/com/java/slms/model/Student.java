@@ -32,7 +32,7 @@ public class Student extends BaseEntity
     @EqualsAndHashCode.Include
     private String panNumber;
 
-    @Column(name = "class_roll_number", unique = true)
+    @Column(name = "class_roll_number")
     private Integer classRollNumber;
     private String name;
     private String photo;

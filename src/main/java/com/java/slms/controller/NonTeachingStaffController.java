@@ -74,4 +74,16 @@ public class NonTeachingStaffController
                         .build()
         );
     }
+
+    @PutMapping("/activate/{id}")
+    public ResponseEntity<RestResponse<Void>> activateFeeStaff(@PathVariable Long id) {
+        nonTeachingStaffService.activateNonTeachingStaff(id);
+
+        return ResponseEntity.ok(
+                RestResponse.<Void>builder()
+                        .message("Non Teaching Staff Activated successfully")
+                        .status(HttpStatus.OK.value())
+                        .build()
+        );
+    }
 }

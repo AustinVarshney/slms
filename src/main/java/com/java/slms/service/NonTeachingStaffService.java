@@ -20,4 +20,7 @@ public interface NonTeachingStaffService
 
     @Transactional
     void inActiveNonTeachingStaff(Long id);
+
+    @Transactional
+    void activateNonTeachingStaff(Long id);
 }

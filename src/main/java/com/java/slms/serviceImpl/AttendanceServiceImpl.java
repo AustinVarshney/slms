@@ -121,6 +121,7 @@ public class AttendanceServiceImpl implements AttendanceService
             attendance.setSession(activeSession);
 
             attendanceRepository.save(attendance);
+            log.info("Marked attendance for student PAN '{}' as present={}", panNumber, sa.isPresent());
         }
     }
 

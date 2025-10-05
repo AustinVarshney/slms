@@ -41,7 +41,7 @@ public class Subject extends BaseEntity
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JsonBackReference
-    @JoinColumn(name = "teacher_id", nullable = false)
+    @JoinColumn(name = "teacher_id", nullable = true)
     private Teacher teacher;
 
 

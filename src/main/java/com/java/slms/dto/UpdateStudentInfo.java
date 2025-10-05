@@ -21,4 +21,6 @@ public class UpdateStudentInfo
     private String emergencyContact;
     private String bloodGroup;
     private String previousSchool;
+    private String className; // Format: "1-A", "10-B", etc.
+    private Long classId; // Direct class ID if provided
 }

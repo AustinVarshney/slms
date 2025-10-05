@@ -39,7 +39,11 @@ public class TimeTableServiceImpl implements TimeTableService
         Subject subject = fetchSubject(dto.getSubjectId());
         validateSubjectBelongsToClass(subject, dto.getClassId());
 
-        Teacher teacher = subject.getTeacher();
+        // Get teacher from request - teacher is now optional in subjects
+        if (dto.getTeacherId() == null) {
+            throw new WrongArgumentException("Teacher ID is required for timetable assignment.");
+        }
+        Teacher teacher = fetchTeacher(dto.getTeacherId());
 
         preventOverlappingForClass(dto, classEntity.getId());
         preventTeacherDoubleBooking(dto, teacher.getId());
@@ -63,7 +67,42 @@ public class TimeTableServiceImpl implements TimeTableService
         }
 
         return timetables.stream()
-                .map(t -> modelMapper.map(t, TimetableResponseDTO.class))
+                .map(t -> {
+                    TimetableResponseDTO dto = modelMapper.map(t, TimetableResponseDTO.class);
+                    // Manually set IDs and names that modelMapper might not map correctly
+                    if (t.getClassEntity() != null) {
+                        dto.setClassId(t.getClassEntity().getId());
+                        dto.setClassName(t.getClassEntity().getClassName());
+                        
+                        // Parse className (e.g., "4-A") into className and section
+                        String fullClassName = t.getClassEntity().getClassName();
+                        if (fullClassName != null && fullClassName.contains("-")) {
+                            String[] parts = fullClassName.split("-");
+                            dto.setClassName(parts[0]); // e.g., "4", "10"
+                            dto.setSection(parts.length > 1 ? parts[1] : "A");
+                        }
+                        
+                        // Set total students
+                        dto.setTotalStudents(t.getClassEntity().getStudents() != null ? 
+                            t.getClassEntity().getStudents().size() : 0);
+                    }
+                    if (t.getSubject() != null) {
+                        dto.setSubjectId(t.getSubject().getId());
+                        dto.setSubjectName(t.getSubject().getSubjectName());
+                    }
+                    if (t.getTeacher() != null) {
+                        dto.setTeacherId(t.getTeacher().getId());
+                        dto.setTeacherName(t.getTeacher().getName());
+                        dto.setTeacherContactNumber(t.getTeacher().getContactNumber());
+                    }
+                    if (t.getDay() != null) {
+                        dto.setDayOfWeek(t.getDay().name());
+                    }
+                    // Set period
+                    dto.setPeriod(t.getPeriod() != null ? t.getPeriod() : 1);
+                    
+                    return dto;
+                })
                 .collect(Collectors.toList());
     }
 
@@ -91,7 +130,30 @@ public class TimeTableServiceImpl implements TimeTableService
         }
 
         return timetables.stream()
-                .map(t -> modelMapper.map(t, TimetableResponseDTO.class))
+                .map(t -> {
+                    TimetableResponseDTO dto = modelMapper.map(t, TimetableResponseDTO.class);
+                    // Manually set fields for better data completeness
+                    if (t.getClassEntity() != null) {
+                        dto.setClassId(t.getClassEntity().getId());
+                        dto.setClassName(t.getClassEntity().getClassName());
+                        dto.setTotalStudents(t.getClassEntity().getStudents() != null ? 
+                            t.getClassEntity().getStudents().size() : 0);
+                    }
+                    if (t.getSubject() != null) {
+                        dto.setSubjectId(t.getSubject().getId());
+                        dto.setSubjectName(t.getSubject().getSubjectName());
+                    }
+                    if (t.getTeacher() != null) {
+                        dto.setTeacherId(t.getTeacher().getId());
+                        dto.setTeacherName(t.getTeacher().getName());
+                        dto.setTeacherContactNumber(t.getTeacher().getContactNumber());
+                    }
+                    if (t.getDay() != null) {
+                        dto.setDayOfWeek(t.getDay().name());
+                    }
+                    dto.setPeriod(t.getPeriod() != null ? t.getPeriod() : 1);
+                    return dto;
+                })
                 .collect(Collectors.toList());
     }
 
@@ -107,17 +169,18 @@ public class TimeTableServiceImpl implements TimeTableService
         Subject subject = fetchSubject(dto.getSubjectId());
         validateSubjectBelongsToClass(subject, dto.getClassId());
 
-        Teacher teacher = subject.getTeacher();
-        if (teacher == null)
-        {
-            throw new WrongArgumentException("No teacher assigned to this subject.");
+        // Get teacher from request - teacher is now optional in subjects
+        if (dto.getTeacherId() == null) {
+            throw new WrongArgumentException("Teacher ID is required for timetable assignment.");
         }
+        Teacher teacher = fetchTeacher(dto.getTeacherId());
 
         validateNoOverlapExcludingCurrent(dto, id);
 
         existing.setSubject(subject);
         existing.setTeacher(teacher);
         existing.setDay(dto.getDay());
+        existing.setPeriod(dto.getPeriod() != null ? dto.getPeriod() : existing.getPeriod());
         existing.setStartTime(dto.getStartTime());
         existing.setEndTime(dto.getEndTime());
         existing.setSession(classEntity.getSession());
@@ -144,6 +207,12 @@ public class TimeTableServiceImpl implements TimeTableService
     {
         return subjectRepository.findById(subjectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Subject not found with ID: " + subjectId));
+    }
+
+    private Teacher fetchTeacher(Long teacherId)
+    {
+        return teacherRepository.findById(teacherId)
+                .orElseThrow(() -> new ResourceNotFoundException("Teacher not found with ID: " + teacherId));
     }
 
     private void validateSubjectBelongsToClass(Subject subject, Long classId)
@@ -190,6 +259,7 @@ public class TimeTableServiceImpl implements TimeTableService
         timetable.setSubject(subject);
         timetable.setTeacher(teacher);
         timetable.setDay(dto.getDay());
+        timetable.setPeriod(dto.getPeriod() != null ? dto.getPeriod() : 1); // Default to period 1 if not provided
         timetable.setStartTime(dto.getStartTime());
         timetable.setEndTime(dto.getEndTime());
         return timetable;
@@ -202,6 +272,24 @@ public class TimeTableServiceImpl implements TimeTableService
         dto.setClassName(classEntity.getClassName());
         dto.setSubjectId(subject.getId());
         dto.setTeacherId(teacher.getId());
+        dto.setDayOfWeek(timetable.getDay() != null ? timetable.getDay().name() : "MONDAY"); // Set string representation
+        dto.setPeriod(timetable.getPeriod() != null ? timetable.getPeriod() : 1); // Set period number
+        
+        // Set total students count for the class
+        dto.setTotalStudents(classEntity.getStudents() != null ? classEntity.getStudents().size() : 0);
+        
+        // Parse className (e.g., "1-A") into className ("1") and section ("A")
+        String fullClassName = classEntity.getClassName();
+        if (fullClassName != null && fullClassName.contains("-")) {
+            String[] parts = fullClassName.split("-");
+            dto.setClassName(parts[0]); // e.g., "1", "10"
+            dto.setSection(parts.length > 1 ? parts[1] : "A"); // e.g., "A", "B"
+        } else {
+            // If no section in className, use fullClassName as is
+            dto.setClassName(fullClassName != null ? fullClassName : "N/A");
+            dto.setSection("A"); // Default section
+        }
+        
         return dto;
     }
 

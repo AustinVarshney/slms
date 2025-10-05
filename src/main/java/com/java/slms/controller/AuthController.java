@@ -49,7 +49,7 @@ public class AuthController
 
     @PostMapping("/register/staff")
     @Transactional
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    // @PreAuthorize("hasRole('ROLE_ADMIN')")  // Commented out for public registration
     public ResponseEntity<RestResponse<Void>> registerStaff(@RequestBody StaffRegisterRequest req)
     {
         // Check if user already exists
@@ -149,15 +149,34 @@ public class AuthController
     @Transactional
     public ResponseEntity<RestResponse<StudentResponseDto>> registerStudent(@RequestBody StudentRequestDto req)
     {
-        if (userRepository.findByPanNumberIgnoreCase(req.getPanNumber()).isPresent())
+        // Check if user with this PAN already exists
+        var existingUserOpt = userRepository.findByPanNumberIgnoreCase(req.getPanNumber());
+        
+        if (existingUserOpt.isPresent())
         {
-            return ResponseEntity
-                    .status(HttpStatus.BAD_REQUEST)
-                    .body(RestResponse.<StudentResponseDto>builder()
-                            .message("PAN already registered")
-                            .status(HttpStatus.BAD_REQUEST.value())
-                            .build());
+            // Check if this is an orphaned user (user exists but student doesn't)
+            boolean studentExists = studentService.existsByPanNumber(req.getPanNumber());
+            
+            if (studentExists)
+            {
+                // User and Student both exist - genuine duplicate
+                return ResponseEntity
+                        .status(HttpStatus.CONFLICT)
+                        .body(RestResponse.<StudentResponseDto>builder()
+                                .message("A student with this PAN number already exists in the system")
+                                .status(HttpStatus.CONFLICT.value())
+                                .build());
+            }
+            else
+            {
+                // Orphaned user record - delete it and allow re-registration
+                User orphanedUser = existingUserOpt.get();
+                userRepository.delete(orphanedUser);
+                userRepository.flush(); // Ensure deletion is committed
+            }
         }
+        
+        // Create new user
         User user = User.builder()
                 .panNumber(req.getPanNumber())
                 .password(passwordEncoder.encode(req.getPassword()))
@@ -168,13 +187,24 @@ public class AuthController
 
         req.setUserId(user.getId());
 
-        return ResponseEntity.ok(
-                RestResponse.<StudentResponseDto>builder()
-                        .data(studentService.createStudent(req))
-                        .message("Student registered successfully")
-                        .status(HttpStatus.OK.value())
-                        .build()
-        );
+        try
+        {
+            // Create student record
+            StudentResponseDto studentResponse = studentService.createStudent(req);
+            
+            return ResponseEntity.ok(
+                    RestResponse.<StudentResponseDto>builder()
+                            .data(studentResponse)
+                            .message("Student registered successfully")
+                            .status(HttpStatus.OK.value())
+                            .build()
+            );
+        }
+        catch (Exception e)
+        {
+            // If student creation fails, the @Transactional will rollback the user creation
+            throw e;
+        }
     }
 
 

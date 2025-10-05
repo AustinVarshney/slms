@@ -103,5 +103,24 @@ public class EntityFetcher
         }
     }
 
+    @Transactional
+    public static void addRoleToUser(Long userId, RoleEnum roleToAdd, UserRepository userRepository)
+    {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (user.getRoles() == null)
+        {
+            user.setRoles(new java.util.HashSet<>());
+        }
+
+        if (!user.getRoles().contains(roleToAdd))
+        {
+            user.getRoles().add(roleToAdd);
+            user.setEnabled(true); // Enable user when adding a role
+            userRepository.save(user);
+        }
+    }
+
 
 }

@@ -4,7 +4,9 @@ import com.java.slms.model.Fee;
 import com.java.slms.util.FeeMonth;
 import com.java.slms.util.FeeStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -25,6 +27,11 @@ public interface FeeRepository extends JpaRepository<Fee, Long>
             LocalDate dueDate,
             Long sessionId
     );
+
+    // Delete all fees for a student (used when changing class)
+    @Modifying
+    @Transactional
+    void deleteByStudent_PanNumber(String panNumber);
 
 //
 //    List<Fee> findByFeeStructure_Id(Long feeStructureId);

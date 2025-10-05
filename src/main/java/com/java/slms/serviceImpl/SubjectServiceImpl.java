@@ -48,14 +48,17 @@ public class SubjectServiceImpl implements SubjectService
                     "' already exists in class with ID '" + subjectDto.getClassId() + "'.");
         }
 
-        validateTeacherStatus(subjectDto.getTeacherId());
-
-        Teacher teacher = teacherRepository.findById(subjectDto.getTeacherId()).get(); // already validated
-
         Subject subject = new Subject();
         subject.setSubjectName(subjectDto.getSubjectName());
         subject.setClassEntity(classEntity);
-        subject.setTeacher(teacher);
+        
+        // Teacher is optional - can be assigned later
+        if (subjectDto.getTeacherId() != null)
+        {
+            validateTeacherStatus(subjectDto.getTeacherId());
+            Teacher teacher = teacherRepository.findById(subjectDto.getTeacherId()).get();
+            subject.setTeacher(teacher);
+        }
 
         Subject saved = subjectRepository.save(subject);
         return mapToDto(saved);
@@ -65,13 +68,7 @@ public class SubjectServiceImpl implements SubjectService
     public List<SubjectDto> getAllSubjects()
     {
         List<Subject> subjects = subjectRepository.findAll();
-        return subjects.stream().map(s ->
-        {
-            SubjectDto dto = modelMapper.map(s, SubjectDto.class);
-            dto.setClassName(s.getClassEntity().getClassName());
-            dto.setSessionId(s.getClassEntity().getSession().getId());
-            return dto;
-        }).toList();
+        return subjects.stream().map(this::mapToDto).toList();
     }
 
     @Override
@@ -120,7 +117,6 @@ public class SubjectServiceImpl implements SubjectService
                 .orElseThrow(() -> new ResourceNotFoundException("Class not found with ID: " + subjectDto.getClassId()));
 
         ensureActiveSession(classEntity);
-        validateTeacherStatus(subjectDto.getTeacherId());
 
         boolean subjectExists = subjectRepository.existsBySubjectNameIgnoreCaseAndClassEntity_Id(
                 subjectDto.getSubjectName(), subjectDto.getClassId());
@@ -131,11 +127,20 @@ public class SubjectServiceImpl implements SubjectService
                     "' already exists in class with ID: " + subjectDto.getClassId());
         }
 
-        Teacher teacher = teacherRepository.findById(subjectDto.getTeacherId()).get(); // already validated
-
         existing.setSubjectName(subjectDto.getSubjectName());
         existing.setClassEntity(classEntity);
-        existing.setTeacher(teacher);
+        
+        // Teacher is optional - can be updated or removed
+        if (subjectDto.getTeacherId() != null)
+        {
+            validateTeacherStatus(subjectDto.getTeacherId());
+            Teacher teacher = teacherRepository.findById(subjectDto.getTeacherId()).get();
+            existing.setTeacher(teacher);
+        }
+        else
+        {
+            existing.setTeacher(null);
+        }
 
         Subject updated = subjectRepository.save(existing);
         return mapToDto(updated);
@@ -233,7 +238,14 @@ public class SubjectServiceImpl implements SubjectService
         SubjectDto dto = modelMapper.map(subject, SubjectDto.class);
         dto.setClassId(subject.getClassEntity().getId());
         dto.setClassName(subject.getClassEntity().getClassName());
-        dto.setTeacherId(subject.getTeacher().getId());
+        
+        // Teacher is optional - handle null safely
+        if (subject.getTeacher() != null)
+        {
+            dto.setTeacherId(subject.getTeacher().getId());
+            dto.setTeacherName(subject.getTeacher().getName());
+        }
+        
         dto.setSessionId(subject.getClassEntity().getSession().getId());
         return dto;
     }

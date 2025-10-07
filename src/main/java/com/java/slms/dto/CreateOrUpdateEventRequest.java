@@ -14,6 +14,7 @@ public class CreateOrUpdateEventRequest
     private String title;
     private String type;
     private String description;
+    private String banner_url;
     private LocalDate startDate;
     private LocalDate endDate;
 }

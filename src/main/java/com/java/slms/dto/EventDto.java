@@ -14,6 +14,7 @@ public class EventDto
     private Long id;
     private String title;
     private String type;
+    private String banner_url;
     private String description;
     private LocalDate startDate;
     private LocalDate endDate;

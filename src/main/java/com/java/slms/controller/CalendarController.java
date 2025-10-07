@@ -1,5 +1,6 @@
 package com.java.slms.controller;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.java.slms.dto.CalendarRequestDto;
@@ -24,6 +25,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @RequestMapping("/api/calendar")
 @RequiredArgsConstructor
 @Tag(name = "Calendar Controller", description = "APIs for managing calendar events")
+@Slf4j
 public class CalendarController
 {
 
@@ -147,4 +149,66 @@ public class CalendarController
                         .build()
         );
     }
+
+    @Operation(
+            summary = "Get calendar events (optionally filtered by session ID)",
+            description = "Fetches all calendar events. If sessionId is provided, filters calendar events by that session.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Calendar events retrieved"),
+                    @ApiResponse(responseCode = "404", description = "Session not found", content = @Content)
+            }
+    )
+    @GetMapping("/by-session")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<RestResponse<List<CalendarResponseDto>>> getCalendarEventsBySessionId(
+            @RequestParam(required = false) Long sessionId
+    )
+    {
+        log.info(sessionId != null
+                        ? "Fetching calendar events for session ID: {}"
+                        : "Fetching all calendar events (no session filter)",
+                sessionId);
+
+        List<CalendarResponseDto> events = (sessionId != null)
+                ? calendarService.getCalendarEventsBySessionId(sessionId)
+                : calendarService.getAllCalendarEvents();
+
+        return ResponseEntity.ok(
+                RestResponse.<List<CalendarResponseDto>>builder()
+                        .data(events)
+                        .message(sessionId != null
+                                ? "Calendar events retrieved for session ID " + sessionId
+                                : "All calendar events retrieved")
+                        .status(HttpStatus.OK.value())
+                        .build()
+        );
+    }
+
+    @Operation(
+            summary = "Get calendar events for the current active session",
+            description = "Fetches calendar events for the current active session. Assumes only one session is active at a time.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Calendar events retrieved for current session"),
+                    @ApiResponse(responseCode = "404", description = "No active session found", content = @Content)
+            }
+    )
+    @GetMapping("/current-session")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_STUDENT', 'ROLE_NON_TEACHING_STAFF')")
+    public ResponseEntity<RestResponse<List<CalendarResponseDto>>> getCalendarEventsForCurrentSession()
+    {
+        log.info("Fetching calendar events for the current active session");
+
+        List<CalendarResponseDto> events = calendarService.getCalendarEventsForCurrentSession();
+
+        return ResponseEntity.ok(
+                RestResponse.<List<CalendarResponseDto>>builder()
+                        .data(events)
+                        .message("Calendar events retrieved for the current session")
+                        .status(HttpStatus.OK.value())
+                        .build()
+        );
+    }
+
+
+
 }

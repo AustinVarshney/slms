@@ -11,9 +11,13 @@ public interface CalendarService
 
     List<CalendarResponseDto> getAllCalendarEvents();
 
+    List<CalendarResponseDto> getCalendarEventsBySessionId(Long sessionId);
+
     CalendarResponseDto getCalendarEventById(Long id);
 
     CalendarResponseDto updateCalendarEvent(Long id, CalendarRequestDto calendarRequestDto);
 
     void deleteCalendarEvent(Long id);
+
+    List<CalendarResponseDto> getCalendarEventsForCurrentSession();
 }

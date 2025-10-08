@@ -40,6 +40,7 @@ public class CalendarServiceImpl implements CalendarService
 
         CalendarEntity calendarEntity = modelMapper.map(calendarRequestDto, CalendarEntity.class);
         calendarEntity.setSession(session);
+        calendarEntity.setId(null);
         calendarEntity = calendarRepository.save(calendarEntity);
         CalendarResponseDto calendarResponseDto = modelMapper.map(calendarEntity, CalendarResponseDto.class);
         calendarResponseDto.setSessionId(session.getId());
@@ -92,6 +93,33 @@ public class CalendarServiceImpl implements CalendarService
     public void deleteCalendarEvent(Long id)
     {
         CalendarEntity calendarEntity = calendarRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Calendar event not found"));
+        Session session = sessionRepository.findById(calendarEntity.getSession().getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Session not found with ID: " + calendarEntity.getSession().getId()));
         calendarRepository.delete(calendarEntity);
     }
+
+    @Override
+    public List<CalendarResponseDto> getCalendarEventsForCurrentSession()
+    {
+        Session activeSession = sessionRepository.findByActiveTrue()
+                .orElseThrow(() -> new ResourceNotFoundException("No active session found"));
+
+        return calendarRepository.findBySession_Id(activeSession.getId())
+                .stream()
+                .map(calendar -> modelMapper.map(calendar, CalendarResponseDto.class))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<CalendarResponseDto> getCalendarEventsBySessionId(Long sessionId)
+    {
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Session not found with ID: " + sessionId));
+
+        return calendarRepository.findBySession_Id(sessionId)
+                .stream()
+                .map(calendar -> modelMapper.map(calendar, CalendarResponseDto.class))
+                .collect(Collectors.toList());
+    }
+
 }

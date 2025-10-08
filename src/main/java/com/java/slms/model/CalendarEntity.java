@@ -21,7 +21,7 @@ public class CalendarEntity extends BaseEntity
     private LocalDate startDate;
     private LocalDate endDate;
     private String occasion;
-    @OneToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "session_id")
     private Session session;
 }

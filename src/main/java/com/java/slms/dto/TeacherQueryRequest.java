@@ -5,9 +5,9 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class StudentQueryRequest
+public class TeacherQueryRequest
 {
-    private Long teacherId;
+    private Long adminId;
     private String subject;
     private String content;
 }

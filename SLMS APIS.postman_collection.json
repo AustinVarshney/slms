@@ -2167,7 +2167,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"title\": \"Annual Sports Day\",\r\n  \"description\": \"Annual sports competition for all classes\",\r\n  \"type\": \"sports\",\r\n  \"startDate\": \"2024-02-15\",\r\n  \"endDate\": \"2024-02-16\"\r\n}\r\n",
+							"raw": "{\r\n  \"title\": \"Annual Sports Day\",\r\n  \"description\": \"Annual sports competition for all classes\",\r\n  \"type\": \"sports\",\r\n  \"startDate\": \"2024-02-15\",\r\n  \"endDate\": \"2024-02-16\",\r\n  \"banner_url\" : \"http//image.jpg\"\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2196,7 +2196,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"title\": \"Updated Sports Day\",\r\n  \"description\": \"Updated description for the sports event\",\r\n  \"type\": \"sports\",\r\n  \"startDate\": \"2024-02-15\",\r\n  \"endDate\": \"2024-02-16\"\r\n}\r\n",
+							"raw": "{\r\n  \"title\": \"Updated Sports Day\",\r\n  \"description\": \"Updated descriptiondddddddddd for the sports event\",\r\n  \"banner_url\" : \"http//image.jpg\",\r\n  \"type\": \"sports\",\r\n  \"startDate\": \"2024-02-15\",\r\n  \"endDate\": \"2024-02-16\"\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2305,20 +2305,54 @@
 					},
 					"response": []
 				}
+			],
+			"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+						"key": "token",
+						"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU5ODM0NTA1LCJleHAiOjE3NTk4MzgxMDV9.1WcmpJIlAAB3H7F_l6PRMrH1wisVTONGU8Ux9nZIPJs",
+						"type": "string"
+					}
+				]
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {},
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {},
+						"exec": [
+							""
+						]
+					}
+				}
 			]
 		},
 		{
 			"name": "Calendar",
 			"item": [
 				{
-					"name": "Add Holiday",
+					"name": "Add Calendar Entry - Admin",
 					"request": {
 						"auth": {
 							"type": "bearer",
 							"bearer": [
 								{
 									"key": "token",
-									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU5MDY1NjI4LCJleHAiOjE3NTkwNjkyMjh9.tBMhPCLMOgVsCSQjVG8nLX0Lt3EhtliNTSi-e88Rk6Q",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU5ODM0NTA1LCJleHAiOjE3NTk4MzgxMDV9.1WcmpJIlAAB3H7F_l6PRMrH1wisVTONGU8Ux9nZIPJs",
 									"type": "string"
 								}
 							]
@@ -2327,7 +2361,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"startDate\": \"2025-10-01\",\r\n  \"endDate\": \"2025-10-02\",\r\n  \"occasion\": \"School Holiday\",\r\n  \"sessionId\": 1\r\n}\r\n",
+							"raw": "{\r\n  \"startDate\": \"2025-10-03\",\r\n  \"endDate\": \"2025-10-05\",\r\n  \"occasion\": \"School Holiday - 5\",\r\n  \"sessionId\": 1\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2350,6 +2384,728 @@
 									"key": "file",
 									"value": "",
 									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Holiday of any SessionId - Admin",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU5ODM0NTA1LCJleHAiOjE3NTk4MzgxMDV9.1WcmpJIlAAB3H7F_l6PRMrH1wisVTONGU8Ux9nZIPJs",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"startDate\": \"2025-10-01\",\r\n  \"endDate\": \"2025-10-02\",\r\n  \"occasion\": \"School Holiday\",\r\n  \"sessionId\": 1\r\n}\r\n"
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/calendar/by-session?sessionId=1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"calendar",
+								"by-session"
+							],
+							"query": [
+								{
+									"key": "sessionId",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get calendar of current session - Any role",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU5ODM0NTA1LCJleHAiOjE3NTk4MzgxMDV9.1WcmpJIlAAB3H7F_l6PRMrH1wisVTONGU8Ux9nZIPJs",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"startDate\": \"2025-10-01\",\r\n  \"endDate\": \"2025-10-02\",\r\n  \"occasion\": \"School Holiday\",\r\n  \"sessionId\": 1\r\n}\r\n"
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/calendar/current-session",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"calendar",
+								"current-session"
+							],
+							"query": [
+								{
+									"key": "file",
+									"value": "",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Caledar - Admin",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU5ODM0NTA1LCJleHAiOjE3NTk4MzgxMDV9.1WcmpJIlAAB3H7F_l6PRMrH1wisVTONGU8Ux9nZIPJs",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"startDate\": \"2025-10-03\",\r\n  \"endDate\": \"2025-10-05\",\r\n  \"occasion\": \"School Holiday - 5999999999999\",\r\n  \"sessionId\": 1\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/calendar/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"calendar",
+								"1"
+							],
+							"query": [
+								{
+									"key": "file",
+									"value": "",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Calendar Entry - Admin",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU5ODM0NTA1LCJleHAiOjE3NTk4MzgxMDV9.1WcmpJIlAAB3H7F_l6PRMrH1wisVTONGU8Ux9nZIPJs",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"startDate\": \"2025-10-03\",\r\n  \"endDate\": \"2025-10-05\",\r\n  \"occasion\": \"School Holiday - 5999999999999\",\r\n  \"sessionId\": 1\r\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/calendar/2",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"calendar",
+								"2"
+							],
+							"query": [
+								{
+									"key": "file",
+									"value": "",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Gallery",
+			"item": [
+				{
+					"name": "Add Gallery - Admin",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"image\": \"https://example.com/images/image1.jpg\",\r\n  \"sessionId\": 1\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/gallery",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"gallery"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add Gallery In Bulk - Admin",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"sessionId\": 1,\r\n  \"images\": [\r\n    \"https://example.com/image1.jpg\",\r\n    \"https://example.com/image2.jpg\",\r\n    \"https://example.com/image3.jpg\"\r\n  ]\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/gallery/bulk",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"gallery",
+								"bulk"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Images By Id - Any Role",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/gallery/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"gallery",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Gallery By SessionId - Any Role",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/gallery?sessionId=1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"gallery"
+							],
+							"query": [
+								{
+									"key": "sessionId",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Gallery Items - Admin",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"image\": \"https://example.com/images/updated-image.jpg\",\r\n  \"sessionId\": 1\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/gallery/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"gallery",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Gallery Image",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/gallery/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"gallery",
+								"1"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+						"key": "token",
+						"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU5ODM5NjAxLCJleHAiOjE3NTk4NDMyMDF9.OyfyLC8QS5epMtSCTEYczO3e3Eh8blVrRRWDJXC_NBQ",
+						"type": "string"
+					}
+				]
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {},
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {},
+						"exec": [
+							""
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "Student Query To Teacher",
+			"item": [
+				{
+					"name": "Student Raised Query - Student",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBQkMxMzYiLCJyb2xlcyI6WyJST0xFX1NUVURFTlQiXSwiaWF0IjoxNzU5ODU0NDg4LCJleHAiOjE3NTk4NTgwODh9.mzknLX20BHItUUBveYEUUAU5phvIHe1wYb7OR_KM5oo",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"teacherId\": 2,\r\n  \"subject\": \"Mathematics\",\r\n  \"content\": \"Lesson plan for algebra basics\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/student-query/me",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"student-query",
+								"me"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "All Request Raised By a Student - Student",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBQkMxMzYiLCJyb2xlcyI6WyJST0xFX1NUVURFTlQiXSwiaWF0IjoxNzU5ODU4NTM3LCJleHAiOjE3NTk4NjIxMzd9.9dYPTCr_fg8sWuMLtN2BqQi42GafMcObA1hXLhIdq9E",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"teacherId\": 2,\r\n  \"subject\": \"Mathematics\",\r\n  \"content\": \"Lesson plan for algebra basics\"\r\n}\r\n"
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/student-query/me?status=RESPONDED",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"student-query",
+								"me"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "RESPONDED"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Respond to Student Query - Teacher",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJUZWFjaGVyMTExMUBleGFtcGxlLmNvbSIsInJvbGVzIjpbIlJPTEVfVEVBQ0hFUiJdLCJpYXQiOjE3NTk4NTgwNzYsImV4cCI6MTc1OTg2MTY3Nn0.PqSpT4Ya3KAr6THhXzrHHeTurIoEFWGci-VDqPsdCcM",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"queryId\" : 1,\r\n    \"response\" : \"Theek Hai kr dunga\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/student-query/respond",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"student-query",
+								"respond"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All requests raised to Teacher - Teacher",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJUZWFjaGVyMTExMUBleGFtcGxlLmNvbSIsInJvbGVzIjpbIlJPTEVfVEVBQ0hFUiJdLCJpYXQiOjE3NTk4NTgwNzYsImV4cCI6MTc1OTg2MTY3Nn0.PqSpT4Ya3KAr6THhXzrHHeTurIoEFWGci-VDqPsdCcM",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"teacherId\": 2,\r\n  \"subject\": \"Mathematics\",\r\n  \"content\": \"Lesson plan for algebra basics\"\r\n}\r\n"
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/student-query/teacher/queries",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"student-query",
+								"teacher",
+								"queries"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Teacher Query to Admin",
+			"item": [
+				{
+					"name": "Teacher Raised request to Admin - Admin",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJUZWFjaGVyMTExMUBleGFtcGxlLmNvbSIsInJvbGVzIjpbIlJPTEVfVEVBQ0hFUiJdLCJpYXQiOjE3NTk5OTU2NTcsImV4cCI6MTc1OTk5OTI1N30.W1BF2wPFGkHC0b4UqgEmFtv12G0UardstTWJ7ZA8dls",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"subject\": \"Need clarification on exam schedule\",\r\n  \"content\": \"Can you please confirm the final exam dates for semester 5?\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/teacher-query/me",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"teacher-query",
+								"me"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Teacher gets own queries - Teacher",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJUZWFjaGVyMTExMUBleGFtcGxlLmNvbSIsInJvbGVzIjpbIlJPTEVfVEVBQ0hFUiJdLCJpYXQiOjE3NTk5OTU2NTcsImV4cCI6MTc1OTk5OTI1N30.W1BF2wPFGkHC0b4UqgEmFtv12G0UardstTWJ7ZA8dls",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/teacher-query/me",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"teacher-query",
+								"me"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Admin Respond to Teacher Query - Admin",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU5OTk1NjUwLCJleHAiOjE3NTk5OTkyNTB9.z6UdcUoLt8Bt4weTW_0zwi8BJFdYYe4PIAsxug0ddbg",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"queryId\": 1,\r\n  \"response\": \"Final exams will be held from 15th Dec to 25th Dec.\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/teacher-query/respond",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"teacher-query",
+								"respond"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Admin gets all queries assigned - Admin",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU5OTk1NjUwLCJleHAiOjE3NTk5OTkyNTB9.z6UdcUoLt8Bt4weTW_0zwi8BJFdYYe4PIAsxug0ddbg",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/teacher-query/admin/queries?status=RESPONDED",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"teacher-query",
+								"admin",
+								"queries"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "RESPONDED"
 								}
 							]
 						}

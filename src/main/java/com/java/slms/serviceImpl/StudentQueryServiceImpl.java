@@ -2,7 +2,6 @@ package com.java.slms.serviceImpl;
 
 import com.java.slms.dto.StudentQueryRequest;
 import com.java.slms.dto.StudentQueryResponse;
-import com.java.slms.dto.StudentResponseDto;
 import com.java.slms.dto.TeacherResponseDto;
 import com.java.slms.exception.ResourceNotFoundException;
 import com.java.slms.exception.WrongArgumentException;

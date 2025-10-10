@@ -27,10 +27,9 @@ public class TeacherServiceImpl implements TeacherService
     private final TeacherRepository teacherRepository;
     private final ModelMapper modelMapper;
     private final SubjectRepository subjectRepository;
-    private final ClassEntityRepository classEntityRepository;
     private final UserRepository userRepository;
-    private final AdminRepository adminRepository;
-    private final NonTeachingStaffRepository nonTeachingStaffRepository;
+    private final SessionRepository sessionRepository;
+    private final StaffLeaveAllowanceRepository staffLeaveAllowanceRepository;
 
     @Override
     public TeacherDto createTeacher(TeacherDto teacherDto)
@@ -45,6 +44,15 @@ public class TeacherServiceImpl implements TeacherService
         Teacher teacher = modelMapper.map(teacherDto, Teacher.class);
         teacher.setStatus(UserStatus.ACTIVE);
         Teacher savedTeacher = teacherRepository.save(teacher);
+
+        Session activeSession = sessionRepository.findByActiveTrue()
+                .orElseThrow(() -> new ResourceNotFoundException("No active session found"));
+
+        StaffLeaveAllowance staffLeaveAllowance = new StaffLeaveAllowance();
+        staffLeaveAllowance.setSession(activeSession);
+        staffLeaveAllowance.setTeacher(savedTeacher);
+        staffLeaveAllowance.setAllowedLeaves(teacherDto.getAllowedLeaves());
+        staffLeaveAllowanceRepository.save(staffLeaveAllowance);
 
         log.info("Teacher created with ID: {}", savedTeacher.getId());
         return convertToDto(savedTeacher);
@@ -173,6 +181,17 @@ public class TeacherServiceImpl implements TeacherService
                 .map(ClassEntity::getClassName)  // assuming getClassName() returns class name
                 .collect(Collectors.toList());
         dto.setClassName(classNames);
+
+        Session activeSession = sessionRepository.findByActiveTrue()
+                .orElseThrow(() -> new ResourceNotFoundException("No active session found"));
+
+        if (activeSession != null)
+        {
+            Optional<StaffLeaveAllowance> allowanceOpt =
+                    staffLeaveAllowanceRepository.findByTeacherAndSession(teacher, activeSession);
+
+            allowanceOpt.ifPresent(allowance -> dto.setAllowedLeaves(allowance.getAllowedLeaves()));
+        }
 
         // 4. Timestamps
         dto.setCreatedAt(teacher.getCreatedAt());

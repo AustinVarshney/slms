@@ -21,6 +21,7 @@ public class TeacherDto
     private String contactNumber;
     private Long userId;
     private String designation;
+    private int allowedLeaves;
     private LocalDate joiningDate;
     private List<Long> classId;
     private List<String> className;

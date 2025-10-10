@@ -2952,7 +2952,7 @@
 			"name": "Teacher Query to Admin",
 			"item": [
 				{
-					"name": "Teacher Raised request to Admin - Admin",
+					"name": "Teacher Raised query to Admin - Admin",
 					"request": {
 						"auth": {
 							"type": "bearer",
@@ -3107,6 +3107,173 @@
 									"key": "status",
 									"value": "RESPONDED"
 								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "StaffLeaveRequest",
+			"item": [
+				{
+					"name": "Staff Raised Request To Admin - Teacher, NTS",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJUZWFjaGVyMTExMUBleGFtcGxlLmNvbSIsInJvbGVzIjpbIlJPTEVfVEVBQ0hFUiJdLCJpYXQiOjE3NjAxMDgxMTQsImV4cCI6MTc2MDExMTcxNH0.PSl2SeGXdW0e8D_G6l2QfsK-SmLcKbJBNFcdzRBZFHw",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"teacherId\": 1,\r\n  \"startDate\": \"2025-10-15\",\r\n  \"endDate\": \"2025-10-17\",\r\n  \"reason\": \"Medical leave\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/staff-leaves/request",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"staff-leaves",
+								"request"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "All Leaves Raised By Teacher - Teacher",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJUZWFjaGVyQW5kQWRtaW4xMTExMUBleGFtcGxlLmNvbSIsInJvbGVzIjpbIlJPTEVfVEVBQ0hFUiJdLCJpYXQiOjE3NjAxMTAyMzQsImV4cCI6MTc2MDExMzgzNH0.Cm6tSfsEZ57ASi6lXFp4ZgxN4S2aK_WbI239tm3gQ6E",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/staff-leaves/my-leaves",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"staff-leaves",
+								"my-leaves"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "View Teacher's Leave Requests - Admin",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzYwMTExMTMxLCJleHAiOjE3NjAxMTQ3MzF9.gyYIdKtwLzPpvDhzACcKmPbfCicVeFF5Flm8kphz8bk",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/staff-leaves?status=PENDING",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"staff-leaves"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "PENDING"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Approve/Reject Leave - Admin",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzYwMTE2MDgyLCJleHAiOjE3NjAxMTk2ODJ9.K-jVD65WVQcP83ipQJtweQhCY4csYCERPic9bwSe_Ro",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"status\": \"APPROVED\",\r\n  \"adminResponse\": \"Approved due to emergency\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/staff-leaves/1/status",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"staff-leaves",
+								"1",
+								"status"
 							]
 						}
 					},

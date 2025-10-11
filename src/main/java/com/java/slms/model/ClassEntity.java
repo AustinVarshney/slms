@@ -55,7 +55,6 @@ public class ClassEntity extends BaseEntity
 
     @OneToOne(fetch = FetchType.LAZY, optional = true)
     @JoinColumn(name = "class_teacher_id", unique = true)
-    @JsonManagedReference
     private Teacher classTeacher;
 
 }

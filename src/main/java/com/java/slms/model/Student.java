@@ -71,13 +71,11 @@ public class Student extends BaseEntity
     private String previousSchool;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JsonBackReference
     @JoinColumn(name = "session_id")
     private Session session;
 
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JsonBackReference
     @JoinColumn(name = "class_id")
     private ClassEntity currentClass;
 
@@ -86,14 +84,11 @@ public class Student extends BaseEntity
     private User user;
 
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JsonManagedReference
     private List<Attendance> attendanceRecords;
 
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JsonManagedReference
     private List<Score> scores;
 
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonManagedReference
     private List<Fee> fees;
 }

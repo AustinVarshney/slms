@@ -51,7 +51,7 @@ public class StaffLeaveServiceImpl implements StaffLeaveService
 
         if (approvedLeaves + daysRequested > allowance.getAllowedLeaves())
         {
-            throw new IllegalArgumentException("Not enough leave balance");
+            throw new WrongArgumentException("Not enough leave balance");
         }
 
         StaffLeaveRecord leave = modelMapper.map(dto, StaffLeaveRecord.class);

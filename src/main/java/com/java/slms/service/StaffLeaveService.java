@@ -4,7 +4,6 @@ import com.java.slms.dto.StaffLeaveRequestDto;
 import com.java.slms.dto.StaffLeaveResponseDto;
 import com.java.slms.dto.StaffLeaveStatusUpdateDto;
 import com.java.slms.model.Admin;
-import com.java.slms.model.StaffLeaveRecord;
 import com.java.slms.util.LeaveStatus;
 
 import java.util.List;

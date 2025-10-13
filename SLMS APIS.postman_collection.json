@@ -1011,7 +1011,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"panNumber\": \"ABC133\",\r\n  \"password\": \"securePassword123\"\r\n}       ",
+							"raw": "{\r\n  \"panNumber\": \"ABC155\",\r\n  \"password\": \"securePassword123\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -3274,6 +3274,173 @@
 								"staff-leaves",
 								"1",
 								"status"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "StudentLeaveRequest",
+			"item": [
+				{
+					"name": "Raise Leave Request to ClassTeacher -Student",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBQkMxNTUiLCJyb2xlcyI6WyJST0xFX1NUVURFTlQiXSwiaWF0IjoxNzYwMjAzNTc4LCJleHAiOjE3NjAyMDcxNzh9.eZaCd1Fb2r3uZkbqKfOTmoIv7I10IZKW-sJrHRxo4Dw",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"startDate\": \"2025-10-15\",\r\n  \"endDate\": \"2025-10-17\",\r\n  \"reason\": \"Medical leave\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/leave/request",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"leave",
+								"request"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Leaves Raised By Student - Student",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBQkMxNTUiLCJyb2xlcyI6WyJST0xFX1NUVURFTlQiXSwiaWF0IjoxNzYwMjA3MjkxLCJleHAiOjE3NjAyMTA4OTF9.vafxbL9jUaBd4IIJFXtyU9-zqg86xSIYMDL-ySQmX34",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/leave/my?status=PENDING",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"leave",
+								"my"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "PENDING"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Take action on Leave - Teacher",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJUZWFjaGVyQW5kQWRtaW4xMTExMUBleGFtcGxlLmNvbSIsInJvbGVzIjpbIlJPTEVfVEVBQ0hFUiJdLCJpYXQiOjE3NjAyMDcxMzYsImV4cCI6MTc2MDIxMDczNn0.qDIjLYcgd0JDJ5wRFqPvKQOKJjV5r0EMBcHlEpHixeU",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"status\" : \"APPROVED\",\r\n    \"responseMessage\" : \"Ja Maje le beta\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/leave/action/8",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"leave",
+								"action",
+								"8"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Assigned Leaves to ClassTeacher - Teacher",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJUZWFjaGVyQW5kQWRtaW4xMTExMUBleGFtcGxlLmNvbSIsInJvbGVzIjpbIlJPTEVfVEVBQ0hFUiJdLCJpYXQiOjE3NjAyMDcxMzYsImV4cCI6MTc2MDIxMDczNn0.qDIjLYcgd0JDJ5wRFqPvKQOKJjV5r0EMBcHlEpHixeU",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"status\" : \"APPROVED\",\r\n    \"responseMessage\" : \"Ja Maje le beta\"\r\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/leave/teacher?status=PENDING",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"leave",
+								"teacher"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "PENDING"
+								}
 							]
 						}
 					},

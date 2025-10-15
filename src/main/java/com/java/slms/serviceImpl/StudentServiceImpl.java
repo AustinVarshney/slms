@@ -53,7 +53,11 @@ public class StudentServiceImpl implements StudentService
 
         Student student = modelMapper.map(studentRequestDto, Student.class);
         student.setStatus(UserStatus.ACTIVE);
-        student.setClassRollNumber(getNextRollNumber(studentRequestDto.getClassId()));
+        
+        // Get next available roll number that doesn't conflict with unique constraint
+        Integer rollNumber = getNextAvailableRollNumber(studentRequestDto.getClassId(), session.getId());
+        student.setClassRollNumber(rollNumber);
+        
         student.setCurrentClass(classEntity);
         student.setUser(user);
         student.setSession(session);
@@ -421,6 +425,32 @@ public class StudentServiceImpl implements StudentService
     {
         Integer maxRoll = studentRepository.findMaxClassRollNumberByCurrentClassId(classId);
         return (maxRoll != null ? maxRoll : 0) + 1;
+    }
+
+    /**
+     * Get next available roll number considering the unique constraint on (class_roll_number, class_id, session_id)
+     * This method checks for existing students with the same class and session to avoid conflicts
+     */
+    private Integer getNextAvailableRollNumber(Long classId, Long sessionId)
+    {
+        // Find all students in this class and session
+        List<Student> existingStudents = studentRepository.findByCurrentClass_Id(classId).stream()
+                .filter(s -> s.getSession() != null && s.getSession().getId().equals(sessionId))
+                .toList();
+        
+        if (existingStudents.isEmpty())
+        {
+            return 1;
+        }
+        
+        // Find the maximum roll number
+        Integer maxRoll = existingStudents.stream()
+                .map(Student::getClassRollNumber)
+                .filter(roll -> roll != null)
+                .max(Integer::compareTo)
+                .orElse(0);
+        
+        return maxRoll + 1;
     }
 
     private void createAndSaveFeesForStudent(Student student, Long classId, Long sessionId, Session session)

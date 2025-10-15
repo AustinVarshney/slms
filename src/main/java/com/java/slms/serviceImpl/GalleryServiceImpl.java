@@ -8,12 +8,16 @@ import com.java.slms.model.Gallery;
 import com.java.slms.model.Session;
 import com.java.slms.repository.GalleryRepository;
 import com.java.slms.repository.SessionRepository;
+import com.java.slms.service.CloudinaryService;
 import com.java.slms.service.GalleryService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -22,6 +26,7 @@ public class GalleryServiceImpl implements GalleryService
 {
     private final GalleryRepository galleryRepository;
     private final SessionRepository sessionRepository;
+    private final CloudinaryService cloudinaryService;
     private final ModelMapper modelMapper;
 
     @Override
@@ -30,11 +35,52 @@ public class GalleryServiceImpl implements GalleryService
         Session session = sessionRepository.findById(dto.getSessionId())
                 .orElseThrow(() -> new ResourceNotFoundException("Session not found with ID: " + dto.getSessionId()));
 
-        Gallery gallery = modelMapper.map(dto, Gallery.class);
-        gallery.setSession(session);
-        gallery.setId(null);
+        Gallery gallery = Gallery.builder()
+                .title(dto.getTitle())
+                .description(dto.getDescription())
+                .imageUrl(dto.getImageUrl())
+                .cloudinaryPublicId(dto.getCloudinaryPublicId())
+                .uploadedByType(dto.getUploadedByType())
+                .uploadedById(dto.getUploadedById())
+                .uploadedByName(dto.getUploadedByName())
+                .session(session)
+                .build();
+        
         gallery = galleryRepository.save(gallery);
 
+        return toResponseDto(gallery);
+    }
+    
+    @Override
+    public GalleryResponseDto uploadGalleryImage(MultipartFile file, String title, String description,
+                                                 String uploadedByType, Long uploadedById,
+                                                 String uploadedByName, Long sessionId) throws IOException {
+        // Validate inputs
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("File cannot be empty");
+        }
+        
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Session not found with ID: " + sessionId));
+
+        // Upload to Cloudinary
+        Map<String, Object> uploadResult = cloudinaryService.uploadImage(file, "gallery");
+        String imageUrl = (String) uploadResult.get("secure_url");
+        String publicId = (String) uploadResult.get("public_id");
+
+        // Create gallery entity
+        Gallery gallery = Gallery.builder()
+                .title(title)
+                .description(description)
+                .imageUrl(imageUrl)
+                .cloudinaryPublicId(publicId)
+                .uploadedByType(uploadedByType)
+                .uploadedById(uploadedById)
+                .uploadedByName(uploadedByName)
+                .session(session)
+                .build();
+
+        gallery = galleryRepository.save(gallery);
         return toResponseDto(gallery);
     }
 
@@ -64,7 +110,13 @@ public class GalleryServiceImpl implements GalleryService
         Session session = sessionRepository.findById(dto.getSessionId())
                 .orElseThrow(() -> new ResourceNotFoundException("Session not found with ID: " + dto.getSessionId()));
 
-        gallery.setImage(dto.getImage());
+        gallery.setTitle(dto.getTitle());
+        gallery.setDescription(dto.getDescription());
+        gallery.setImageUrl(dto.getImageUrl());
+        gallery.setCloudinaryPublicId(dto.getCloudinaryPublicId());
+        gallery.setUploadedByType(dto.getUploadedByType());
+        gallery.setUploadedById(dto.getUploadedById());
+        gallery.setUploadedByName(dto.getUploadedByName());
         gallery.setSession(session);
         gallery = galleryRepository.save(gallery);
 
@@ -98,8 +150,10 @@ public class GalleryServiceImpl implements GalleryService
                 .orElseThrow(() -> new ResourceNotFoundException("Session not found with ID: " + dto.getSessionId()));
 
         List<Gallery> galleries = dto.getImages().stream()
-                .map(image -> Gallery.builder()
-                        .image(image)
+                .map(imageUrl -> Gallery.builder()
+                        .imageUrl(imageUrl)
+                        .title("Bulk Upload")
+                        .description("Uploaded via bulk upload")
                         .session(session)
                         .build())
                 .collect(Collectors.toList());
@@ -116,8 +170,17 @@ public class GalleryServiceImpl implements GalleryService
     {
         return GalleryResponseDto.builder()
                 .id(gallery.getId())
-                .image(gallery.getImage())
-                .sessionId(gallery.getSession().getId())
+                .title(gallery.getTitle())
+                .description(gallery.getDescription())
+                .imageUrl(gallery.getImageUrl())
+                .cloudinaryPublicId(gallery.getCloudinaryPublicId())
+                .uploadedByType(gallery.getUploadedByType())
+                .uploadedById(gallery.getUploadedById())
+                .uploadedByName(gallery.getUploadedByName())
+                .sessionId(gallery.getSession() != null ? gallery.getSession().getId() : null)
+                .sessionName(gallery.getSession() != null ? gallery.getSession().getName() : null)
+                .createdAt(gallery.getCreatedAt())
+                .updatedAt(gallery.getUpdatedAt())
                 .build();
     }
 }

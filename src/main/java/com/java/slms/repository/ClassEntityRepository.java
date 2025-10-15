@@ -26,4 +26,9 @@ public interface ClassEntityRepository extends JpaRepository<ClassEntity, Long>
     List<ClassEntity> findBySession_Id(Long sessionId);
 
     boolean existsByIdAndSessionId(Long classId, Long sessionId);
+    
+    // Find class where teacher is assigned as class teacher
+    Optional<ClassEntity> findByClassTeacher_Id(Long teacherId);
+    
+    List<ClassEntity> findAllByClassTeacher_Id(Long teacherId);
 }

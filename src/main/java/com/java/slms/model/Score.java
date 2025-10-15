@@ -32,6 +32,6 @@ public class Score extends BaseEntity
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JsonBackReference
-    @JoinColumn(name = "exam_id")
+    @JoinColumn(name = "exam_id", nullable = true)
     private Exam exam;
 }

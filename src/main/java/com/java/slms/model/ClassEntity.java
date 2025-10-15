@@ -53,8 +53,8 @@ public class ClassEntity extends BaseEntity
     @JoinColumn(name = "session_id")
     private Session session;
 
-    @OneToOne(fetch = FetchType.LAZY, optional = true)
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "class_teacher_id", unique = true)
-    private Teacher classTeacher;
+    private Teacher classTeacher;  // Required for new classes, nullable for backward compatibility
 
 }

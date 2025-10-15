@@ -65,6 +65,11 @@ public class StudentLeaveServiceImpl implements StudentLeaveService
         }
 
         Teacher teacher = student.getCurrentClass().getClassTeacher();
+        
+        if (teacher == null)
+        {
+            throw new WrongArgumentException("No class teacher assigned to your class. Please contact administration.");
+        }
 
         teacher = teacherRepository.findById(teacher.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Assigned teacher does not exist."));

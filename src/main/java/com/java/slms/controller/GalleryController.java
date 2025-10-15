@@ -13,10 +13,13 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -189,6 +192,49 @@ public class GalleryController
                         .status(HttpStatus.CREATED.value())
                         .build()
         );
+    }
+    
+    @Operation(
+            summary = "Upload gallery image to Cloudinary",
+            description = "Uploads an image file to Cloudinary and creates a gallery entry.",
+            responses = {
+                    @ApiResponse(responseCode = "201", description = "Image uploaded successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid file or request", content = @Content)
+            }
+    )
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER')")
+    public ResponseEntity<RestResponse<GalleryResponseDto>> uploadImage(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "title", required = false) String title,
+            @RequestParam(value = "description", required = false) String description,
+            @RequestParam("uploadedByType") String uploadedByType,
+            @RequestParam("uploadedById") Long uploadedById,
+            @RequestParam("uploadedByName") String uploadedByName,
+            @RequestParam("sessionId") Long sessionId
+    ) {
+        try {
+            log.info("Uploading gallery image for session ID: {} by {} ({})", sessionId, uploadedByName, uploadedByType);
+            GalleryResponseDto created = galleryService.uploadGalleryImage(
+                    file, title, description, uploadedByType, uploadedById, uploadedByName, sessionId
+            );
+            return ResponseEntity.status(HttpStatus.CREATED).body(
+                    RestResponse.<GalleryResponseDto>builder()
+                            .data(created)
+                            .message("Image uploaded successfully")
+                            .status(HttpStatus.CREATED.value())
+                            .build()
+            );
+        } catch (IOException e) {
+            log.error("Error uploading image", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    RestResponse.<GalleryResponseDto>builder()
+                            .data(null)
+                            .message("Failed to upload image: " + e.getMessage())
+                            .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                            .build()
+            );
+        }
     }
 
 

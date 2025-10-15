@@ -7,15 +7,17 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class GalleryRequestDto
-{
+public class GalleryDTO {
+    private Long id;
     private String title;
     private String description;
-    private String imageUrl; // Cloudinary URL
+    private String imageUrl;
     private String cloudinaryPublicId;
-    private String uploadedByType; // "TEACHER" or "ADMIN"
+    private String uploadedByType;
     private Long uploadedById;
     private String uploadedByName;
     private Long sessionId;
+    private String sessionName;
+    private String createdAt;
+    private String updatedAt;
 }
-

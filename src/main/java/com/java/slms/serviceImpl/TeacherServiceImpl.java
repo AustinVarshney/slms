@@ -30,6 +30,7 @@ public class TeacherServiceImpl implements TeacherService
     private final UserRepository userRepository;
     private final SessionRepository sessionRepository;
     private final StaffLeaveAllowanceRepository staffLeaveAllowanceRepository;
+    private final ClassEntityRepository classEntityRepository;
 
     @Override
     public TeacherDto createTeacher(TeacherDto teacherDto)
@@ -172,13 +173,17 @@ public class TeacherServiceImpl implements TeacherService
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
+        // 3. Add class where teacher is assigned as class teacher
+        List<ClassEntity> classTeacherClasses = classEntityRepository.findAllByClassTeacher_Id(teacher.getId());
+        classes.addAll(classTeacherClasses);
+
         List<Long> classIds = classes.stream()
                 .map(ClassEntity::getId)
                 .collect(Collectors.toList());
         dto.setClassId(classIds);
 
         List<String> classNames = classes.stream()
-                .map(ClassEntity::getClassName)  // assuming getClassName() returns class name
+                .map(ClassEntity::getClassName)
                 .collect(Collectors.toList());
         dto.setClassName(classNames);
 

@@ -67,21 +67,23 @@ public class ClassEntityServiceImpl implements ClassEntityService
             throw new WrongArgumentException("Cannot add class to an inactive session");
         }
 
-        Teacher teacher = null;
-        if (classRequestDto.getClassTeacherId() != null)
+        // Class teacher is now required
+        if (classRequestDto.getClassTeacherId() == null)
         {
-            teacher = teacherRepository.findById(classRequestDto.getClassTeacherId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Teacher not present with id " + classRequestDto.getClassTeacherId()));
+            throw new WrongArgumentException("Class teacher is required when creating a class.");
+        }
 
-            if (teacher.getStatus().equals(UserStatus.INACTIVE))
-            {
-                throw new WrongArgumentException("Teacher with id " + classRequestDto.getClassTeacherId() + " is inactive.");
-            }
+        Teacher teacher = teacherRepository.findById(classRequestDto.getClassTeacherId())
+                .orElseThrow(() -> new ResourceNotFoundException("Teacher not present with id " + classRequestDto.getClassTeacherId()));
 
-            if (isTeacherAssignedToAnotherClass(classRequestDto.getClassTeacherId()))
-            {
-                throw new WrongArgumentException("Teacher with id " + classRequestDto.getClassTeacherId() + " is already assigned to another class.");
-            }
+        if (teacher.getStatus().equals(UserStatus.INACTIVE))
+        {
+            throw new WrongArgumentException("Teacher with id " + classRequestDto.getClassTeacherId() + " is inactive.");
+        }
+
+        if (isTeacherAssignedToAnotherClass(classRequestDto.getClassTeacherId()))
+        {
+            throw new WrongArgumentException("Teacher with id " + classRequestDto.getClassTeacherId() + " is already assigned to another class.");
         }
 
         ClassEntity classEntity = modelMapper.map(classRequestDto, ClassEntity.class);
@@ -100,17 +102,10 @@ public class ClassEntityServiceImpl implements ClassEntityService
 
         ClassResponseDto response = modelMapper.map(savedEntity, ClassResponseDto.class);
         response.setFeesAmount(classRequestDto.getFeesAmount());
-
-        if (savedEntity.getClassTeacher() != null)
-        {
-            response.setClassTeacherId(savedEntity.getClassTeacher().getId());
-            response.setClassTeacherName(savedEntity.getClassTeacher().getName());
-        }
-        else
-        {
-            response.setClassTeacherId(null);
-            response.setClassTeacherName(null);
-        }
+        
+        // Class teacher is always present now
+        response.setClassTeacherId(savedEntity.getClassTeacher().getId());
+        response.setClassTeacherName(savedEntity.getClassTeacher().getName());
 
         if (savedEntity.getStudents() != null && !savedEntity.getStudents().isEmpty())
         {
@@ -191,8 +186,19 @@ public class ClassEntityServiceImpl implements ClassEntityService
         dto.setSessionId(classEntity.getSession().getId());
         dto.setSessionName(classEntity.getSession().getName());
         dto.setFeesAmount(feeStructure.getFeesAmount());
-        dto.setClassTeacherId(classEntity.getClassTeacher().getId());
-        dto.setClassTeacherName(classEntity.getClassTeacher().getName());
+        
+        // Handle potential null class teacher for backward compatibility
+        if (classEntity.getClassTeacher() != null)
+        {
+            dto.setClassTeacherId(classEntity.getClassTeacher().getId());
+            dto.setClassTeacherName(classEntity.getClassTeacher().getName());
+        }
+        else
+        {
+            dto.setClassTeacherId(null);
+            dto.setClassTeacherName(null);
+        }
+        
         dto.setTotalStudents(classEntity.getStudents() != null ? classEntity.getStudents().size() : 0);
         List<StudentResponseDto> students = studentService.getStudentsByClassId(classId);
         dto.setFeeCollectionRate(calculateFeeCollectionRate(students));

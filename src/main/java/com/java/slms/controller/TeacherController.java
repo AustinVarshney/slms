@@ -132,7 +132,7 @@ public class TeacherController
             }
     )
     @GetMapping("/active")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_NON_TEACHING_STAFF')")
     public ResponseEntity<RestResponse<List<TeacherDto>>> getActiveTeachers()
     {
         log.info("Fetching all active teachers...");

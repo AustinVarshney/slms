@@ -35,5 +35,18 @@ public interface ScoreRepository extends JpaRepository<Score, Long>
 
     @Query("SELECT s FROM Score s " + "JOIN s.student st " + "JOIN s.subject sub " + "JOIN sub.classEntity c " + "JOIN s.exam e " + "WHERE st.panNumber = :panNumber " + "AND sub.id = :subjectId " + "AND e.id = :examId " + "AND c.id = :classId")
     Optional<Score> findByStudentPanNumberAndClassIdAndSubjectIdAndExamId(@Param("panNumber") String panNumber, @Param("classId") Long classId, @Param("subjectId") Long subjectId, @Param("examId") Long examId);
+    
+    // Additional methods for results management
+    @Query("SELECT s FROM Score s WHERE s.student = :student AND s.exam = :exam AND s.subject = :subject")
+    Optional<Score> findByStudentAndExamAndSubject(@Param("student") com.java.slms.model.Student student, @Param("exam") com.java.slms.model.Exam exam, @Param("subject") com.java.slms.model.Subject subject);
+    
+    @Query("SELECT s FROM Score s WHERE s.student = :student AND s.exam = :exam")
+    List<Score> findByStudentAndExam(@Param("student") com.java.slms.model.Student student, @Param("exam") com.java.slms.model.Exam exam);
+    
+    @Query("SELECT s FROM Score s WHERE s.exam = :exam AND s.subject = :subject")
+    List<Score> findByExamAndSubject(@Param("exam") com.java.slms.model.Exam exam, @Param("subject") com.java.slms.model.Subject subject);
+    
+    @Query("SELECT s FROM Score s WHERE s.student = :student AND s.subject = :subject AND s.exam IS NULL")
+    Optional<Score> findByStudentAndSubjectAndExamIsNull(@Param("student") com.java.slms.model.Student student, @Param("subject") com.java.slms.model.Subject subject);
 
 }

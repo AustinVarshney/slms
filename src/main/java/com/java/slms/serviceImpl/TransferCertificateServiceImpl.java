@@ -73,7 +73,11 @@ public class TransferCertificateServiceImpl implements TransferCertificateReques
 
         TransferCertificateRequest request = fetchRequestById(requestId);
 
-        validateRequestPending(request);
+        // Only validate that request is not already processed by admin
+        if (request.getStatus() == RequestStatus.APPROVED || request.getStatus() == RequestStatus.REJECTED)
+        {
+            throw new WrongArgumentException("Request has already been processed by admin.");
+        }
 
         request.setStatus(decision);
         request.setAdminReplyToStudent(adminReply);
@@ -191,6 +195,7 @@ public class TransferCertificateServiceImpl implements TransferCertificateReques
         dto.setSessionName(tcRequest.getSession().getName());
         dto.setClassId(tcRequest.getLastClass().getId());
         dto.setClassName(tcRequest.getLastClass().getClassName());
+        dto.setAdminReply(tcRequest.getAdminReplyToStudent()); // Ensure admin reply is mapped
         return dto;
     }
 

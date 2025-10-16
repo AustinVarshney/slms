@@ -60,28 +60,43 @@ public class GalleryServiceImpl implements GalleryService
             throw new IllegalArgumentException("File cannot be empty");
         }
         
+        // Validate file type
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new IllegalArgumentException("File must be an image");
+        }
+        
+        // Validate file size (max 10MB)
+        if (file.getSize() > 10 * 1024 * 1024) {
+            throw new IllegalArgumentException("File size must not exceed 10MB");
+        }
+        
         Session session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Session not found with ID: " + sessionId));
 
-        // Upload to Cloudinary
-        Map<String, Object> uploadResult = cloudinaryService.uploadImage(file, "gallery");
-        String imageUrl = (String) uploadResult.get("secure_url");
-        String publicId = (String) uploadResult.get("public_id");
+        try {
+            // Upload to Cloudinary
+            Map<String, Object> uploadResult = cloudinaryService.uploadImage(file, "gallery");
+            String imageUrl = (String) uploadResult.get("secure_url");
+            String publicId = (String) uploadResult.get("public_id");
 
-        // Create gallery entity
-        Gallery gallery = Gallery.builder()
-                .title(title)
-                .description(description)
-                .imageUrl(imageUrl)
-                .cloudinaryPublicId(publicId)
-                .uploadedByType(uploadedByType)
-                .uploadedById(uploadedById)
-                .uploadedByName(uploadedByName)
-                .session(session)
-                .build();
+            // Create gallery entity
+            Gallery gallery = Gallery.builder()
+                    .title(title != null && !title.trim().isEmpty() ? title : "Untitled")
+                    .description(description != null ? description : "")
+                    .imageUrl(imageUrl)
+                    .cloudinaryPublicId(publicId)
+                    .uploadedByType(uploadedByType)
+                    .uploadedById(uploadedById)
+                    .uploadedByName(uploadedByName)
+                    .session(session)
+                    .build();
 
-        gallery = galleryRepository.save(gallery);
-        return toResponseDto(gallery);
+            gallery = galleryRepository.save(gallery);
+            return toResponseDto(gallery);
+        } catch (IOException e) {
+            throw new IOException("Failed to upload image to Cloudinary: " + e.getMessage(), e);
+        }
     }
 
     @Override
@@ -128,6 +143,17 @@ public class GalleryServiceImpl implements GalleryService
     {
         Gallery gallery = galleryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Gallery item not found with ID: " + id));
+        
+        // Delete from Cloudinary if publicId exists
+        if (gallery.getCloudinaryPublicId() != null && !gallery.getCloudinaryPublicId().isEmpty()) {
+            try {
+                cloudinaryService.deleteImage(gallery.getCloudinaryPublicId());
+            } catch (IOException e) {
+                // Log error but continue with database deletion
+                System.err.println("Failed to delete image from Cloudinary: " + e.getMessage());
+            }
+        }
+        
         galleryRepository.delete(gallery);
     }
 

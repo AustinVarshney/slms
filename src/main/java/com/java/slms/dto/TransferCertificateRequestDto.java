@@ -24,4 +24,13 @@ public class TransferCertificateRequestDto
     private Long classId;
     private String className;
 
+    // Alias for studentPanNumber (some frontend code uses studentPan)
+    public String getStudentPan() {
+        return studentPanNumber;
+    }
+
+    public void setStudentPan(String studentPan) {
+        this.studentPanNumber = studentPan;
+    }
+
 }

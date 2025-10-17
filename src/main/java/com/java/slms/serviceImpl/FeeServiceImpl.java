@@ -14,8 +14,6 @@ import com.java.slms.repository.FeeRepository;
 import com.java.slms.repository.SessionRepository;
 import com.java.slms.repository.StudentRepository;
 import com.java.slms.service.FeeService;
-import com.java.slms.util.EntityFetcher;
-import com.java.slms.util.EntityNames;
 import com.java.slms.util.FeeMonth;
 import com.java.slms.util.FeeStatus;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +22,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -39,24 +40,18 @@ public class FeeServiceImpl implements FeeService
     private final SessionRepository sessionRepository;
 
     @Override
-    public void payFeesOfStudent(FeeRequestDTO feeRequestDTO)
+    public void payFeesOfStudent(FeeRequestDTO feeRequestDTO, Long schoolId)
     {
-        Student student = EntityFetcher.fetchByIdOrThrow(studentRepository, feeRequestDTO.getStudentPanNumber(), EntityNames.STUDENT);
+        Student student = studentRepository
+                .findByPanNumberIgnoreCaseAndSchool_Id(feeRequestDTO.getStudentPanNumber(), schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found with PAN: "
+                        + feeRequestDTO.getStudentPanNumber() + " in school ID: " + schoolId));
+
         FeeStructure feeStructure = student.getCurrentClass().getFeeStructures();
-        Session activeSession = getActiveSession();
+        Session session = sessionRepository.findBySessionIdAndSchoolId(feeRequestDTO.getSessionId(), schoolId).orElseThrow(() -> new ResourceNotFoundException("Session not found with ID: " + feeRequestDTO.getSessionId() + " for schoolId: " + schoolId));
 
-        if (!student.getSession().getId().equals(activeSession.getId()))
-        {
-            throw new WrongArgumentException("Student does not belong to the active session");
-        }
-
-        if (!feeStructure.getSession().getId().equals(activeSession.getId()))
-        {
-            throw new WrongArgumentException("FeeStructure does not belong to the active session");
-        }
-
-        List<Fee> fees = feeRepository.findByStudent_PanNumberAndMonth(
-                feeRequestDTO.getStudentPanNumber(), feeRequestDTO.getMonth()
+        List<Fee> fees = feeRepository.findFeesByPanNumberAndSchoolIdAndMonth(
+                feeRequestDTO.getStudentPanNumber(), schoolId, feeRequestDTO.getMonth()
         );
 
         if (fees.isEmpty())
@@ -90,28 +85,27 @@ public class FeeServiceImpl implements FeeService
     }
 
     @Override
-    public List<FeeCatalogDto> getAllFeeCatalogsInActiveSesssion()
+    public List<FeeCatalogDto> getAllFeeCatalogsInActiveSession(Long schoolId)
     {
-        Session activeSession = getActiveSession();
-        List<Student> students = studentRepository.findBySession_Id(activeSession.getId());
+        List<Student> students = studentRepository.findStudentsBySchoolIdAndActiveSession(schoolId);
 
         return students.stream()
-                .map(this::buildCatalogForStudent)
+                .map(student -> buildCatalogForStudent(student, schoolId))
                 .collect(Collectors.toList());
     }
 
     @Override
-    public FeeCatalogDto getFeeCatalogByStudentPanNumber(String panNumber)
+    public FeeCatalogDto getFeeCatalogByStudentPanNumber(String panNumber, Long schoolId)
     {
-        Student student = studentRepository.findById(panNumber)
+        Student student = studentRepository.findByPanNumberIgnoreCaseAndSchool_Id(panNumber, schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found with PAN: " + panNumber));
 
-        return buildCatalogForStudent(student);
+        return buildCatalogForStudent(student, schoolId);
     }
 
-    private FeeCatalogDto buildCatalogForStudent(Student student)
+    private FeeCatalogDto buildCatalogForStudent(Student student, Long schoolId)
     {
-        List<Fee> fees = feeRepository.findByStudent_PanNumberOrderByYearAscMonthAsc(student.getPanNumber());
+        List<Fee> fees = feeRepository.findByStudentPanNumberAndSchoolIdOrderByYearAscMonthAsc(student.getPanNumber(), schoolId);
 
         Map<FeeMonth, Fee> feeMap = fees.stream()
                 .collect(Collectors.toMap(Fee::getMonth, Function.identity(), (existing, replacement) -> existing));
@@ -171,26 +165,16 @@ public class FeeServiceImpl implements FeeService
 
     @Transactional
     @Override
-    public void markPendingFeesAsOverdue()
+    public void markPendingFeesAsOverdue(Long schoolId)
     {
         LocalDate today = LocalDate.now();
-        Session activeSession = getActiveSession();
-
         List<Fee> overdueFees = feeRepository
-                .findByStatusAndDueDateLessThanEqualAndFeeStructure_Session_Id(
-                        FeeStatus.PENDING, today, activeSession.getId()
-                );
+                .findOverdueFeesByStudentAndActiveSession(
+                        FeeStatus.PENDING, today, schoolId);
 
         overdueFees.forEach(fee -> fee.setStatus(FeeStatus.OVERDUE));
-        feeRepository.saveAll(overdueFees); // Batch update
+        feeRepository.saveAll(overdueFees);
 
         log.info("Marked {} pending fees as OVERDUE as of {}", overdueFees.size(), today);
-    }
-
-    // Helper
-    private Session getActiveSession()
-    {
-        return sessionRepository.findByActiveTrue()
-                .orElseThrow(() -> new ResourceNotFoundException("No active session found"));
     }
 }

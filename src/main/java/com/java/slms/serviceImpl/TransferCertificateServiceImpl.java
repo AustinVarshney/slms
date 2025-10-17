@@ -8,15 +8,11 @@ import com.java.slms.exception.AlreadyExistException;
 import com.java.slms.exception.ResourceNotFoundException;
 import com.java.slms.exception.WrongArgumentException;
 import com.java.slms.model.*;
-import com.java.slms.repository.ClassEntityRepository;
-import com.java.slms.repository.SessionRepository;
-import com.java.slms.repository.StudentRepository;
-import com.java.slms.repository.TransferCertificateRequestRepository;
+import com.java.slms.repository.*;
 import com.java.slms.service.TransferCertificateRequestService;
 import com.java.slms.util.RequestStatus;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,19 +30,29 @@ public class TransferCertificateServiceImpl implements TransferCertificateReques
     private final ModelMapper modelMapper;
     private final SessionRepository sessionRepository;
     private final ClassEntityRepository classEntityRepository;
+    private final SchoolRepository schoolRepository;
 
     @Transactional
     @Override
-    public TransferCertificateRequestDto createTransferCertificateRequest(String studentPan, TCReasonDto reasonDto)
+    public TransferCertificateRequestDto createTransferCertificateRequest(String studentPan, TCReasonDto reasonDto, Long schoolId)
     {
-        Student student = fetchStudentByPan(studentPan);
+        School school = schoolRepository.findById(schoolId).orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + schoolId));
 
-        checkExistingPendingOrApprovedRequest(student);
+        Student student = studentRepository.findByPanNumberIgnoreCaseAndSchool_IdAndStatusActive(studentPan, schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Student not found with PAN Number: " + studentPan +
+                                " and ACTIVE status in school with ID: " + schoolId));
 
-        Session activeSession = fetchActiveSession();
+        boolean exists = tcRequestRepository.existsByStudentAndStatusInAndSchoolId(student, List.of(RequestStatus.PENDING, RequestStatus.APPROVED), schoolId);
+        if (exists)
+        {
+            throw new AlreadyExistException("Transfer Certificate request already exists or approved for this student.");
+        }
+        Session activeSession = sessionRepository.findBySchoolIdAndActiveTrue(schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("No active session found"));
 
         TransferCertificateRequest tcRequest = buildTransferCertificateRequest(student, activeSession, reasonDto);
-
+        tcRequest.setSchool(school);
         TransferCertificateRequest savedRequest = tcRequestRepository.save(tcRequest);
 
         return mapToDto(savedRequest);
@@ -54,11 +60,12 @@ public class TransferCertificateServiceImpl implements TransferCertificateReques
 
     @Transactional(readOnly = true)
     @Override
-    public List<TransferCertificateRequestDto> getAllRequestsByStudentPan(String studentPan)
+    public List<TransferCertificateRequestDto> getAllRequestsByStudentPan(String studentPan, Long schoolId)
     {
-        Student student = fetchStudentByPan(studentPan);
+        Student student = studentRepository.findByPanNumberIgnoreCaseAndSchool_Id(studentPan, schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found with PAN: " + studentPan));
 
-        List<TransferCertificateRequest> tcRequests = tcRequestRepository.findByStudent(student);
+        List<TransferCertificateRequest> tcRequests = tcRequestRepository.findByStudentAndSchoolId(student, schoolId);
 
         return tcRequests.stream()
                 .map(this::mapToDto)
@@ -67,11 +74,11 @@ public class TransferCertificateServiceImpl implements TransferCertificateReques
 
     @Transactional
     @Override
-    public TransferCertificateRequestDto processRequestDecision(Long requestId, String adminReply, RequestStatus decision)
+    public TransferCertificateRequestDto processRequestDecision(Long requestId, String adminReply, RequestStatus decision, Long schoolId)
     {
         validateDecision(decision);
 
-        TransferCertificateRequest request = fetchRequestById(requestId);
+        TransferCertificateRequest request = fetchRequestById(requestId, schoolId);
 
         validateRequestPending(request);
 
@@ -86,13 +93,12 @@ public class TransferCertificateServiceImpl implements TransferCertificateReques
 
     @Transactional(readOnly = true)
     @Override
-    public List<TransferCertificateRequestDto> getAllRequests(RequestStatus status)
+    public List<TransferCertificateRequestDto> getAllRequests(RequestStatus status, Long schoolId)
     {
-        Sort sortByRequestDateDesc = Sort.by(Sort.Direction.DESC, "requestDate");
 
         List<TransferCertificateRequest> requests = (status != null) ?
-                tcRequestRepository.findAllByStatus(status, sortByRequestDateDesc) :
-                tcRequestRepository.findAll(sortByRequestDateDesc);
+                tcRequestRepository.findAllByStatusAndSchoolId(status, schoolId) :
+                tcRequestRepository.findAllBySchoolId(schoolId);
 
         return requests.stream()
                 .map(this::mapToDto)
@@ -101,10 +107,10 @@ public class TransferCertificateServiceImpl implements TransferCertificateReques
 
     @Override
     @Transactional(readOnly = true)
-    public List<TransferCertificateRequestDto> getAllRequestForwardedByAdminToClassTeacher(Teacher teacher)
+    public List<TransferCertificateRequestDto> getAllRequestForwardedByAdminToClassTeacher(Teacher teacher, Long schoolId)
     {
         List<TransferCertificateRequest> requests = tcRequestRepository
-                .findByApprovedByClassTeacherAndStatus(teacher, RequestStatus.PROCESSING);
+                .findByApprovedByClassTeacherAndStatusAndSchoolId(teacher, RequestStatus.PROCESSING, schoolId);
 
         return requests.stream()
                 .map(this::mapToDto)
@@ -112,9 +118,9 @@ public class TransferCertificateServiceImpl implements TransferCertificateReques
     }
 
     @Override
-    public void forwardTCRequestToClassTeacher(Long tcRequestId, Admin admin, AdminToTeacherDto adminToTeacherDto)
+    public void forwardTCRequestToClassTeacher(Long tcRequestId, Admin admin, AdminToTeacherDto adminToTeacherDto, Long schoolId)
     {
-        TransferCertificateRequest request = fetchRequestById(tcRequestId);
+        TransferCertificateRequest request = fetchRequestById(tcRequestId, schoolId);
 
         if (request.getStatus().equals(RequestStatus.APPROVED))
         {
@@ -131,9 +137,9 @@ public class TransferCertificateServiceImpl implements TransferCertificateReques
     }
 
     @Override
-    public void replyTCRequestToAdmin(Long tcRequestId, Teacher teacher, TeacherToAdminDto teacherToAdminDto)
+    public void replyTCRequestToAdmin(Long tcRequestId, Teacher teacher, TeacherToAdminDto teacherToAdminDto, Long schoolId)
     {
-        TransferCertificateRequest request = fetchRequestById(tcRequestId);
+        TransferCertificateRequest request = fetchRequestById(tcRequestId, schoolId);
 
         if (!teacher.getId().equals(request.getApprovedByClassTeacher().getId()))
         {
@@ -148,27 +154,6 @@ public class TransferCertificateServiceImpl implements TransferCertificateReques
     }
 
     // Private helper methods
-
-    private Student fetchStudentByPan(String studentPan)
-    {
-        return studentRepository.findById(studentPan)
-                .orElseThrow(() -> new ResourceNotFoundException("Student not found with PAN: " + studentPan));
-    }
-
-    private void checkExistingPendingOrApprovedRequest(Student student)
-    {
-        boolean exists = tcRequestRepository.existsByStudentAndStatusIn(student, List.of(RequestStatus.PENDING, RequestStatus.APPROVED));
-        if (exists)
-        {
-            throw new AlreadyExistException("Transfer Certificate request already exists or approved for this student.");
-        }
-    }
-
-    private Session fetchActiveSession()
-    {
-        return sessionRepository.findByActiveTrue()
-                .orElseThrow(() -> new ResourceNotFoundException("No active session found"));
-    }
 
     private TransferCertificateRequest buildTransferCertificateRequest(Student student, Session activeSession, TCReasonDto reasonDto)
     {
@@ -191,6 +176,7 @@ public class TransferCertificateServiceImpl implements TransferCertificateReques
         dto.setSessionName(tcRequest.getSession().getName());
         dto.setClassId(tcRequest.getLastClass().getId());
         dto.setClassName(tcRequest.getLastClass().getClassName());
+        dto.setSchoolId(tcRequest.getSchool().getId());
         return dto;
     }
 
@@ -202,9 +188,9 @@ public class TransferCertificateServiceImpl implements TransferCertificateReques
         }
     }
 
-    private TransferCertificateRequest fetchRequestById(Long requestId)
+    private TransferCertificateRequest fetchRequestById(Long requestId, Long schoolId)
     {
-        return tcRequestRepository.findById(requestId)
+        return tcRequestRepository.findByIdAndSchoolId(requestId, schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Request not found with id: " + requestId));
     }
 

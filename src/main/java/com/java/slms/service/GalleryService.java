@@ -8,20 +8,17 @@ import java.util.List;
 
 public interface GalleryService
 {
+    GalleryResponseDto addGallery(GalleryRequestDto dto, Long schoolId);
 
-    GalleryResponseDto addGallery(GalleryRequestDto dto);
+    List<GalleryResponseDto> getGalleryItemsBySessionId(Long sessionId, Long schoolId);
 
-    List<GalleryResponseDto> getAllGalleryItems();
+    List<GalleryResponseDto> getAllGalleryItems(Long schoolId);
 
-    GalleryResponseDto getGalleryById(Long id);
+    GalleryResponseDto getGalleryById(Long id, Long schoolId);
 
-    GalleryResponseDto updateGallery(Long id, GalleryRequestDto dto);
+    void deleteGallery(Long id, Long schoolId);
 
-    void deleteGallery(Long id);
-
-    List<GalleryResponseDto> getGalleryItemsBySessionId(Long sessionId);
-
-    List<GalleryResponseDto> addBulkGalleryImages(BulkGalleryRequestDto dto);
+    List<GalleryResponseDto> addBulkGalleryImages(BulkGalleryRequestDto dto, Long schoolId);
 
 }
 

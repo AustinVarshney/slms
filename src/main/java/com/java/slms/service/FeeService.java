@@ -8,13 +8,13 @@ import java.util.List;
 
 public interface FeeService
 {
-    void payFeesOfStudent(FeeRequestDTO feeRequestDTO);
+    void payFeesOfStudent(FeeRequestDTO requestDto, Long schoolId);
 
-    List<FeeCatalogDto> getAllFeeCatalogsInActiveSesssion();
+    List<FeeCatalogDto> getAllFeeCatalogsInActiveSession(Long schoolId);
 
-    FeeCatalogDto getFeeCatalogByStudentPanNumber(String panNumber);
+    FeeCatalogDto getFeeCatalogByStudentPanNumber(String panNumber, Long schoolId);
 
     //    @Scheduled(cron = "0 0 0 15 * ?")  // Runs at midnight on the 15th day of every month
-        @Transactional
-        void markPendingFeesAsOverdue();
+    @Transactional
+    void markPendingFeesAsOverdue(Long schoolid);
 }

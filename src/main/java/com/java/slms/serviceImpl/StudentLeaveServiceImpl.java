@@ -19,7 +19,6 @@ import com.java.slms.util.LeaveStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -42,21 +41,18 @@ public class StudentLeaveServiceImpl implements StudentLeaveService
     private final StudentLeaveRecordRepository studentLeaveRecordRepository;
 
     @Override
-    public void createLeaveRequest(StudentLeaveRequestDTO dto)
+    public void createLeaveRequest(StudentLeaveRequestDTO dto, Student student, Long schoolId)
     {
-
-        Student student = studentRepository.findById(dto.getStudentPan())
-                .orElseThrow(() -> new RuntimeException("Student not found"));
-
-        Session session = sessionRepository.findByActiveTrue()
+        Session session = sessionRepository.findBySchoolIdAndActiveTrue(schoolId)
                 .orElseThrow(() -> new RuntimeException("Active Session not found"));
 
         // Check for overlapping leaves
-        boolean exists = studentLeaveRecordRepository.existsByStudentAndSessionAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+        boolean exists = studentLeaveRecordRepository.existsByStudentAndSessionAndStartDateLessThanEqualAndEndDateGreaterThanEqualAndStudent_School_Id(
                 student,
                 session,
                 dto.getEndDate(),
-                dto.getStartDate()
+                dto.getStartDate(),
+                schoolId
         );
 
         if (exists)
@@ -66,13 +62,14 @@ public class StudentLeaveServiceImpl implements StudentLeaveService
 
         Teacher teacher = student.getCurrentClass().getClassTeacher();
 
-        teacher = teacherRepository.findById(teacher.getId())
+        teacher = teacherRepository.findByTeacherIdAndSchoolIdAndStatusActive(teacher.getId(), schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Assigned teacher does not exist."));
 
         StudentLeaveRecord leave = new StudentLeaveRecord();
         leave.setStudent(student);
         leave.setTeacher(teacher);
         leave.setSession(session);
+        leave.setStudent(student);
         leave.setStartDate(dto.getStartDate());
         leave.setEndDate(dto.getEndDate());
 
@@ -91,12 +88,12 @@ public class StudentLeaveServiceImpl implements StudentLeaveService
     }
 
     @Override
-    public List<StudentLeaveResponse> getLeavesForLoggedInStudent(String panNumber)
+    public List<StudentLeaveResponse> getLeavesForLoggedInStudent(String panNumber, Long schoolId)
     {
-        Student student = studentRepository.findById(panNumber)
-                .orElseThrow(() -> new RuntimeException("Student not found"));
+        Student student = studentRepository.findByPanNumberIgnoreCaseAndSchool_IdAndStatusActive(panNumber, schoolId)
+                .orElseThrow(() -> new RuntimeException("Student not found with pan: " + panNumber));
 
-        Session session = sessionRepository.findByActiveTrue()
+        Session session = sessionRepository.findBySchoolIdAndActiveTrue(schoolId)
                 .orElseThrow(() -> new RuntimeException("Active Session not found"));
 
         List<StudentLeaveRecord> records = studentLeaveRecordRepository
@@ -108,9 +105,9 @@ public class StudentLeaveServiceImpl implements StudentLeaveService
     }
 
     @Override
-    public void takeActionOnLeave(Long leaveId, Long teacherId, LeaveActionRequest request)
+    public void takeActionOnLeave(Long leaveId, Long teacherId, Long schoolId, LeaveActionRequest request)
     {
-        StudentLeaveRecord leave = studentLeaveRecordRepository.findById(leaveId)
+        StudentLeaveRecord leave = studentLeaveRecordRepository.findByIdAndStudent_School_Id(leaveId, schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Leave record not found"));
 
         if (leave.getTeacher() == null || !leave.getTeacher().getId().equals(teacherId))
@@ -131,12 +128,12 @@ public class StudentLeaveServiceImpl implements StudentLeaveService
     }
 
     @Override
-    public List<StudentLeaveResponse> getLeavesForTeacher(Long teacherId, LeaveStatus status)
+    public List<StudentLeaveResponse> getLeavesForTeacher(Long teacherId, LeaveStatus status, Long schoolId)
     {
-        Session session = sessionRepository.findByActiveTrue()
+        Session session = sessionRepository.findBySchoolIdAndActiveTrue(schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Active session not found"));
 
-        Teacher teacher = teacherRepository.findById(teacherId)
+        Teacher teacher = teacherRepository.findByTeacherIdAndSchoolId(teacherId, schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Teacher not found"));
 
         List<StudentLeaveRecord> records;
@@ -144,12 +141,12 @@ public class StudentLeaveServiceImpl implements StudentLeaveService
         if (status != null)
         {
             records = studentLeaveRecordRepository
-                    .findBySessionAndTeacherAndStatusOrderByCreatedAtDesc(session, teacher, status);
+                    .findBySessionAndTeacherAndStatusAndStudent_School_IdOrderByCreatedAtDesc(session, teacher, status, schoolId);
         }
         else
         {
             records = studentLeaveRecordRepository
-                    .findBySessionAndTeacherOrderByCreatedAtDesc(session, teacher);
+                    .findBySessionAndTeacherAndStudent_School_IdOrderByCreatedAtDesc(session, teacher, schoolId);
         }
 
         return records.stream()

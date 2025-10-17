@@ -4,6 +4,11 @@ import com.java.slms.dto.SubjectDto;
 import com.java.slms.dto.SubjectsBulkDto;
 import com.java.slms.payload.RestResponse;
 import com.java.slms.service.SubjectService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,12 +16,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/subjects")
@@ -30,16 +29,21 @@ public class SubjectController
 
     @Operation(
             summary = "Add a new subject",
-            description = "Creates a new subject for a class.",
+            description = "Creates a new subject for a class in the given school.",
+            parameters = {
+                    @Parameter(name = "schoolId", description = "School ID (injected from request)", required = true)
+            },
             responses = {
                     @ApiResponse(responseCode = "201", description = "Subject created successfully"),
                     @ApiResponse(responseCode = "400", description = "Invalid request or subject already exists", content = @Content)
             }
     )
     @PostMapping
-    public ResponseEntity<RestResponse<SubjectDto>> addSubject(@RequestBody SubjectDto subjectDto)
+    public ResponseEntity<RestResponse<SubjectDto>> addSubject(
+            @RequestBody SubjectDto subjectDto,
+            @RequestAttribute("schoolId") Long schoolId)
     {
-        SubjectDto created = subjectService.addSubject(subjectDto);
+        SubjectDto created = subjectService.addSubject(subjectDto, schoolId);
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 RestResponse.<SubjectDto>builder()
                         .data(created)
@@ -51,16 +55,21 @@ public class SubjectController
 
     @Operation(
             summary = "Add multiple subjects by class",
-            description = "Creates multiple subjects in bulk for a specific class.",
+            description = "Creates multiple subjects in bulk for a specific class in the given school.",
+            parameters = {
+                    @Parameter(name = "schoolId", description = "School ID (injected from request)", required = true)
+            },
             responses = {
                     @ApiResponse(responseCode = "201", description = "Subjects created successfully"),
                     @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content)
             }
     )
     @PostMapping("/multiple")
-    public ResponseEntity<RestResponse<List<SubjectDto>>> addSubjectsByClass(@RequestBody SubjectsBulkDto bulkDto)
+    public ResponseEntity<RestResponse<List<SubjectDto>>> addSubjectsByClass(
+            @RequestBody SubjectsBulkDto bulkDto,
+            @RequestAttribute("schoolId") Long schoolId)
     {
-        List<SubjectDto> created = subjectService.addSubjectsByClass(bulkDto);
+        List<SubjectDto> created = subjectService.addSubjectsByClass(bulkDto, schoolId);
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 RestResponse.<List<SubjectDto>>builder()
                         .data(created)
@@ -72,16 +81,20 @@ public class SubjectController
 
     @Operation(
             summary = "Get all subjects",
-            description = "Fetches all subjects across classes.",
+            description = "Fetches all subjects across classes in a given school.",
+            parameters = {
+                    @Parameter(name = "schoolId", description = "School ID (injected from request)", required = true)
+            },
             responses = {
                     @ApiResponse(responseCode = "200", description = "Subjects retrieved successfully"),
                     @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content)
             }
     )
     @GetMapping
-    public ResponseEntity<RestResponse<List<SubjectDto>>> getAllSubjects()
+    public ResponseEntity<RestResponse<List<SubjectDto>>> getAllSubjects(
+            @RequestAttribute("schoolId") Long schoolId)
     {
-        List<SubjectDto> list = subjectService.getAllSubjects();
+        List<SubjectDto> list = subjectService.getAllSubjects(schoolId);
         return ResponseEntity.ok(
                 RestResponse.<List<SubjectDto>>builder()
                         .data(list)
@@ -93,9 +106,10 @@ public class SubjectController
 
     @Operation(
             summary = "Get subject by ID",
-            description = "Fetches a particular subject by its ID.",
+            description = "Fetches a particular subject by its ID and school ID.",
             parameters = {
-                    @Parameter(name = "id", description = "ID of the subject", required = true)
+                    @Parameter(name = "id", description = "ID of the subject", required = true),
+                    @Parameter(name = "schoolId", description = "School ID (injected from request)", required = true)
             },
             responses = {
                     @ApiResponse(responseCode = "200", description = "Subject found successfully"),
@@ -104,9 +118,11 @@ public class SubjectController
     )
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_STUDENT')")
-    public ResponseEntity<RestResponse<SubjectDto>> getSubjectById(@PathVariable Long id)
+    public ResponseEntity<RestResponse<SubjectDto>> getSubjectById(
+            @PathVariable Long id,
+            @RequestAttribute("schoolId") Long schoolId)
     {
-        SubjectDto dto = subjectService.getSubjectById(id);
+        SubjectDto dto = subjectService.getSubjectById(id, schoolId);
         return ResponseEntity.ok(
                 RestResponse.<SubjectDto>builder()
                         .data(dto)
@@ -118,9 +134,10 @@ public class SubjectController
 
     @Operation(
             summary = "Get subjects by class ID",
-            description = "Fetches all subjects related to a specific class.",
+            description = "Fetches all subjects related to a specific class in the given school.",
             parameters = {
-                    @Parameter(name = "classId", description = "ID of the class", required = true)
+                    @Parameter(name = "classId", description = "ID of the class", required = true),
+                    @Parameter(name = "schoolId", description = "School ID (injected from request)", required = true)
             },
             responses = {
                     @ApiResponse(responseCode = "200", description = "Subjects fetched successfully"),
@@ -129,9 +146,11 @@ public class SubjectController
     )
     @GetMapping("/class/{classId}")
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_STUDENT')")
-    public ResponseEntity<RestResponse<List<SubjectDto>>> getSubjectsByClassId(@PathVariable Long classId)
+    public ResponseEntity<RestResponse<List<SubjectDto>>> getSubjectsByClassId(
+            @PathVariable Long classId,
+            @RequestAttribute("schoolId") Long schoolId)
     {
-        List<SubjectDto> subjectDtos = subjectService.getSubjectsByClassId(classId);
+        List<SubjectDto> subjectDtos = subjectService.getSubjectsByClassId(classId, schoolId);
 
         return ResponseEntity.ok(
                 RestResponse.<List<SubjectDto>>builder()
@@ -144,9 +163,10 @@ public class SubjectController
 
     @Operation(
             summary = "Update subject information",
-            description = "Updates subject details by subject ID.",
+            description = "Updates subject details by subject ID in the given school.",
             parameters = {
-                    @Parameter(name = "subjectId", description = "ID of the subject", required = true)
+                    @Parameter(name = "subjectId", description = "ID of the subject", required = true),
+                    @Parameter(name = "schoolId", description = "School ID (injected from request)", required = true)
             },
             responses = {
                     @ApiResponse(responseCode = "200", description = "Subject updated successfully"),
@@ -154,9 +174,12 @@ public class SubjectController
             }
     )
     @PutMapping("/{subjectId}")
-    public ResponseEntity<RestResponse<SubjectDto>> updateSubject(@PathVariable Long subjectId, @RequestBody SubjectDto subjectDto)
+    public ResponseEntity<RestResponse<SubjectDto>> updateSubject(
+            @PathVariable Long subjectId,
+            @RequestBody SubjectDto subjectDto,
+            @RequestAttribute("schoolId") Long schoolId)
     {
-        SubjectDto updated = subjectService.updateSubjectInfoById(subjectId, subjectDto);
+        SubjectDto updated = subjectService.updateSubjectInfoById(subjectId, subjectDto, schoolId);
         return ResponseEntity.ok(
                 RestResponse.<SubjectDto>builder()
                         .data(updated)
@@ -168,10 +191,11 @@ public class SubjectController
 
     @Operation(
             summary = "Delete subject",
-            description = "Deletes a subject by ID and class ID.",
+            description = "Deletes a subject by ID and class ID in the given school.",
             parameters = {
                     @Parameter(name = "subjectId", description = "ID of the subject", required = true),
-                    @Parameter(name = "classId", description = "ID of the class", required = true)
+                    @Parameter(name = "classId", description = "ID of the class", required = true),
+                    @Parameter(name = "schoolId", description = "School ID (injected from request)", required = true)
             },
             responses = {
                     @ApiResponse(responseCode = "200", description = "Subject deleted successfully"),
@@ -179,9 +203,11 @@ public class SubjectController
             }
     )
     @DeleteMapping("/subject/{subjectId}/class/{classId}")
-    public ResponseEntity<RestResponse<String>> deleteSubject(@PathVariable Long subjectId, @PathVariable Long classId)
+    public ResponseEntity<RestResponse<String>> deleteSubject(
+            @PathVariable Long subjectId,
+            @RequestAttribute("schoolId") Long schoolId)
     {
-        subjectService.deleteSubject(subjectId, classId);
+        subjectService.deleteSubject(subjectId, schoolId);
         return ResponseEntity.ok(
                 RestResponse.<String>builder()
                         .data(null)

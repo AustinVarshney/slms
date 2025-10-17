@@ -37,6 +37,9 @@ public class StudentQueryController
     @Operation(
             summary = "Raise a query to a teacher",
             description = "Allows a student to raise a query to the assigned teacher.",
+            parameters = {
+                    @Parameter(name = "schoolId", description = "School identifier", required = true)
+            },
             requestBody = @RequestBody(
                     description = "Query details submitted by student",
                     required = true,
@@ -50,11 +53,12 @@ public class StudentQueryController
     @PostMapping("/me")
     @PreAuthorize("hasRole('ROLE_STUDENT')")
     public ResponseEntity<RestResponse<StudentQueryResponse>> raiseQueryToTeacher(
-            @org.springframework.web.bind.annotation.RequestBody StudentQueryRequest studentQueryRequest
+            @org.springframework.web.bind.annotation.RequestBody StudentQueryRequest studentQueryRequest,
+            @RequestAttribute("schoolId") Long schoolId
     )
     {
         String panNumber = SecurityContextHolder.getContext().getAuthentication().getName();
-        StudentQueryResponse studentQueryResponse = studentQueryService.askQueryToTeacher(panNumber, studentQueryRequest);
+        StudentQueryResponse studentQueryResponse = studentQueryService.askQueryToTeacher(panNumber, studentQueryRequest, schoolId);
 
         return ResponseEntity.ok(RestResponse.<StudentQueryResponse>builder()
                 .data(studentQueryResponse)
@@ -67,7 +71,8 @@ public class StudentQueryController
             summary = "Get all queries by the logged-in student",
             description = "Fetches all queries raised by the authenticated student, optionally filtered by status.",
             parameters = {
-                    @Parameter(name = "status", description = "Filter queries by their status (e.g., PENDING, RESOLVED)", required = false)
+                    @Parameter(name = "status", description = "Filter queries by their status (e.g., PENDING, RESOLVED)", required = false),
+                    @Parameter(name = "schoolId", description = "School identifier", required = true)
             },
             responses = {
                     @ApiResponse(responseCode = "200", description = "Queries fetched successfully")
@@ -76,11 +81,12 @@ public class StudentQueryController
     @GetMapping("/me")
     @PreAuthorize("hasRole('ROLE_STUDENT')")
     public ResponseEntity<RestResponse<List<StudentQueryResponse>>> getAllQueriesByStudent(
-            @RequestParam(value = "status", required = false) QueryStatus status
+            @RequestParam(value = "status", required = false) QueryStatus status,
+            @RequestAttribute("schoolId") Long schoolId
     )
     {
         String panNumber = SecurityContextHolder.getContext().getAuthentication().getName();
-        List<StudentQueryResponse> queries = studentQueryService.getAllQueriesByStudent(panNumber, status);
+        List<StudentQueryResponse> queries = studentQueryService.getAllQueriesByStudent(panNumber, status, schoolId);
 
         return ResponseEntity.ok(RestResponse.<List<StudentQueryResponse>>builder()
                 .data(queries)
@@ -92,6 +98,9 @@ public class StudentQueryController
     @Operation(
             summary = "Respond to a student query",
             description = "Allows a teacher to respond to a specific query raised by a student.",
+            parameters = {
+                    @Parameter(name = "schoolId", description = "School identifier", required = true)
+            },
             requestBody = @RequestBody(
                     description = "Response details from the teacher",
                     required = true,
@@ -105,12 +114,13 @@ public class StudentQueryController
     @PutMapping("/respond")
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     public ResponseEntity<RestResponse<StudentQueryResponse>> respondToQuery(
-            @org.springframework.web.bind.annotation.RequestBody TeacherResponseDto responseRequest
+            @org.springframework.web.bind.annotation.RequestBody TeacherResponseDto responseRequest,
+            @RequestAttribute("schoolId") Long schoolId
     )
     {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        Teacher teacher = teacherService.getActiveTeacherByEmail(email);
-        StudentQueryResponse response = studentQueryService.respondToQuery(teacher.getId(), responseRequest);
+        Teacher teacher = teacherService.getActiveTeacherByEmail(email, schoolId);
+        StudentQueryResponse response = studentQueryService.respondToQuery(teacher.getId(), responseRequest, schoolId);
 
         return ResponseEntity.ok(RestResponse.<StudentQueryResponse>builder()
                 .data(response)
@@ -123,7 +133,8 @@ public class StudentQueryController
             summary = "Get all queries assigned to the logged-in teacher",
             description = "Fetches all student queries assigned to the authenticated teacher, optionally filtered by status.",
             parameters = {
-                    @Parameter(name = "status", description = "Filter queries by status", required = false)
+                    @Parameter(name = "status", description = "Filter queries by status", required = false),
+                    @Parameter(name = "schoolId", description = "School identifier", required = true)
             },
             responses = {
                     @ApiResponse(responseCode = "200", description = "Queries fetched successfully")
@@ -132,12 +143,13 @@ public class StudentQueryController
     @GetMapping("/teacher/queries")
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     public ResponseEntity<RestResponse<List<StudentQueryResponse>>> getAllQueriesAssignedToTeacher(
-            @RequestParam(value = "status", required = false) QueryStatus status
+            @RequestParam(value = "status", required = false) QueryStatus status,
+            @RequestAttribute("schoolId") Long schoolId
     )
     {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        Teacher teacher = teacherService.getActiveTeacherByEmail(email);
-        List<StudentQueryResponse> queries = studentQueryService.getAllQueriesAssignedToTeacher(teacher.getId(), status);
+        Teacher teacher = teacherService.getActiveTeacherByEmail(email, schoolId);
+        List<StudentQueryResponse> queries = studentQueryService.getAllQueriesAssignedToTeacher(teacher.getId(), status, schoolId);
 
         return ResponseEntity.ok(RestResponse.<List<StudentQueryResponse>>builder()
                 .data(queries)

@@ -5,8 +5,10 @@ import com.java.slms.dto.GalleryRequestDto;
 import com.java.slms.dto.GalleryResponseDto;
 import com.java.slms.exception.ResourceNotFoundException;
 import com.java.slms.model.Gallery;
+import com.java.slms.model.School;
 import com.java.slms.model.Session;
 import com.java.slms.repository.GalleryRepository;
+import com.java.slms.repository.SchoolRepository;
 import com.java.slms.repository.SessionRepository;
 import com.java.slms.service.GalleryService;
 import lombok.RequiredArgsConstructor;
@@ -23,83 +25,71 @@ public class GalleryServiceImpl implements GalleryService
     private final GalleryRepository galleryRepository;
     private final SessionRepository sessionRepository;
     private final ModelMapper modelMapper;
+    private final SchoolRepository schoolRepository;
 
     @Override
-    public GalleryResponseDto addGallery(GalleryRequestDto dto)
+    public GalleryResponseDto addGallery(GalleryRequestDto dto, Long schoolId)
     {
-        Session session = sessionRepository.findById(dto.getSessionId())
+        School school = schoolRepository.findById(schoolId).orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + schoolId));
+
+        Session session = sessionRepository.findBySessionIdAndSchoolId(dto.getSessionId(), schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Session not found with ID: " + dto.getSessionId()));
 
         Gallery gallery = modelMapper.map(dto, Gallery.class);
         gallery.setSession(session);
         gallery.setId(null);
+        gallery.setSchool(school);
         gallery = galleryRepository.save(gallery);
 
         return toResponseDto(gallery);
     }
 
     @Override
-    public List<GalleryResponseDto> getAllGalleryItems()
+    public List<GalleryResponseDto> getAllGalleryItems(Long schoolId)
     {
-        return galleryRepository.findAll()
+        return galleryRepository.findAllBySchoolId(schoolId)
                 .stream()
                 .map(this::toResponseDto)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public GalleryResponseDto getGalleryById(Long id)
+    public GalleryResponseDto getGalleryById(Long id, Long schoolId)
     {
-        Gallery gallery = galleryRepository.findById(id)
+        Gallery gallery = galleryRepository.findByIdAndSchoolId(id, schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Gallery item not found with ID: " + id));
         return toResponseDto(gallery);
     }
 
     @Override
-    public GalleryResponseDto updateGallery(Long id, GalleryRequestDto dto)
+    public void deleteGallery(Long id, Long schoolId)
     {
-        Gallery gallery = galleryRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Gallery item not found with ID: " + id));
-
-        Session session = sessionRepository.findById(dto.getSessionId())
-                .orElseThrow(() -> new ResourceNotFoundException("Session not found with ID: " + dto.getSessionId()));
-
-        gallery.setImage(dto.getImage());
-        gallery.setSession(session);
-        gallery = galleryRepository.save(gallery);
-
-        return toResponseDto(gallery);
-    }
-
-    @Override
-    public void deleteGallery(Long id)
-    {
-        Gallery gallery = galleryRepository.findById(id)
+        Gallery gallery = galleryRepository.findByIdAndSchoolId(id, schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Gallery item not found with ID: " + id));
         galleryRepository.delete(gallery);
     }
 
     @Override
-    public List<GalleryResponseDto> getGalleryItemsBySessionId(Long sessionId)
+    public List<GalleryResponseDto> getGalleryItemsBySessionId(Long sessionId, Long schoolId)
     {
-        Session session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Session not found with ID: " + sessionId));
-
-        return galleryRepository.findBySession_Id(sessionId)
+        return galleryRepository.findBySessionIdAndSchoolId(sessionId, schoolId)
                 .stream()
                 .map(this::toResponseDto)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<GalleryResponseDto> addBulkGalleryImages(BulkGalleryRequestDto dto)
+    public List<GalleryResponseDto> addBulkGalleryImages(BulkGalleryRequestDto dto, Long schoolId)
     {
-        Session session = sessionRepository.findById(dto.getSessionId())
+        Session session = sessionRepository.findBySessionIdAndSchoolId(dto.getSessionId(), schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Session not found with ID: " + dto.getSessionId()));
+
+        School school = schoolRepository.findById(schoolId).orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + schoolId));
 
         List<Gallery> galleries = dto.getImages().stream()
                 .map(image -> Gallery.builder()
                         .image(image)
+                        .school(school)
                         .session(session)
                         .build())
                 .collect(Collectors.toList());
@@ -118,6 +108,7 @@ public class GalleryServiceImpl implements GalleryService
                 .id(gallery.getId())
                 .image(gallery.getImage())
                 .sessionId(gallery.getSession().getId())
+                .schoolId(gallery.getSchool().getId())
                 .build();
     }
 }

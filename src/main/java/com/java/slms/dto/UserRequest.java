@@ -1,7 +1,10 @@
 package com.java.slms.dto;
 
 import com.java.slms.util.UserStatus;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDate;
 import java.util.Date;
@@ -20,6 +23,9 @@ public class UserRequest
     private String designation;
     private String contactNumber;
     private LocalDate joiningDate;
+    private Long schoolId;
+    private String schoolName;
+    private int allowedLeaves;
     private Long userId;
     private Date createdAt;
     private Date deletedAt;

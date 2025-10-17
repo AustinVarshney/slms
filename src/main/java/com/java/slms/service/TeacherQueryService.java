@@ -10,11 +10,11 @@ import java.util.List;
 
 public interface TeacherQueryService
 {
-    TeacherQueryResponse askQueryToAdmin(String teacherEmail, TeacherQueryRequest request);
+    TeacherQueryResponse askQueryToAdmin(String teacherEmail, TeacherQueryRequest request, Long schoolId);
 
-    List<TeacherQueryResponse> getAllQueriesByTeacher(String teacherEmail, QueryStatus status);
+    List<TeacherQueryResponse> getAllQueriesByTeacher(String teacherEmail, QueryStatus status, Long schoolId);
 
-    TeacherQueryResponse respondToTeacherQuery(Admin admin, AdminResponseDto responseRequest);
+    TeacherQueryResponse respondToTeacherQuery(Admin admin, AdminResponseDto responseRequest, Long schoolId);
 
-    List<TeacherQueryResponse> getAllQueriesAssignedToAdmin(Admin admin, QueryStatus status);
+    List<TeacherQueryResponse> getAllQueriesAssignedToAdmin(Admin admin, QueryStatus status, Long schoolId);
 }

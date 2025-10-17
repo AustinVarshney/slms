@@ -35,4 +35,8 @@ public class Session extends BaseEntity
     @JsonManagedReference
     private List<ClassEntity> classes;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "school_id")
+    private School school;
+
 }

@@ -1,6 +1,5 @@
 package com.java.slms.dto;
 
-import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -18,7 +17,6 @@ public class StaffRegisterRequest
     private String qualification;
     private String salaryGrade;
     private String contactNumber;
-    private int allowedLeaves;
     private LocalDate joiningDate;
     private Set<String> roles;
     private String password;

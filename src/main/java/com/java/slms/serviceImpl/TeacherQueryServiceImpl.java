@@ -6,15 +6,15 @@ import com.java.slms.dto.TeacherQueryResponse;
 import com.java.slms.exception.ResourceNotFoundException;
 import com.java.slms.exception.WrongArgumentException;
 import com.java.slms.model.Admin;
+import com.java.slms.model.School;
 import com.java.slms.model.Teacher;
 import com.java.slms.model.TeacherQuery;
 import com.java.slms.repository.AdminRepository;
+import com.java.slms.repository.SchoolRepository;
 import com.java.slms.repository.TeacherQueryRepository;
 import com.java.slms.repository.TeacherRepository;
 import com.java.slms.service.TeacherQueryService;
-import com.java.slms.util.ConfigUtil;
 import com.java.slms.util.QueryStatus;
-import com.java.slms.util.UserStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -35,48 +35,51 @@ public class TeacherQueryServiceImpl implements TeacherQueryService
     private final TeacherRepository teacherRepository;
     private final AdminRepository adminRepository;
     private final ModelMapper modelMapper;
-
-    private static final String ADMIN_EMAIL = "admin.email";
+    private final SchoolRepository schoolRepository;
 
     @Override
-    public TeacherQueryResponse askQueryToAdmin(String teacherEmail, TeacherQueryRequest request)
+    public TeacherQueryResponse askQueryToAdmin(String teacherEmail, TeacherQueryRequest request, Long schoolId)
     {
-        Teacher teacher = teacherRepository.findByEmailIgnoreCaseAndStatus(teacherEmail, UserStatus.ACTIVE)
-                .orElseThrow(() -> new ResourceNotFoundException("Teacher not found with email: " + teacherEmail));
+        Teacher teacher = teacherRepository.findByEmailIgnoreCaseAndSchoolIdAndStatusActive(teacherEmail, schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("Active Teacher not found with email: " + teacherEmail));
 
-        Admin admin = adminRepository.findByEmailIgnoreCase(ConfigUtil.getRequired(ADMIN_EMAIL))
+        Admin admin = adminRepository.findBySchoolId(schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Admin not found"));
+
+        School school = schoolRepository.findById(schoolId).orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + schoolId));
 
         TeacherQuery teacherQuery = modelMapper.map(request, TeacherQuery.class);
         teacherQuery.setTeacher(teacher);
         teacherQuery.setAdmin(admin);
         teacherQuery.setStatus(QueryStatus.OPEN);
         teacherQuery.setId(null);
+        teacherQuery.setSchool(school);
 
         TeacherQuery savedQuery = teacherQueryRepository.save(teacherQuery);
 
         TeacherQueryResponse response = modelMapper.map(savedQuery, TeacherQueryResponse.class);
         response.setCreatedAt(savedQuery.getCreatedAt().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime());
         response.setAdminId(savedQuery.getAdmin().getId());
+        response.setSchoolId(schoolId);
         response.setAdminName(savedQuery.getAdmin().getName());
         return response;
     }
 
     @Override
-    public List<TeacherQueryResponse> getAllQueriesByTeacher(String teacherEmail, QueryStatus status)
+    public List<TeacherQueryResponse> getAllQueriesByTeacher(String teacherEmail, QueryStatus status, Long schoolId)
     {
-        Teacher teacher = teacherRepository.findByEmailIgnoreCaseAndStatus(teacherEmail, UserStatus.ACTIVE)
-                .orElseThrow(() -> new ResourceNotFoundException("Teacher not found with email: " + teacherEmail));
+        Teacher teacher = teacherRepository.findByEmailIgnoreCaseAndSchoolIdAndStatusActive(teacherEmail, schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("Active Teacher not found with email: " + teacherEmail));
 
         List<TeacherQuery> queries;
 
         if (status != null)
         {
-            queries = teacherQueryRepository.findByTeacherAndStatus(teacher, status);
+            queries = teacherQueryRepository.findByTeacherAndStatusAndSchoolId(teacher, status, schoolId);
         }
         else
         {
-            queries = teacherQueryRepository.findByTeacher(teacher);
+            queries = teacherQueryRepository.findByTeacherAndSchoolId(teacher, schoolId);
         }
 
         return queries.stream().map(query ->
@@ -84,16 +87,16 @@ public class TeacherQueryServiceImpl implements TeacherQueryService
             TeacherQueryResponse response = modelMapper.map(query, TeacherQueryResponse.class);
             response.setCreatedAt(query.getCreatedAt().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime());
             response.setAdminId(query.getAdmin().getId());
+            response.setSchoolId(schoolId);
             response.setAdminName(query.getAdmin().getName());
             return response;
         }).toList();
     }
 
     @Override
-    public TeacherQueryResponse respondToTeacherQuery(Admin admin, AdminResponseDto responseRequest)
+    public TeacherQueryResponse respondToTeacherQuery(Admin admin, AdminResponseDto responseRequest, Long schoolId)
     {
-        // Fetch Query
-        TeacherQuery query = teacherQueryRepository.findById(responseRequest.getQueryId())
+        TeacherQuery query = teacherQueryRepository.findByIdAndSchoolId(responseRequest.getQueryId(), schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Query not found with ID: " + responseRequest.getQueryId()));
 
         if (!query.getAdmin().getId().equals(admin.getId()))
@@ -116,22 +119,23 @@ public class TeacherQueryServiceImpl implements TeacherQueryService
         response.setCreatedAt(updatedQuery.getCreatedAt().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime());
         response.setAdminId(updatedQuery.getAdmin().getId());
         response.setAdminName(updatedQuery.getAdmin().getName());
+        response.setSchoolId(schoolId);
 
         return response;
     }
 
     @Override
-    public List<TeacherQueryResponse> getAllQueriesAssignedToAdmin(Admin admin, QueryStatus status)
+    public List<TeacherQueryResponse> getAllQueriesAssignedToAdmin(Admin admin, QueryStatus status, Long schoolId)
     {
         List<TeacherQuery> queries;
 
         if (status != null)
         {
-            queries = teacherQueryRepository.findByAdminAndStatus(admin, status);
+            queries = teacherQueryRepository.findByAdminAndStatusAndSchoolId(admin, status, schoolId);
         }
         else
         {
-            queries = teacherQueryRepository.findByAdmin(admin);
+            queries = teacherQueryRepository.findByAdminAndSchoolId(admin, schoolId);
         }
 
         return queries.stream().map(query ->
@@ -140,7 +144,9 @@ public class TeacherQueryServiceImpl implements TeacherQueryService
             response.setCreatedAt(query.getCreatedAt().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime());
             response.setAdminId(query.getAdmin().getId());
             response.setAdminName(query.getAdmin().getName());
+            response.setSchoolId(schoolId);
             return response;
         }).toList();
     }
+
 }

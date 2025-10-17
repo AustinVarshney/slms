@@ -33,10 +33,6 @@ public class Teacher extends BaseEntity
     @Column(name = "status")
     private UserStatus status;
 
-
-//    @ManyToMany(mappedBy = "teachers", fetch = FetchType.LAZY)
-//    private List<ClassEntity> classes;
-
     @OneToMany(mappedBy = "teacher", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private List<Subject> subjects;
@@ -44,5 +40,9 @@ public class Teacher extends BaseEntity
     @OneToOne
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "school_id")
+    private School school;
 
 }

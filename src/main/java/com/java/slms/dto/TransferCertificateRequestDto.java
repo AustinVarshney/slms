@@ -23,5 +23,6 @@ public class TransferCertificateRequestDto
     private String sessionName;
     private Long classId;
     private String className;
+    private Long schoolId;
 
 }

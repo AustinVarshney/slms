@@ -31,7 +31,7 @@ public class GalleryController
 
     @Operation(
             summary = "Add new gallery item",
-            description = "Creates a new gallery image for a specific session.",
+            description = "Creates a new gallery image for a specific session and school.",
             responses = {
                     @ApiResponse(responseCode = "201", description = "Gallery item created successfully"),
                     @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content)
@@ -39,10 +39,13 @@ public class GalleryController
     )
     @PostMapping
     @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public ResponseEntity<RestResponse<GalleryResponseDto>> addGallery(@RequestBody GalleryRequestDto dto)
+    public ResponseEntity<RestResponse<GalleryResponseDto>> addGallery(
+            @RequestAttribute("schoolId") Long schoolId,
+            @RequestBody GalleryRequestDto dto)
     {
-        log.info("Creating new gallery item for session ID: {}", dto.getSessionId());
-        GalleryResponseDto created = galleryService.addGallery(dto);
+
+        log.info("Creating new gallery item for session ID: {} and schoolId: {}", dto.getSessionId(), schoolId);
+        GalleryResponseDto created = galleryService.addGallery(dto, schoolId);
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 RestResponse.<GalleryResponseDto>builder()
                         .data(created)
@@ -54,7 +57,7 @@ public class GalleryController
 
     @Operation(
             summary = "Get all gallery items (optionally filtered by session ID)",
-            description = "Retrieves all gallery items. If a sessionId is provided, filters gallery items by that session.",
+            description = "Retrieves all gallery items for a school. If a sessionId is provided, filters gallery items by that session.",
             parameters = {
                     @Parameter(name = "sessionId", description = "ID of the session to filter gallery items", required = false)
             },
@@ -66,16 +69,17 @@ public class GalleryController
     @GetMapping
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_STUDENT', 'ROLE_NON_TEACHING_STAFF')")
     public ResponseEntity<RestResponse<List<GalleryResponseDto>>> getAllGalleryItems(
-            @RequestParam(required = false) Long sessionId
-    )
+            @RequestAttribute("schoolId") Long schoolId,
+            @RequestParam(required = false) Long sessionId)
     {
+
         log.info(sessionId != null
-                ? "Fetching gallery items for session ID: {}"
-                : "Fetching all gallery items", sessionId);
+                ? "Fetching gallery items for session ID: {} and schoolId: {}"
+                : "Fetching all gallery items for schoolId: {}", sessionId, schoolId);
 
         List<GalleryResponseDto> list = (sessionId != null)
-                ? galleryService.getGalleryItemsBySessionId(sessionId)
-                : galleryService.getAllGalleryItems();
+                ? galleryService.getGalleryItemsBySessionId(sessionId, schoolId)
+                : galleryService.getAllGalleryItems(schoolId);
 
         return ResponseEntity.ok(
                 RestResponse.<List<GalleryResponseDto>>builder()
@@ -90,7 +94,7 @@ public class GalleryController
 
     @Operation(
             summary = "Get gallery item by ID",
-            description = "Fetches a single gallery item using its ID.",
+            description = "Fetches a single gallery item using its ID and schoolId.",
             parameters = {
                     @Parameter(name = "id", description = "ID of the gallery item", required = true)
             },
@@ -101,10 +105,13 @@ public class GalleryController
     )
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_STUDENT', 'ROLE_NON_TEACHING_STAFF')")
-    public ResponseEntity<RestResponse<GalleryResponseDto>> getGalleryById(@PathVariable Long id)
+    public ResponseEntity<RestResponse<GalleryResponseDto>> getGalleryById(
+            @RequestAttribute("schoolId") Long schoolId,
+            @PathVariable Long id)
     {
-        log.info("Fetching gallery item with ID: {}", id);
-        GalleryResponseDto dto = galleryService.getGalleryById(id);
+
+        log.info("Fetching gallery item with ID: {} and schoolId: {}", id, schoolId);
+        GalleryResponseDto dto = galleryService.getGalleryById(id, schoolId);
         return ResponseEntity.ok(
                 RestResponse.<GalleryResponseDto>builder()
                         .data(dto)
@@ -115,37 +122,8 @@ public class GalleryController
     }
 
     @Operation(
-            summary = "Update gallery item",
-            description = "Updates an existing gallery image by ID.",
-            parameters = {
-                    @Parameter(name = "id", description = "ID of the gallery item", required = true)
-            },
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "Gallery item updated successfully"),
-                    @ApiResponse(responseCode = "400", description = "Invalid request or gallery item not found", content = @Content)
-            }
-    )
-    @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public ResponseEntity<RestResponse<GalleryResponseDto>> updateGallery(@PathVariable Long id, @RequestBody GalleryRequestDto dto)
-    {
-        log.info("Updating gallery item with ID: {}", id);
-        GalleryResponseDto updated = galleryService.updateGallery(id, dto);
-        return ResponseEntity.ok(
-                RestResponse.<GalleryResponseDto>builder()
-                        .data(updated)
-                        .message("Gallery item updated")
-                        .status(HttpStatus.OK.value())
-                        .build()
-        );
-    }
-
-    @Operation(
             summary = "Delete gallery item",
-            description = "Deletes a gallery image by ID.",
-            parameters = {
-                    @Parameter(name = "id", description = "ID of the gallery item", required = true)
-            },
+            description = "Deletes a gallery image by ID and schoolId.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "Gallery item deleted successfully"),
                     @ApiResponse(responseCode = "404", description = "Gallery item not found", content = @Content)
@@ -153,10 +131,13 @@ public class GalleryController
     )
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public ResponseEntity<RestResponse<String>> deleteGallery(@PathVariable Long id)
+    public ResponseEntity<RestResponse<String>> deleteGallery(
+            @RequestAttribute("schoolId") Long schoolId,
+            @PathVariable Long id)
     {
-        log.info("Deleting gallery item with ID: {}", id);
-        galleryService.deleteGallery(id);
+
+        log.info("Deleting gallery item with ID: {} and schoolId: {}", id, schoolId);
+        galleryService.deleteGallery(id, schoolId);
         return ResponseEntity.ok(
                 RestResponse.<String>builder()
                         .data(null)
@@ -168,7 +149,7 @@ public class GalleryController
 
     @Operation(
             summary = "Add multiple gallery images for a session",
-            description = "Adds multiple image entries under a given session ID.",
+            description = "Adds multiple image entries under a given session ID and school.",
             responses = {
                     @ApiResponse(responseCode = "201", description = "Gallery items created successfully"),
                     @ApiResponse(responseCode = "404", description = "Session not found", content = @Content)
@@ -177,11 +158,12 @@ public class GalleryController
     @PostMapping("/bulk")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<RestResponse<List<GalleryResponseDto>>> addBulkGalleryImages(
-            @RequestBody BulkGalleryRequestDto dto
-    )
+            @RequestAttribute("schoolId") Long schoolId,
+            @RequestBody BulkGalleryRequestDto dto)
     {
-        log.info("Adding bulk gallery images for session ID: {}", dto.getSessionId());
-        List<GalleryResponseDto> created = galleryService.addBulkGalleryImages(dto);
+
+        log.info("Adding bulk gallery images for session ID: {} and schoolId: {}", dto.getSessionId(), schoolId);
+        List<GalleryResponseDto> created = galleryService.addBulkGalleryImages(dto, schoolId);
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 RestResponse.<List<GalleryResponseDto>>builder()
                         .data(created)
@@ -190,6 +172,4 @@ public class GalleryController
                         .build()
         );
     }
-
-
 }

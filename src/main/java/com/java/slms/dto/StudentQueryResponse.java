@@ -16,6 +16,7 @@ public class StudentQueryResponse
     private String content;
     private String response;
     private QueryStatus status;
+    private Long schoolId;
     private LocalDateTime createdAt;
     private LocalDateTime respondedAt;
 }

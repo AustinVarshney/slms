@@ -52,11 +52,12 @@ public class TeacherQueryController
     @PostMapping("/me")
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     public ResponseEntity<RestResponse<TeacherQueryResponse>> raiseQueryToAdmin(
-            @org.springframework.web.bind.annotation.RequestBody TeacherQueryRequest request
+            @org.springframework.web.bind.annotation.RequestBody TeacherQueryRequest request,
+            @RequestAttribute("schoolId") Long schoolId
     )
     {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        TeacherQueryResponse response = teacherQueryService.askQueryToAdmin(email, request);
+        TeacherQueryResponse response = teacherQueryService.askQueryToAdmin(email, request, schoolId);
 
         return ResponseEntity.ok(RestResponse.<TeacherQueryResponse>builder()
                 .data(response)
@@ -78,11 +79,12 @@ public class TeacherQueryController
     @GetMapping("/me")
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     public ResponseEntity<RestResponse<List<TeacherQueryResponse>>> getMyQueries(
-            @RequestParam(value = "status", required = false) QueryStatus status
+            @RequestParam(value = "status", required = false) QueryStatus status,
+            @RequestAttribute("schoolId") Long schoolId
     )
     {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        List<TeacherQueryResponse> queries = teacherQueryService.getAllQueriesByTeacher(email, status);
+        List<TeacherQueryResponse> queries = teacherQueryService.getAllQueriesByTeacher(email, status, schoolId);
 
         return ResponseEntity.ok(RestResponse.<List<TeacherQueryResponse>>builder()
                 .data(queries)
@@ -107,13 +109,14 @@ public class TeacherQueryController
     @PutMapping("/respond")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<RestResponse<TeacherQueryResponse>> respondToQuery(
-            @org.springframework.web.bind.annotation.RequestBody AdminResponseDto responseRequest
+            @org.springframework.web.bind.annotation.RequestBody AdminResponseDto responseRequest,
+            @RequestAttribute("schoolId") Long schoolId
     )
     {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        Admin admin = adminService.getActiveAdminByEmail(email);
+        Admin admin = adminService.getAdminInfo(email, schoolId);
 
-        TeacherQueryResponse response = teacherQueryService.respondToTeacherQuery(admin, responseRequest);
+        TeacherQueryResponse response = teacherQueryService.respondToTeacherQuery(admin, responseRequest, schoolId);
 
         return ResponseEntity.ok(RestResponse.<TeacherQueryResponse>builder()
                 .data(response)
@@ -135,13 +138,14 @@ public class TeacherQueryController
     @GetMapping("/admin/queries")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<RestResponse<List<TeacherQueryResponse>>> getAllQueriesAssignedToAdmin(
-            @RequestParam(value = "status", required = false) QueryStatus status
+            @RequestParam(value = "status", required = false) QueryStatus status,
+            @RequestAttribute("schoolId") Long schoolId
     )
     {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        Admin admin = adminService.getActiveAdminByEmail(email);
+        Admin admin = adminService.getAdminInfo(email, schoolId);
 
-        List<TeacherQueryResponse> queries = teacherQueryService.getAllQueriesAssignedToAdmin(admin, status);
+        List<TeacherQueryResponse> queries = teacherQueryService.getAllQueriesAssignedToAdmin(admin, status, schoolId);
 
         return ResponseEntity.ok(RestResponse.<List<TeacherQueryResponse>>builder()
                 .data(queries)

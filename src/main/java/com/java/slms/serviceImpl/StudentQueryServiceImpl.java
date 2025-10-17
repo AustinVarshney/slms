@@ -5,15 +5,15 @@ import com.java.slms.dto.StudentQueryResponse;
 import com.java.slms.dto.TeacherResponseDto;
 import com.java.slms.exception.ResourceNotFoundException;
 import com.java.slms.exception.WrongArgumentException;
+import com.java.slms.model.School;
 import com.java.slms.model.Student;
 import com.java.slms.model.StudentQuery;
 import com.java.slms.model.Teacher;
+import com.java.slms.repository.SchoolRepository;
 import com.java.slms.repository.StudentQueryRepository;
 import com.java.slms.repository.StudentRepository;
 import com.java.slms.repository.TeacherRepository;
 import com.java.slms.service.StudentQueryService;
-import com.java.slms.util.EntityFetcher;
-import com.java.slms.util.EntityNames;
 import com.java.slms.util.QueryStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,12 +34,17 @@ public class StudentQueryServiceImpl implements StudentQueryService
     private final StudentRepository studentRepository;
     private final TeacherRepository teacherRepository;
     private final ModelMapper modelMapper;
+    private final SchoolRepository schoolRepository;
 
     @Override
-    public StudentQueryResponse askQueryToTeacher(String pan, StudentQueryRequest studentQueryRequest)
+    public StudentQueryResponse askQueryToTeacher(String pan, StudentQueryRequest studentQueryRequest, Long schoolId)
     {
-        Student student = EntityFetcher.fetchByIdOrThrow(studentRepository, pan, EntityNames.STUDENT);
-        Teacher teacher = teacherRepository.findById(studentQueryRequest.getTeacherId())
+        School school = schoolRepository.findById(schoolId).orElseThrow(() -> new ResourceNotFoundException("School not found with Id : " + schoolId));
+
+        Student student = studentRepository.findByPanNumberIgnoreCaseAndSchool_IdAndStatusActive(pan, schoolId)
+                .orElseThrow(() -> new RuntimeException("Student not found with pan: " + pan));
+
+        Teacher teacher = teacherRepository.findByTeacherIdAndSchoolIdAndStatusActive(studentQueryRequest.getTeacherId(), schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Teacher not present with id " + studentQueryRequest.getTeacherId()));
 
         StudentQuery studentQuery = modelMapper.map(studentQueryRequest, StudentQuery.class);
@@ -47,6 +52,7 @@ public class StudentQueryServiceImpl implements StudentQueryService
         studentQuery.setTeacher(teacher);
         studentQuery.setStatus(QueryStatus.OPEN);
         studentQuery.setId(null);
+        studentQuery.setSchool(school);
         StudentQuery raisedQuery = studentQueryRepository.save(studentQuery);
         StudentQueryResponse studentQueryResponse = modelMapper.map(raisedQuery, StudentQueryResponse.class);
         studentQueryResponse.setCreatedAt(raisedQuery.getCreatedAt().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime());
@@ -56,19 +62,20 @@ public class StudentQueryServiceImpl implements StudentQueryService
     }
 
     @Override
-    public List<StudentQueryResponse> getAllQueriesByStudent(String pan, QueryStatus status)
+    public List<StudentQueryResponse> getAllQueriesByStudent(String pan, QueryStatus status, Long schoolId)
     {
-        Student student = EntityFetcher.fetchByIdOrThrow(studentRepository, pan, EntityNames.STUDENT);
+        Student student = studentRepository.findByPanNumberIgnoreCaseAndSchool_IdAndStatusActive(pan, schoolId)
+                .orElseThrow(() -> new RuntimeException("Student not found with pan: " + pan));
 
         List<StudentQuery> queries;
 
         if (status != null)
         {
-            queries = studentQueryRepository.findByStudentAndStatus(student, status);
+            queries = studentQueryRepository.findByStudentAndStatusAndSchoolId(student, status, schoolId);
         }
         else
         {
-            queries = studentQueryRepository.findByStudent(student);
+            queries = studentQueryRepository.findByStudentAndSchoolId(student, schoolId);
         }
 
         return queries.stream().map(query ->
@@ -77,17 +84,18 @@ public class StudentQueryServiceImpl implements StudentQueryService
             response.setCreatedAt(query.getCreatedAt().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime());
             response.setTeacherId(query.getTeacher().getId());
             response.setTeacherName(query.getTeacher().getName());
+            response.setSchoolId(schoolId);
             return response;
         }).toList();
     }
 
     @Override
-    public StudentQueryResponse respondToQuery(Long teacherId, TeacherResponseDto responseRequest)
+    public StudentQueryResponse respondToQuery(Long teacherId, TeacherResponseDto responseRequest, Long schoolId)
     {
-        Teacher teacher = teacherRepository.findById(teacherId)
+        Teacher teacher = teacherRepository.findByTeacherIdAndSchoolId(teacherId, schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Teacher not present with id " + teacherId));
 
-        StudentQuery query = studentQueryRepository.findById(responseRequest.getQueryId())
+        StudentQuery query = studentQueryRepository.findByIdAndSchoolId(responseRequest.getQueryId(), schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Query not found with ID: " + responseRequest.getQueryId()));
 
         if (!query.getTeacher().getId().equals(teacher.getId()))
@@ -114,19 +122,18 @@ public class StudentQueryServiceImpl implements StudentQueryService
     }
 
     @Override
-    public List<StudentQueryResponse> getAllQueriesAssignedToTeacher(Long teacherId, QueryStatus status)
+    public List<StudentQueryResponse> getAllQueriesAssignedToTeacher(Long teacherId, QueryStatus status, Long schoolId)
     {
-        Teacher teacher = teacherRepository.findById(teacherId)
+        Teacher teacher = teacherRepository.findByTeacherIdAndSchoolId(teacherId, schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Teacher not present with id " + teacherId));
         List<StudentQuery> queries;
-
         if (status != null)
         {
-            queries = studentQueryRepository.findByTeacherAndStatus(teacher, status);
+            queries = studentQueryRepository.findByTeacherAndStatusAndSchoolId(teacher, status, schoolId);
         }
         else
         {
-            queries = studentQueryRepository.findByTeacher(teacher);
+            queries = studentQueryRepository.findByTeacherAndSchoolId(teacher, schoolId);
         }
 
         return queries.stream().map(query ->

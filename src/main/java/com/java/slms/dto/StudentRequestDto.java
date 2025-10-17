@@ -47,6 +47,7 @@ public class StudentRequestDto
     private Long userId;
     private Long classId;
     private String className;
+    private Long schoolId;
 
     private Date createdAt;
     private Date deletedAt;

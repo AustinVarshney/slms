@@ -8,14 +8,14 @@ import java.util.List;
 
 public interface ClassEntityService
 {
-    ClassResponseDto addClass(ClassRequestDto classRequestDto);
+    ClassResponseDto addClass(Long schoolId, ClassRequestDto classRequestDto);
 
-    List<ClassInfoResponse> getAllClassInActiveSession();
+    List<ClassInfoResponse> getAllClassInActiveSession(Long schoolId);
 
-    ClassInfoResponse getClassByClassIdAndSessionId(Long classId, Long sessionId);
+    ClassInfoResponse getClassByClassIdAndSessionId(Long schoolId, Long classId);
 
-    void deleteClassByIdAndSessionId(Long id, Long sessionId);
+    void deleteClassByIdAndSessionId(Long schoolId, Long id, Long sessionId);
 
-    ClassInfoResponse updateClassNameById(Long id, ClassRequestDto classRequestDto);
+    ClassInfoResponse updateClassNameById(Long schoolId, Long id, ClassRequestDto classRequestDto);
 
 }

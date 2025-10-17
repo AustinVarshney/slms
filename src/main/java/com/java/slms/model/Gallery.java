@@ -19,4 +19,8 @@ public class Gallery extends BaseEntity
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "session_id")
     private Session session;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "school_id")
+    private School school;
 }

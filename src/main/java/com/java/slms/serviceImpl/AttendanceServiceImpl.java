@@ -4,6 +4,7 @@ import com.java.slms.dto.*;
 import com.java.slms.exception.ResourceNotFoundException;
 import com.java.slms.exception.WrongArgumentException;
 import com.java.slms.model.Attendance;
+import com.java.slms.model.ClassEntity;
 import com.java.slms.model.Session;
 import com.java.slms.model.Student;
 import com.java.slms.repository.AttendanceRepository;
@@ -40,7 +41,7 @@ public class AttendanceServiceImpl implements AttendanceService
 
     @Override
     @Transactional
-    public void markTodaysAttendance(AttendanceDto attendanceDto)
+    public void markTodaysAttendance(AttendanceDto attendanceDto, Long schoolId)
     {
         LocalDate today = LocalDate.now();
         LocalDateTime dayStart = today.atStartOfDay();
@@ -58,11 +59,8 @@ public class AttendanceServiceImpl implements AttendanceService
             throw new WrongArgumentException("Class ID must be provided");
         }
 
-        Session activeSession = sessionRepository.findByActiveTrue()
-                .orElseThrow(() -> new ResourceNotFoundException("No active session found"));
-
-        boolean classBelongsToSession = classEntityRepository.existsByIdAndSessionId(classId, activeSession.getId());
-        if (!classBelongsToSession)
+        Optional<ClassEntity> classBelongsToSession = classEntityRepository.findByIdAndSchoolIdAndSessionActive(classId, schoolId);
+        if (classBelongsToSession.isEmpty())
         {
             throw new WrongArgumentException("Class ID " + classId + " does not belong to the active session");
         }
@@ -72,7 +70,8 @@ public class AttendanceServiceImpl implements AttendanceService
                 .map(StudentAttendance::getPanNumber)
                 .collect(Collectors.toSet());
 
-        List<Student> students = studentRepository.findAllById(panNumbers);
+        List<Student> students = studentService.getStudentsBySchoolIdAndPanNumbers(schoolId, new ArrayList<>(panNumbers));
+        Session activeSession = sessionRepository.findBySchoolIdAndActiveTrue(schoolId).orElseThrow(() -> new ResourceNotFoundException("No active session found"));
 
         Map<String, Student> studentMap = students.stream()
                 .collect(Collectors.toMap(Student::getPanNumber, s -> s));
@@ -106,7 +105,7 @@ public class AttendanceServiceImpl implements AttendanceService
                 throw new WrongArgumentException("Student with PAN '" + panNumber + "' does not belong to class ID " + classId);
             }
 
-            Optional<Attendance> existingAttendanceOpt = attendanceRepository.findByStudentAndDateBetween(student, dayStart, dayEnd);
+            Optional<Attendance> existingAttendanceOpt = attendanceRepository.findByStudentAndDateBetweenAndSchoolId(student, dayStart, dayEnd, schoolId);
 
             if (existingAttendanceOpt.isPresent())
             {
@@ -126,49 +125,42 @@ public class AttendanceServiceImpl implements AttendanceService
 
     @Override
     @Transactional
-    public AttendanceUpdateResult updateAttendanceForAdmin(AttendanceDto attendanceDto, LocalDate attendanceDate)
+    public AttendanceUpdateResult updateAttendanceForAdmin(AttendanceDto attendanceDto, LocalDate attendanceDate, Long schoolId)
     {
         AttendanceUpdateResult result = new AttendanceUpdateResult();
 
-        Session activeSession = sessionRepository.findByActiveTrue()
+        Session activeSession = sessionRepository.findBySchoolIdAndActiveTrue(schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("No active session found"));
 
         if (attendanceDate.isBefore(activeSession.getStartDate()) || attendanceDate.isAfter(activeSession.getEndDate()))
         {
-            throw new IllegalArgumentException("Attendance date " + attendanceDate + " is outside the active session period.");
+            throw new WrongArgumentException("Attendance date " + attendanceDate + " is outside the active session period.");
         }
 
         if (attendanceDto.getStudentAttendances() == null || attendanceDto.getStudentAttendances().isEmpty())
         {
-            throw new IllegalArgumentException("Student attendances must be provided");
+            throw new WrongArgumentException("Student attendances must be provided");
         }
 
         for (StudentAttendance sa : attendanceDto.getStudentAttendances())
         {
             String panNumber = sa.getPanNumber();
 
-            Optional<Student> fetchedStudent = studentRepository.findById(panNumber);
+            Optional<Student> fetchedStudent = studentRepository.findByPanNumberIgnoreCaseAndSchool_IdAndStatusActive(panNumber, schoolId);
 
             if (fetchedStudent.isEmpty())
             {
-                log.warn("Student with PAN '{}' not found. Skipping attendance update.", panNumber);
+                log.warn("Active Student with PAN '{}' not found. Skipping attendance update.", panNumber);
                 result.getInvalidPanNumbers().add(panNumber);
                 continue;
             }
 
             Student student = fetchedStudent.get();
 
-            if (student.getStatus().equals(UserStatus.INACTIVE) || student.getStatus().equals(UserStatus.GRADUATED))
-            {
-                log.warn("Student with PAN '{}' is inactive or graduated. Skipping attendance update.", panNumber);
-                result.getInvalidPanNumbers().add(panNumber);
-                continue;
-            }
-
             LocalDateTime dayStart = attendanceDate.atStartOfDay();
             LocalDateTime dayEnd = attendanceDate.plusDays(1).atStartOfDay();
 
-            Optional<Attendance> attendanceOpt = attendanceRepository.findByStudentAndDateBetween(student, dayStart, dayEnd);
+            Optional<Attendance> attendanceOpt = attendanceRepository.findByStudentAndDateBetweenAndSchoolId(student, dayStart, dayEnd, schoolId);
 
             if (attendanceOpt.isEmpty())
             {
@@ -199,10 +191,10 @@ public class AttendanceServiceImpl implements AttendanceService
     }
 
     @Override
-    public List<AttendanceInfoDto> getAllAttendanceByPanAndSessionId(String panNumber, Long sessionId, FeeMonth month)
+    public List<AttendanceInfoDto> getAllAttendanceByPanAndSessionId(String panNumber, Long sessionId, FeeMonth month, Long schoolId)
     {
         // Fetch session for date range filtering
-        Session session = sessionRepository.findById(sessionId)
+        Session session = sessionRepository.findBySessionIdAndSchoolId(sessionId, schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Session not found with id: " + sessionId));
 
         LocalDateTime sessionStart = session.getStartDate().atStartOfDay();
@@ -215,14 +207,14 @@ public class AttendanceServiceImpl implements AttendanceService
         if (monthNumber != null)
         {
             // Repository method with date range and month filter (you'll need to implement this)
-            attendances = attendanceRepository.findByStudent_PanNumberAndSession_IdAndMonthWithinSession(
-                    panNumber, sessionId, sessionStart, sessionEnd, monthNumber);
+            attendances = attendanceRepository.findByPanNumberAndSessionIdAndMonthWithinSessionAndSchoolId(
+                    panNumber, sessionId, sessionStart, sessionEnd, monthNumber, schoolId);
         }
         else
         {
             // Repository method with date range only
-            attendances = attendanceRepository.findByStudent_PanNumberAndSession_IdWithinSession(
-                    panNumber, sessionId, sessionStart, sessionEnd);
+            attendances = attendanceRepository.findByPanNumberAndSessionIdWithinSessionAndSchoolId(
+                    panNumber, sessionId, sessionStart, sessionEnd, schoolId);
         }
 
         if (attendances.isEmpty())
@@ -283,9 +275,9 @@ public class AttendanceServiceImpl implements AttendanceService
     }
 
     @Override
-    public List<AttendanceByClassDto> getAttendanceByClassAndSession(Long classId, Long sessionId, FeeMonth month)
+    public List<AttendanceByClassDto> getAttendanceByClassAndSession(Long classId, Long sessionId, FeeMonth month, Long schoolId)
     {
-        Session session = sessionRepository.findById(sessionId)
+        Session session = sessionRepository.findBySessionIdAndSchoolId(sessionId, schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Session not found with id: " + sessionId));
 
         LocalDateTime sessionStart = session.getStartDate().atStartOfDay();
@@ -294,10 +286,10 @@ public class AttendanceServiceImpl implements AttendanceService
         Integer monthNumber = (month != null) ? month.ordinal() + 1 : null;
 
         List<Attendance> attendances = (monthNumber != null) ?
-                attendanceRepository.findByClassIdAndSessionIdAndMonthWithinSession(
-                        classId, sessionId, sessionStart, sessionEnd, monthNumber) :
-                attendanceRepository.findByClassIdAndSessionIdWithinSession(
-                        classId, sessionId, sessionStart, sessionEnd);
+                attendanceRepository.findByClassIdAndSessionIdAndMonthWithinSessionAndSchoolId(
+                        classId, sessionId, sessionStart, sessionEnd, monthNumber, schoolId) :
+                attendanceRepository.findByClassIdAndSessionIdWithinSessionAndSchoolId(
+                        classId, sessionId, sessionStart, sessionEnd, schoolId);
 
         if (attendances.isEmpty())
         {

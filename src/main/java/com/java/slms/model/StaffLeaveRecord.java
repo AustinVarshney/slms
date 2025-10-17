@@ -37,8 +37,12 @@ public class StaffLeaveRecord extends BaseEntity
     @JoinColumn(name = "session_id", nullable = false)
     private Session session;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "teacher_id", nullable = false)
-    private Teacher teacher;
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @JoinColumn(name = "staff_id", nullable = false)
+    private Staff staff;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "school_id")
+    private School school;
 
 }

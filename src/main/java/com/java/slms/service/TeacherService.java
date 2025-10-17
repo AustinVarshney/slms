@@ -7,18 +7,26 @@ import java.util.List;
 
 public interface TeacherService
 {
-    TeacherDto createTeacher(TeacherDto teacherDto);
 
-    TeacherDto getTeacherById(Long id);
+    // Create a new teacher
+    TeacherDto createTeacher(TeacherDto teacherDto, Long schoolId);
 
-    List<TeacherDto> getAllTeachers();
+    // Get teacher by ID
+    TeacherDto getTeacherById(Long id, Long schoolId);
 
-    List<TeacherDto> getActiveTeachers();
+    // Get all teachers for a particular school
+    List<TeacherDto> getAllTeachers(Long schoolId);
 
-    Teacher getActiveTeacherByEmail(String email);
+    // Get all active teachers for a particular school
+    List<TeacherDto> getActiveTeachers(Long schoolId);
 
-    void inActiveTeacher(Long id);
+    // Get active teacher by email for a specific school
+    Teacher getActiveTeacherByEmail(String email, Long schoolId);
 
-    TeacherDto getTeacherByEmail(String email);
+    // Inactivate teacher by ID
+    void inActiveTeacher(Long id, Long schoolId);
+
+    // Get teacher by email for a specific school
+    TeacherDto getTeacherByEmail(String email, Long schoolId);
 
 }

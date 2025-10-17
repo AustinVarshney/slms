@@ -9,7 +9,7 @@ import lombok.*;
 public class ClassRequestDto
 {
     private String className;
-    private Long sessionId;
     private Double feesAmount;
+    private Long schoolId;
     private Long classTeacherId;
 }

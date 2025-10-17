@@ -14,6 +14,7 @@ public class GalleryResponseDto
     private Long id;
     private String image;
     private Long sessionId;
+    private Long schoolId;
     private Date createdAt;
     private Date updatedAt;
 }

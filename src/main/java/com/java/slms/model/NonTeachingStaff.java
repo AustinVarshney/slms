@@ -42,4 +42,9 @@ public class NonTeachingStaff extends BaseEntity
     @OneToOne
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "school_id")
+    private School school;
+
 }

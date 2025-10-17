@@ -1,12 +1,13 @@
 package com.java.slms.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 @Entity
@@ -15,11 +16,9 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(
-        name = "class_entity",
-        uniqueConstraints = {
-                @UniqueConstraint(columnNames = {"session_id", "className"})
-        }
+        name = "class_entity"
 )
+
 public class ClassEntity extends BaseEntity
 {
     @Id
@@ -36,10 +35,6 @@ public class ClassEntity extends BaseEntity
     @JsonManagedReference
     private List<Subject> subjects;
 
-    @OneToMany(mappedBy = "classEntity", fetch = FetchType.LAZY, orphanRemoval = true)
-    @JsonManagedReference
-    private List<Exam> exams;
-
     @OneToOne(mappedBy = "classEntity", fetch = FetchType.LAZY, orphanRemoval = true)
     @JsonManagedReference
     private FeeStructure feeStructures;
@@ -53,8 +48,15 @@ public class ClassEntity extends BaseEntity
     @JoinColumn(name = "session_id")
     private Session session;
 
-    @OneToOne(fetch = FetchType.LAZY, optional = true)
-    @JoinColumn(name = "class_teacher_id", unique = true)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "class_teacher_id")
     private Teacher classTeacher;
+
+    @OneToMany(mappedBy = "classEntity", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<ClassExam> classExams = new HashSet<>();
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "school_id")
+    private School school;
 
 }

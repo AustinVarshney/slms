@@ -1,7 +1,6 @@
 package com.java.slms.dto;
 
 import com.java.slms.util.DayOfWeek;
-import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -21,4 +20,5 @@ public class TimetableResponseDTO
     private String teacherName;
     private LocalTime startTime;
     private LocalTime endTime;
+    private Long schoolId;
 }

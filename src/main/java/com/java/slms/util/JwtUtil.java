@@ -1,5 +1,6 @@
 package com.java.slms.util;
 
+import com.java.slms.security.CustomUserDetails;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -29,9 +30,14 @@ public class JwtUtil
         Date now = new Date();
         Date expiry = new Date(now.getTime() + jwtExpirationInMs);
 
+        // Cast to CustomUserDetails to get the schoolId
+        CustomUserDetails customUserDetails = (CustomUserDetails) userDetails;
+        Long schoolId = customUserDetails.getSchoolId();
+
         return Jwts.builder()
-                .setSubject(userDetails.getUsername()) // email or pan
+                .setSubject(userDetails.getUsername())
                 .claim("roles", userDetails.getAuthorities().stream().map(Object::toString).toList())
+                .claim("schoolId", schoolId)
                 .setIssuedAt(now)
                 .setExpiration(expiry)
                 .signWith(key, SignatureAlgorithm.HS256)
@@ -93,6 +99,18 @@ public class JwtUtil
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
+    }
+
+    public Long extractSchoolId(String token)
+    {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+
+        // Extract schoolId from the claims
+        return claims.get("schoolId", Long.class);
     }
 
 

@@ -1,6 +1,8 @@
 package com.java.slms.repository;
 
 import com.java.slms.model.ClassEntity;
+import com.java.slms.model.TimeTable;
+import com.java.slms.util.DayOfWeek;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -10,18 +12,55 @@ import java.util.Optional;
 
 public interface ClassEntityRepository extends JpaRepository<ClassEntity, Long>
 {
-    ClassEntity findByClassNameIgnoreCase(String name);
-
-    @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END FROM ClassEntity c WHERE LOWER(c.className) = LOWER(:name)")
-    boolean existsByNameIgnoreCase(@Param("name") String name);
-
     Optional<ClassEntity> findByClassNameIgnoreCaseAndSessionId(String className, Long sessionId);
 
-    Optional<ClassEntity> findByIdAndSessionId(Long classId, Long sessionId);
+    @Query("SELECT c FROM ClassEntity c " +
+            "WHERE c.id = :classId " +
+            "AND c.session.id = :sessionId " +
+            "AND c.school.id = :schoolId")
+    Optional<ClassEntity> findByIdAndSessionIdAndSchoolId(
+            @Param("classId") Long classId,
+            @Param("sessionId") Long sessionId,
+            @Param("schoolId") Long schoolId);
 
-    Optional<ClassEntity> findByIdAndSession_Active(Long classId, boolean isActive);
+    @Query("SELECT c FROM ClassEntity c " +
+            "WHERE c.id = :classId " +
+            "AND c.session.active = true " +
+            "AND c.school.id = :schoolId")
+    Optional<ClassEntity> findByIdAndSchoolIdAndSessionActive(
+            @Param("classId") Long classId,
+            @Param("schoolId") Long schoolId);
 
-    List<ClassEntity> findBySession_Id(Long sessionId);
+    @Query("SELECT c FROM ClassEntity c WHERE LOWER(c.className) = LOWER(:className) AND c.session.id = :sessionId AND c.school.id = :schoolId")
+    Optional<ClassEntity> findByClassNameIgnoreCaseAndSessionIdAndSchoolId(
+            @Param("className") String className,
+            @Param("sessionId") Long sessionId,
+            @Param("schoolId") Long schoolId
+    );
 
-    boolean existsByIdAndSessionId(Long classId, Long sessionId);
+    @Query("SELECT c FROM ClassEntity c " +
+            "WHERE c.id = :classId " +
+            "AND c.school.id = :schoolId")
+    Optional<ClassEntity> findByIdAndSchoolId(
+            @Param("classId") Long classId,
+            @Param("schoolId") Long schoolId);
+
+    @Query("SELECT c FROM ClassEntity c WHERE c.session.id = :sessionId AND c.school.id = :schoolId")
+    List<ClassEntity> findBySession_IdAndSchool_Id(@Param("sessionId") Long sessionId, @Param("schoolId") Long schoolId);
+
+
+    @Query("SELECT t FROM TimeTable t WHERE t.classEntity.id = :classId AND t.day = :day AND t.school.id = :schoolId")
+    List<TimeTable> findByClassEntity_IdAndDayAndSchool_Id(
+            @Param("classId") Long classId,
+            @Param("day") DayOfWeek day,
+            @Param("schoolId") Long schoolId);
+
+    @Query("SELECT t FROM TimeTable t WHERE t.classEntity.id = :classId AND t.session.active = :active AND t.school.id = :schoolId")
+    List<TimeTable> findByClassEntity_IdAndSession_ActiveAndSchool_Id(
+            @Param("classId") Long classId,
+            @Param("active") boolean active,
+            @Param("schoolId") Long schoolId);
+
+
+
 }

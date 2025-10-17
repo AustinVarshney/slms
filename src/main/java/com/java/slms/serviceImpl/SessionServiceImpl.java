@@ -5,7 +5,9 @@ import com.java.slms.dto.SessionDto;
 import com.java.slms.exception.AlreadyExistException;
 import com.java.slms.exception.ResourceNotFoundException;
 import com.java.slms.exception.WrongArgumentException;
+import com.java.slms.model.School;
 import com.java.slms.model.Session;
+import com.java.slms.repository.SchoolRepository;
 import com.java.slms.repository.SessionRepository;
 import com.java.slms.service.SessionService;
 import lombok.RequiredArgsConstructor;
@@ -15,10 +17,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -27,126 +27,118 @@ public class SessionServiceImpl implements SessionService
 {
 
     private final SessionRepository sessionRepository;
+    private final SchoolRepository schoolRepository;  // Make sure you have this repo
     private final ModelMapper modelMapper;
 
     @Override
-    public SessionDto createSession(CreateOrUpdateSessionRequest dto)
+    public SessionDto createSession(Long schoolId, CreateOrUpdateSessionRequest dto)
     {
-        log.info("Attempting to create new session from {} to {}", dto.getStartDate(), dto.getEndDate());
+        log.info("Creating session for school {} from {} to {}", schoolId, dto.getStartDate(), dto.getEndDate());
 
-        if (sessionRepository.findByActiveTrue().isPresent())
+        if (sessionRepository.findBySchoolIdAndActiveTrue(schoolId).isPresent())
         {
-            throw new WrongArgumentException("An active session already exists. Please deactivate it before creating a new one.");
+            throw new WrongArgumentException("An active session already exists for this school. Deactivate it first.");
         }
 
         validateSessionLength(dto.getStartDate(), dto.getEndDate());
 
-        if (isOverlapping(dto.getStartDate(), dto.getEndDate()))
+        if (sessionRepository.existsBySchoolIdAndStartDateLessThanEqualAndEndDateGreaterThanEqual(schoolId, dto.getEndDate(), dto.getStartDate()))
         {
-            throw new AlreadyExistException("Session period overlaps with an existing session.");
+            throw new AlreadyExistException("Session period overlaps with an existing session for this school.");
         }
 
         Session session = modelMapper.map(dto, Session.class);
         session.setActive(true);
 
+        School school = schoolRepository.findById(schoolId).orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + schoolId));
+        session.setSchool(school);
+
         Session saved = sessionRepository.save(session);
-        log.info("Session created successfully with ID: {}", saved.getId());
+        log.info("Session created with ID {} for school {}", saved.getId(), schoolId);
 
         return modelMapper.map(saved, SessionDto.class);
     }
 
     @Override
-    public SessionDto updateSession(Long id, CreateOrUpdateSessionRequest request)
+    public SessionDto updateSession(Long id, Long schoolId, CreateOrUpdateSessionRequest dto)
     {
-        log.info("Updating session with ID: {}", id);
+        log.info("Updating session {} for school {}", id, schoolId);
 
-        Session existing = sessionRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Session not found with ID: " + id));
+        Session existing = sessionRepository.findActiveSessionByIdAndSchoolId(id, schoolId).orElseThrow(() -> new WrongArgumentException("Session not found or does not belong to the provided school, or is not active."));
 
-        if (!existing.isActive())
-        {
-            throw new WrongArgumentException("Only the active session can be updated.");
-        }
+        validateSessionLength(dto.getStartDate(), dto.getEndDate());
 
-        validateSessionLength(request.getStartDate(), request.getEndDate());
+//        boolean isOverlapping = sessionRepository.existsBySchoolIdAndStartDateLessThanEqualAndEndDateGreaterThanEqual(schoolId, dto.getEndDate(), dto.getStartDate());
+//
+//        boolean sameDates = dto.getStartDate().isEqual(existing.getStartDate()) && dto.getEndDate().isEqual(existing.getEndDate());
+//
+//        if (isOverlapping && !sameDates)
+//        {
+//            throw new WrongArgumentException("Updated session period overlaps with another existing session.");
+//        }
 
-        boolean isOverlapping = isOverlapping(request.getStartDate(), request.getEndDate());
-        boolean sameDates = request.getStartDate().isEqual(existing.getStartDate())
-                && request.getEndDate().isEqual(existing.getEndDate());
-
-        if (isOverlapping && !sameDates)
-        {
-            throw new WrongArgumentException("Updated session period overlaps with another existing session.");
-        }
-
-        modelMapper.map(request, existing);
+        modelMapper.map(dto, existing);
         Session saved = sessionRepository.save(existing);
 
-        log.info("Session with ID {} updated successfully", saved.getId());
+        log.info("Session {} updated for school {}", saved.getId(), schoolId);
         return modelMapper.map(saved, SessionDto.class);
     }
 
     @Override
-    public void deleteSession(Long id)
+    public void deleteSession(Long schoolId, Long id)
     {
-        log.info("Attempting to delete session with ID: {}", id);
+        log.info("Deleting session {} for school {}", id, schoolId);
 
-        if (!sessionRepository.existsById(id))
+        Session session = sessionRepository.findBySessionIdAndSchoolId(id, schoolId).orElseThrow(() -> new ResourceNotFoundException("Session not found with ID: " + id + " for schoolId: " + schoolId));
+        if (session.isActive())
         {
-            throw new ResourceNotFoundException("Session not found with ID: " + id);
+            throw new WrongArgumentException("Cannot delete an active session. Deactivate it first.");
         }
-
-        sessionRepository.deleteById(id);
-        log.info("Session with ID {} deleted", id);
+        sessionRepository.deleteById(session.getId());
+        log.info("Session {} deleted for school {}", id, schoolId);
     }
 
     @Override
-    public List<SessionDto> getAllSessions()
+    public List<SessionDto> getAllSessions(Long schoolId)
     {
-        return sessionRepository.findAll().stream()
-                .map(session -> modelMapper.map(session, SessionDto.class))
-                .toList();
+        return sessionRepository.findAllBySchoolId(schoolId).stream().map(session -> modelMapper.map(session, SessionDto.class)).toList();
     }
 
     @Override
-    public SessionDto getSessionById(Long id)
+    public SessionDto getSessionById(Long schoolId, Long id)
     {
-        Session session = sessionRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Session not found with ID: " + id));
+        Session session = sessionRepository.findActiveSessionByIdAndSchoolId(id, schoolId).orElseThrow(() -> new ResourceNotFoundException("Session not found with ID: " + id + " for schoolId: " + schoolId));
+
         return modelMapper.map(session, SessionDto.class);
     }
 
     @Override
-    public SessionDto getCurrentSession()
+    public SessionDto getCurrentSession(Long schoolId)
     {
-        Session session = sessionRepository.findByActiveTrue()
-                .orElseThrow(() -> new ResourceNotFoundException("No active session found"));
+        Session session = sessionRepository.findBySchoolIdAndActiveTrue(schoolId).orElseThrow(() -> new ResourceNotFoundException("No active session found for school with ID: " + schoolId));
         return modelMapper.map(session, SessionDto.class);
     }
 
     @Transactional
     @Override
-    public void deactivateCurrentSession()
+    public void deactivateCurrentSession(Long schoolId)
     {
-        Session activeSession = sessionRepository.findByActiveTrue()
-                .orElseThrow(() -> new ResourceNotFoundException("No active session found to deactivate"));
+        Session activeSession = sessionRepository.findBySchoolIdAndActiveTrue(schoolId).orElseThrow(() -> new ResourceNotFoundException("No active session found to deactivate for school with ID: " + schoolId));
 
         activeSession.setActive(false);
         sessionRepository.save(activeSession);
 
-        log.info("Deactivated session with ID: {}", activeSession.getId());
+
+
+        log.info("Deactivated session {} for school {}", activeSession.getId(), schoolId);
     }
 
     private void validateSessionLength(LocalDate start, LocalDate end)
     {
-        if (!end.equals(start.plusYears(1).minusDays(1)))
+        long monthsBetween = ChronoUnit.MONTHS.between(start, end);
+        if (monthsBetween != 12)
         {
             throw new WrongArgumentException("Session length must be exactly 12 months.");
         }
-    }
-
-    private boolean isOverlapping(LocalDate start, LocalDate end)
-    {
-        return sessionRepository.existsByStartDateLessThanEqualAndEndDateGreaterThanEqual(end, start);
     }
 }

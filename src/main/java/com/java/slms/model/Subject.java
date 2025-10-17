@@ -35,14 +35,13 @@ public class Subject extends BaseEntity
     @JoinColumn(name = "class_id")
     private ClassEntity classEntity;
 
-    @OneToMany(mappedBy = "subject", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JsonManagedReference
-    private List<Score> scores;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JsonBackReference
     @JoinColumn(name = "teacher_id", nullable = false)
     private Teacher teacher;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "school_id")
+    private School school;
 
 }

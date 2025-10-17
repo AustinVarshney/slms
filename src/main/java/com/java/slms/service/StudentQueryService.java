@@ -9,13 +9,12 @@ import java.util.List;
 
 public interface StudentQueryService
 {
-    StudentQueryResponse askQueryToTeacher(String pan, StudentQueryRequest studentQueryRequest);
+    StudentQueryResponse askQueryToTeacher(String studentPan, StudentQueryRequest request, Long schoolId);
 
-    List<StudentQueryResponse> getAllQueriesByStudent(String pan, QueryStatus status);
+    List<StudentQueryResponse> getAllQueriesByStudent(String studentPan, QueryStatus status, Long schoolId);
 
-    StudentQueryResponse respondToQuery(Long teacherId, TeacherResponseDto responseRequest);
+    StudentQueryResponse respondToQuery(Long teacherId, TeacherResponseDto responseRequest, Long schoolId);
 
-    List<StudentQueryResponse> getAllQueriesAssignedToTeacher(Long teacherId, QueryStatus status);
-
+    List<StudentQueryResponse> getAllQueriesAssignedToTeacher(Long teacherId, QueryStatus status, Long schoolId);
 
 }

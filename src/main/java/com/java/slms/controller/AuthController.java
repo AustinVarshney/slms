@@ -41,16 +41,80 @@ public class AuthController
     private final JwtUtil jwtUtil;
 
     private final AdminService adminService;
+    private final SchoolService schoolService;
     private final TeacherService teacherService;
     private final StudentService studentService;
     private final NonTeachingStaffService nonTeachingStaffService;
     private final ModelMapper modelMapper;
     private final ExcelStudentParseService excelStudentParseService;
 
+    @PostMapping("/register/admin")
+    @Transactional
+    public ResponseEntity<RestResponse<UserRequest>> registerAdmin(@RequestBody AdminRegisterRequestDto req)
+    {
+        // Check if email is already registered
+        if (userRepository.findByPanNumberIgnoreCase(req.getEmail()).isPresent())
+        {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(RestResponse.<UserRequest>builder()
+                            .message("Email already registered")
+                            .status(HttpStatus.BAD_REQUEST.value())
+                            .build());
+        }
+
+        // Create User object with the provided data
+        User user = User.builder()
+                .email(req.getEmail())
+                .password(passwordEncoder.encode(req.getPassword()))  // Encoded password
+                .roles(Set.of(RoleEnum.ROLE_ADMIN))  // Assign role as admin
+                .enabled(true)  // Enable the user
+                .build();
+
+        // Save the user to generate an ID
+        userRepository.save(user);
+
+        // Map AdminRegisterRequestDto to UserRequest manually to avoid conflicts
+        UserRequest userRequest = new UserRequest();
+        userRequest.setEmail(req.getEmail());
+        userRequest.setContactNumber(req.getContactNumber());
+        userRequest.setDesignation(req.getDesignation());
+        userRequest.setQualification(req.getQualification());
+        userRequest.setName(req.getName());
+
+        // Set the userId to link the user to the admin
+        userRequest.setUserId(user.getId());
+
+        // Map the school data and create a school
+        SchoolRequestDto schoolRequestDto = new SchoolRequestDto();
+        schoolRequestDto.setSchoolName(req.getSchoolName());
+        schoolRequestDto.setSchoolEmail(req.getSchoolEmail());
+        schoolRequestDto.setSchoolWebsite(req.getSchoolWebsite());
+        schoolRequestDto.setSchoolContactNumber(req.getSchoolContactNumber());
+        schoolRequestDto.setSchoolAddress(req.getSchoolAddress());  // Assuming there is a schoolAddress in the request
+
+        // Create school using school service
+        SchoolResponseDto schoolResponseDto = schoolService.createSchool(schoolRequestDto);
+
+        // Set the schoolId in UserRequest
+        userRequest.setSchoolId(schoolResponseDto.getId());
+
+        // Now, create the admin using adminService
+        return ResponseEntity.ok(
+                RestResponse.<UserRequest>builder()
+                        .data(adminService.createAdmin(userRequest))  // Save the admin and return response
+                        .message("Admin With School Details registered successfully")
+                        .status(HttpStatus.OK.value())
+                        .build()
+        );
+    }
+
     @PostMapping("/register/staff")
     @Transactional
     @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public ResponseEntity<RestResponse<Void>> registerStaff(@RequestBody StaffRegisterRequest req)
+    public ResponseEntity<RestResponse<Void>> registerStaff(@RequestBody StaffRegisterRequest req,
+                                                            @RequestAttribute("schoolId") Long schoolId
+    )
     {
         // Check if user already exists
         if (userRepository.findByEmailIgnoreCase(req.getEmail()).isPresent())
@@ -111,19 +175,19 @@ public class AuthController
                 {
                     TeacherDto teacherDto = modelMapper.map(req, TeacherDto.class);
                     teacherDto.setUserId(user.getId());
-                    teacherService.createTeacher(teacherDto);
+                    teacherService.createTeacher(teacherDto, schoolId);
                 }
-                case ROLE_ADMIN ->
-                {
-                    UserRequest adminReq = modelMapper.map(req, UserRequest.class);
-                    adminReq.setUserId(user.getId());
-                    adminService.createAdmin(adminReq);
-                }
+//                case ROLE_ADMIN ->
+//                {
+//                    UserRequest adminReq = modelMapper.map(req, UserRequest.class);
+//                    adminReq.setUserId(user.getId());
+//                    adminService.createAdmin(adminReq);
+//                }
                 case ROLE_NON_TEACHING_STAFF ->
                 {
                     UserRequest feeStaffReq = modelMapper.map(req, UserRequest.class);
                     feeStaffReq.setUserId(user.getId());
-                    nonTeachingStaffService.createFeeStaff(feeStaffReq);
+                    nonTeachingStaffService.createFeeStaff(feeStaffReq, schoolId);
                 }
                 default ->
                 {
@@ -147,14 +211,15 @@ public class AuthController
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     @PostMapping("/register/student")
     @Transactional
-    public ResponseEntity<RestResponse<StudentResponseDto>> registerStudent(@RequestBody StudentRequestDto req)
+    public ResponseEntity<RestResponse<StudentResponseDto>> registerStudent(@RequestBody StudentRequestDto req , @RequestAttribute("schoolId") Long schoolId
+    )
     {
         if (userRepository.findByPanNumberIgnoreCase(req.getPanNumber()).isPresent())
         {
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
                     .body(RestResponse.<StudentResponseDto>builder()
-                            .message("PAN already registered")
+                            .message("PAN already present in record")
                             .status(HttpStatus.BAD_REQUEST.value())
                             .build());
         }
@@ -170,7 +235,7 @@ public class AuthController
 
         return ResponseEntity.ok(
                 RestResponse.<StudentResponseDto>builder()
-                        .data(studentService.createStudent(req))
+                        .data(studentService.createStudent(req, schoolId))
                         .message("Student registered successfully")
                         .status(HttpStatus.OK.value())
                         .build()
@@ -180,7 +245,9 @@ public class AuthController
 
     @PostMapping("/upload-students")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public ResponseEntity<?> uploadStudents(@RequestParam("file") MultipartFile file)
+    @Transactional
+    public ResponseEntity<?> uploadStudents(@RequestParam("file") MultipartFile file , @RequestAttribute("schoolId") Long schoolId
+    )
     {
         try
         {
@@ -190,7 +257,7 @@ public class AuthController
                 return ResponseEntity.badRequest().body("Please upload an Excel or CSV file");
             }
 
-            List<StudentRequestDto> students = excelStudentParseService.uploadStudents(file);
+            List<StudentRequestDto> students = excelStudentParseService.uploadStudents(file, schoolId);
             List<StudentResponseDto> responses = new ArrayList<>();
 
             for (StudentRequestDto studentDto : students)
@@ -210,7 +277,7 @@ public class AuthController
 
                 studentDto.setUserId(user.getId());
 
-                StudentResponseDto response = studentService.createStudent(studentDto);
+                StudentResponseDto response = studentService.createStudent(studentDto, schoolId);
                 responses.add(response);
             }
 

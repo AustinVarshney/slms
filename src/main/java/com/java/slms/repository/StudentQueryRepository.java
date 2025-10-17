@@ -5,22 +5,38 @@ import com.java.slms.model.StudentQuery;
 import com.java.slms.model.Teacher;
 import com.java.slms.util.QueryStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface StudentQueryRepository extends JpaRepository<StudentQuery, Long>
 {
-    List<StudentQuery> findByTeacherId(Long teacherId);
+    @Query("SELECT sq FROM StudentQuery sq WHERE sq.student = :student AND sq.status = :status AND sq.school.id = :schoolId")
+    List<StudentQuery> findByStudentAndStatusAndSchoolId(
+            @Param("student") Student student,
+            @Param("status") QueryStatus status,
+            @Param("schoolId") Long schoolId);
 
-    List<StudentQuery> findByStudent_panNumber(String pan);
+    @Query("SELECT sq FROM StudentQuery sq WHERE sq.student = :student AND sq.school.id = :schoolId")
+    List<StudentQuery> findByStudentAndSchoolId(
+            @Param("student") Student student,
+            @Param("schoolId") Long schoolId);
 
-    List<StudentQuery> findByStudent(Student student);
+    @Query("SELECT sq FROM StudentQuery sq WHERE sq.id = :queryId AND sq.school.id = :schoolId")
+    Optional<StudentQuery> findByIdAndSchoolId(@Param("queryId") Long queryId, @Param("schoolId") Long schoolId);
 
-    List<StudentQuery> findByStudentAndStatus(Student student, QueryStatus status);
+    @Query("SELECT sq FROM StudentQuery sq WHERE sq.teacher = :teacher AND sq.status = :status AND sq.school.id = :schoolId")
+    List<StudentQuery> findByTeacherAndStatusAndSchoolId(
+            @Param("teacher") Teacher teacher,
+            @Param("status") QueryStatus status,
+            @Param("schoolId") Long schoolId);
 
-    List<StudentQuery> findByTeacher(Teacher teacher);
-
-    List<StudentQuery> findByTeacherAndStatus(Teacher teacher, QueryStatus status);
+    @Query("SELECT sq FROM StudentQuery sq WHERE sq.teacher = :teacher AND sq.school.id = :schoolId")
+    List<StudentQuery> findByTeacherAndSchoolId(
+            @Param("teacher") Teacher teacher,
+            @Param("schoolId") Long schoolId);
 
 
 }

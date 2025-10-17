@@ -51,14 +51,24 @@ public class CalendarServiceImpl implements CalendarService
     public List<CalendarResponseDto> getAllCalendarEvents()
     {
         List<CalendarEntity> calendarEntityList = calendarRepository.findAll();
-        return calendarEntityList.stream().map(calendarEntity -> modelMapper.map(calendarEntity, CalendarResponseDto.class)).collect(Collectors.toList());
+        return calendarEntityList.stream().map(calendarEntity -> {
+            CalendarResponseDto dto = modelMapper.map(calendarEntity, CalendarResponseDto.class);
+            if (calendarEntity.getSession() != null) {
+                dto.setSessionId(calendarEntity.getSession().getId());
+            }
+            return dto;
+        }).collect(Collectors.toList());
     }
 
     @Override
     public CalendarResponseDto getCalendarEventById(Long id)
     {
         CalendarEntity calendarEntity = calendarRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Calendar event not found"));
-        return modelMapper.map(calendarEntity, CalendarResponseDto.class);
+        CalendarResponseDto dto = modelMapper.map(calendarEntity, CalendarResponseDto.class);
+        if (calendarEntity.getSession() != null) {
+            dto.setSessionId(calendarEntity.getSession().getId());
+        }
+        return dto;
     }
 
     @Override
@@ -76,8 +86,10 @@ public class CalendarServiceImpl implements CalendarService
             throw new WrongArgumentException("Cannot update event for an inactive session");
         }
 
-        modelMapper.map(calendarRequestDto, calendarEntity);
-
+        // Manually update fields to avoid ID conflict
+        calendarEntity.setStartDate(calendarRequestDto.getStartDate());
+        calendarEntity.setEndDate(calendarRequestDto.getEndDate());
+        calendarEntity.setOccasion(calendarRequestDto.getOccasion());
         calendarEntity.setSession(session);
 
         calendarEntity = calendarRepository.save(calendarEntity);
@@ -106,7 +118,11 @@ public class CalendarServiceImpl implements CalendarService
 
         return calendarRepository.findBySession_Id(activeSession.getId())
                 .stream()
-                .map(calendar -> modelMapper.map(calendar, CalendarResponseDto.class))
+                .map(calendar -> {
+                    CalendarResponseDto dto = modelMapper.map(calendar, CalendarResponseDto.class);
+                    dto.setSessionId(activeSession.getId());
+                    return dto;
+                })
                 .collect(Collectors.toList());
     }
 
@@ -118,7 +134,11 @@ public class CalendarServiceImpl implements CalendarService
 
         return calendarRepository.findBySession_Id(sessionId)
                 .stream()
-                .map(calendar -> modelMapper.map(calendar, CalendarResponseDto.class))
+                .map(calendar -> {
+                    CalendarResponseDto dto = modelMapper.map(calendar, CalendarResponseDto.class);
+                    dto.setSessionId(sessionId);
+                    return dto;
+                })
                 .collect(Collectors.toList());
     }
 

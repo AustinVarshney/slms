@@ -161,10 +161,15 @@ public class TransferCertificateServiceImpl implements TransferCertificateReques
 
     private void checkExistingPendingOrApprovedRequest(Student student)
     {
-        boolean exists = tcRequestRepository.existsByStudentAndStatusIn(student, List.of(RequestStatus.PENDING, RequestStatus.APPROVED));
+        // Only block if there's a PENDING, PROCESSING, or APPROVED request
+        // Allow students to submit new requests after REJECTED
+        boolean exists = tcRequestRepository.existsByStudentAndStatusIn(
+            student, 
+            List.of(RequestStatus.PENDING, RequestStatus.PROCESSING, RequestStatus.APPROVED)
+        );
         if (exists)
         {
-            throw new AlreadyExistException("Transfer Certificate request already exists or approved for this student.");
+            throw new AlreadyExistException("A pending or approved Transfer Certificate request already exists for this student. Please wait for it to be processed.");
         }
     }
 

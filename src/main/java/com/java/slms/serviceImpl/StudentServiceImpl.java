@@ -51,7 +51,20 @@ public class StudentServiceImpl implements StudentService
 
         validateClassAndSession(classEntity, session);
 
-        Student student = modelMapper.map(studentRequestDto, Student.class);
+        // Create Student manually to avoid ModelMapper issues with entity relationships
+        Student student = new Student();
+        student.setPanNumber(studentRequestDto.getPanNumber());
+        student.setName(studentRequestDto.getName());
+        student.setPhoto(studentRequestDto.getPhoto());
+        student.setParentName(studentRequestDto.getParentName());
+        student.setMobileNumber(studentRequestDto.getMobileNumber());
+        student.setDateOfBirth(studentRequestDto.getDateOfBirth());
+        student.setGender(studentRequestDto.getGender());
+        student.setAddress(studentRequestDto.getAddress());
+        student.setEmergencyContact(studentRequestDto.getEmergencyContact());
+        student.setBloodGroup(studentRequestDto.getBloodGroup());
+        student.setAdmissionDate(studentRequestDto.getAdmissionDate());
+        student.setPreviousSchool(studentRequestDto.getPreviousSchool());
         student.setStatus(UserStatus.ACTIVE);
         
         // Get next available roll number that doesn't conflict with unique constraint
@@ -183,6 +196,7 @@ public class StudentServiceImpl implements StudentService
     }
 
     @Override
+    @Transactional
     public StudentResponseDto updateStudent(String pan, UpdateStudentInfo updateStudentInfo)
     {
         log.info("Updating student with PAN: {}", pan);

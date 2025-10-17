@@ -8,7 +8,7 @@ public class DBTest {
         try {
             String url = "jdbc:mysql://127.0.0.1:3306/slms?useSSL=false";
             String user = "root";
-            String pass = "Austin@123";
+            String pass = "root";
             Connection conn = DriverManager.getConnection(url, user, pass);
             System.out.println("Connected successfully!");
             conn.close();

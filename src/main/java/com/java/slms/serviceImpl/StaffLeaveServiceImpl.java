@@ -40,9 +40,17 @@ public class StaffLeaveServiceImpl implements StaffLeaveService
         Session session = sessionRepository.findByActiveTrue()
                 .orElseThrow(() -> new ResourceNotFoundException("Active session not found"));
 
+        // Fetch or create leave allowance for the teacher in this session
         StaffLeaveAllowance allowance = staffLeaveAllowanceRepository
                 .findByTeacherAndSession(teacher, session)
-                .orElseThrow(() -> new ResourceNotFoundException("Leave allowance not found"));
+                .orElseGet(() -> {
+                    // Auto-create leave allowance with default 15 days if not found
+                    StaffLeaveAllowance newAllowance = new StaffLeaveAllowance();
+                    newAllowance.setTeacher(teacher);
+                    newAllowance.setSession(session);
+                    newAllowance.setAllowedLeaves(15); // Default 15 days per session
+                    return staffLeaveAllowanceRepository.save(newAllowance);
+                });
 
         int approvedLeaves = staffLeaveRecordRepository
                 .countApprovedLeaves(teacher.getId(), session.getId());
@@ -51,7 +59,8 @@ public class StaffLeaveServiceImpl implements StaffLeaveService
 
         if (approvedLeaves + daysRequested > allowance.getAllowedLeaves())
         {
-            throw new WrongArgumentException("Not enough leave balance");
+            throw new WrongArgumentException("Not enough leave balance. You have " + 
+                (allowance.getAllowedLeaves() - approvedLeaves) + " days remaining.");
         }
 
         StaffLeaveRecord leave = modelMapper.map(dto, StaffLeaveRecord.class);

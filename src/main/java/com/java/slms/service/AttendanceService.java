@@ -8,13 +8,11 @@ import java.util.List;
 
 public interface AttendanceService
 {
-    void markTodaysAttendance(AttendanceDto attendanceDto);
+    void markTodaysAttendance(AttendanceDto attendanceDto, Long schoolId);
 
-    AttendanceUpdateResult updateAttendanceForAdmin(AttendanceDto attendanceDto, LocalDate attendanceDate);
+    AttendanceUpdateResult updateAttendanceForAdmin(AttendanceDto attendanceDto, LocalDate date, Long schoolId);
 
-//    List<AttendanceInfoDto> getAllAttendanceByPanAndSessionId(String panNumber, Long sessionId);
+    List<AttendanceInfoDto> getAllAttendanceByPanAndSessionId(String pan, Long sessionId, FeeMonth month, Long schoolId);
 
-    List<AttendanceInfoDto> getAllAttendanceByPanAndSessionId(String panNumber, Long sessionId, FeeMonth month);
-
-    List<AttendanceByClassDto> getAttendanceByClassAndSession(Long classId, Long sessionId, FeeMonth month);
+    List<AttendanceByClassDto> getAttendanceByClassAndSession(Long classId, Long sessionId, FeeMonth month, Long schoolId);
 }

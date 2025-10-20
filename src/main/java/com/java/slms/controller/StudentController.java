@@ -1,8 +1,17 @@
 package com.java.slms.controller;
 
-import com.java.slms.dto.*;
+import com.java.slms.dto.CurrentDayAttendance;
+import com.java.slms.dto.PreviousSchoolingRecordDto;
+import com.java.slms.dto.StudentResponseDto;
+import com.java.slms.dto.UpdateStudentInfo;
+import com.java.slms.dto.UpdateStudentStatusRequest;
 import com.java.slms.payload.RestResponse;
 import com.java.slms.service.StudentService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -10,15 +19,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequiredArgsConstructor
@@ -38,9 +40,9 @@ public class StudentController
             }
     )
     @GetMapping
-    public ResponseEntity<RestResponse<List<StudentResponseDto>>> getAllStudents()
+    public ResponseEntity<RestResponse<List<StudentResponseDto>>> getAllStudents(@RequestAttribute("schoolId") Long schoolId)
     {
-        List<StudentResponseDto> students = studentService.getAllStudent();
+        List<StudentResponseDto> students = studentService.getAllStudent(schoolId);
         RestResponse<List<StudentResponseDto>> response = RestResponse.<List<StudentResponseDto>>builder()
                 .data(students)
                 .message("Total Students - " + students.size())
@@ -59,10 +61,10 @@ public class StudentController
             }
     )
     @GetMapping("/active")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_NON_TEACHING_STAFF')")
-    public ResponseEntity<RestResponse<List<StudentResponseDto>>> getActiveStudents()
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_NON_TEACHING_STAFF', 'ROLE_STUDENT')")
+    public ResponseEntity<RestResponse<List<StudentResponseDto>>> getActiveStudents(@RequestAttribute("schoolId") Long schoolId)
     {
-        List<StudentResponseDto> students = studentService.getActiveStudents();
+        List<StudentResponseDto> students = studentService.getActiveStudents(schoolId);
         RestResponse<List<StudentResponseDto>> response = RestResponse.<List<StudentResponseDto>>builder()
                 .data(students)
                 .message("Total Students - " + students.size())
@@ -85,10 +87,10 @@ public class StudentController
     )
     @GetMapping("/{panNumber}")
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER')")
-    public ResponseEntity<RestResponse<StudentResponseDto>> getStudentByPAN(@PathVariable String panNumber)
+    public ResponseEntity<RestResponse<StudentResponseDto>> getStudentByPAN(@PathVariable String panNumber, @RequestAttribute("schoolId") Long schoolId)
     {
         RestResponse<StudentResponseDto> response = RestResponse.<StudentResponseDto>builder()
-                .data(studentService.getStudentByPAN(panNumber))
+                .data(studentService.getStudentByPAN(panNumber, schoolId))
                 .message("Student Fetched")
                 .status(HttpStatus.OK.value())
                 .build();
@@ -106,18 +108,46 @@ public class StudentController
     )
     @GetMapping("/me")
     @PreAuthorize("hasRole('ROLE_STUDENT')")
-    public ResponseEntity<RestResponse<StudentResponseDto>> getCurrentStudent()
+    public ResponseEntity<RestResponse<StudentResponseDto>> getCurrentStudent(@RequestAttribute("schoolId") Long schoolId)
     {
         String panNumber = SecurityContextHolder
                 .getContext()
                 .getAuthentication()
                 .getName();
 
-        StudentResponseDto student = studentService.getStudentByPAN(panNumber);
+        StudentResponseDto student = studentService.getStudentByPAN(panNumber, schoolId);
 
         RestResponse<StudentResponseDto> response = RestResponse.<StudentResponseDto>builder()
                 .data(student)
                 .message("Current student fetched successfully")
+                .status(HttpStatus.OK.value())
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+            summary = "Get student's previous schooling records",
+            description = "Fetches academic history including past sessions, results, attendance, and grades for the currently logged-in student",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Previous schooling records retrieved successfully"),
+                    @ApiResponse(responseCode = "401", description = "Unauthorized - student not logged in", content = @Content)
+            }
+    )
+    @GetMapping("/me/previous-schooling")
+    @PreAuthorize("hasRole('ROLE_STUDENT')")
+    public ResponseEntity<RestResponse<List<PreviousSchoolingRecordDto>>> getPreviousSchoolingRecords(@RequestAttribute("schoolId") Long schoolId)
+    {
+        String panNumber = SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getName();
+
+        List<PreviousSchoolingRecordDto> records = studentService.getPreviousSchoolingRecords(panNumber, schoolId);
+
+        RestResponse<List<PreviousSchoolingRecordDto>> response = RestResponse.<List<PreviousSchoolingRecordDto>>builder()
+                .data(records)
+                .message("Previous schooling records fetched successfully")
                 .status(HttpStatus.OK.value())
                 .build();
 
@@ -139,10 +169,11 @@ public class StudentController
     public ResponseEntity<RestResponse<StudentResponseDto>> updateStudent(
             @PathVariable String panNumber,
             @RequestBody UpdateStudentInfo updateStudentInfo
+            , @RequestAttribute("schoolId") Long schoolId
     )
     {
         RestResponse<StudentResponseDto> response = RestResponse.<StudentResponseDto>builder()
-                .data(studentService.updateStudent(panNumber, updateStudentInfo))
+                .data(studentService.updateStudent(panNumber, updateStudentInfo, schoolId))
                 .message("Student updated successfully")
                 .status(HttpStatus.OK.value())
                 .build();
@@ -163,10 +194,11 @@ public class StudentController
     @GetMapping("/present-today")
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_NON_TEACHING_STAFF')")
     public ResponseEntity<RestResponse<CurrentDayAttendance>> getPresentToday(
-            @RequestParam(required = false) Long classId)
+            @RequestParam(required = false) Long classId
+            , @RequestAttribute("schoolId") Long schoolId)
     {
 
-        CurrentDayAttendance attendance = studentService.getStudentsPresentToday(Optional.ofNullable(classId));
+        CurrentDayAttendance attendance = studentService.getStudentsPresentToday(Optional.ofNullable(classId), schoolId);
 
         String message = (classId != null)
                 ? "Students present today in class " + classId + ": " + attendance.getStudentAttendances().size()
@@ -194,9 +226,9 @@ public class StudentController
     )
     @GetMapping("/class/{classId}")
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_STUDENT', 'ROLE_NON_TEACHING_STAFF')")
-    public ResponseEntity<RestResponse<List<StudentResponseDto>>> getStudentByClassId(@PathVariable Long classId)
+    public ResponseEntity<RestResponse<List<StudentResponseDto>>> getStudentByClassId(@PathVariable Long classId, @RequestAttribute("schoolId") Long schoolId)
     {
-        List<StudentResponseDto> list = studentService.getStudentsByClassId(classId);
+        List<StudentResponseDto> list = studentService.getStudentsByClassId(classId, schoolId);
         return ResponseEntity.ok(
                 RestResponse.<List<StudentResponseDto>>builder()
                         .data(list)
@@ -217,10 +249,11 @@ public class StudentController
     @PutMapping("/status")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<RestResponse<Void>> updateStudentsStatus(
-            @RequestBody UpdateStudentStatusRequest request)
+            @RequestBody UpdateStudentStatusRequest request
+            , @RequestAttribute("schoolId") Long schoolId)
     {
 
-        studentService.markStudentsGraduateOrInActive(request.getPanNumbers(), request.getStatus());
+        studentService.markStudentsGraduateOrInActive(request.getPanNumbers(), request.getStatus(), schoolId);
 
         return ResponseEntity.ok(
                 RestResponse.<Void>builder()
@@ -229,5 +262,31 @@ public class StudentController
                         .build()
         );
     }
+
+    @Operation(
+            summary = "Promote students to another class",
+            description = "Promotes a list of active students (by PAN) to a given class in the active session.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Students promoted successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid class ID or some PANs inactive/missing", content = @Content)
+            }
+    )
+    @PutMapping("/promote-to/{classId}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<RestResponse<Void>> promoteStudentsToClass(
+            @PathVariable Long classId,
+            @RequestBody List<String> panNumbers,
+            @RequestAttribute("schoolId") Long schoolId)
+    {
+        studentService.promoteStudentsToClass(panNumbers, classId, schoolId);
+
+        return ResponseEntity.ok(
+                RestResponse.<Void>builder()
+                        .message("Students promoted to class ID: " + classId)
+                        .status(HttpStatus.OK.value())
+                        .build()
+        );
+    }
+
 
 }

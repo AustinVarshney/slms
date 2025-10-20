@@ -19,5 +19,6 @@ public class EventDto
     private LocalDate startDate;
     private LocalDate endDate;
     private Long sessionId;
+    private Long schoolId;
     private String sessionName;
 }

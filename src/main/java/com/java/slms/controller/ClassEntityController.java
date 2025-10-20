@@ -37,9 +37,10 @@ public class ClassEntityController
     )
     @PostMapping
     @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public ResponseEntity<RestResponse<ClassResponseDto>> addClass(@RequestBody ClassRequestDto classRequestDto)
+    public ResponseEntity<RestResponse<ClassResponseDto>> addClass(@RequestBody ClassRequestDto classRequestDto,
+                                                                   @RequestAttribute("schoolId") Long schoolId)
     {
-        ClassResponseDto createdClass = classEntityService.addClass(classRequestDto);
+        ClassResponseDto createdClass = classEntityService.addClass(schoolId, classRequestDto);
         RestResponse<ClassResponseDto> response = RestResponse.<ClassResponseDto>builder()
                 .data(createdClass)
                 .message("Class created with FeeStructure successfully")
@@ -59,9 +60,9 @@ public class ClassEntityController
     )
     @GetMapping
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_NON_TEACHING_STAFF', 'ROLE_TEACHER')")
-    public ResponseEntity<RestResponse<List<ClassInfoResponse>>> getAllClasses()
+    public ResponseEntity<RestResponse<List<ClassInfoResponse>>> getAllClasses(@RequestAttribute("schoolId") Long schoolId)
     {
-        List<ClassInfoResponse> classes = classEntityService.getAllClassInActiveSession();
+        List<ClassInfoResponse> classes = classEntityService.getAllClassInActiveSession(schoolId);
         RestResponse<List<ClassInfoResponse>> response = RestResponse.<List<ClassInfoResponse>>builder()
                 .data(classes)
                 .message("Total Classes - " + classes.size())
@@ -85,9 +86,9 @@ public class ClassEntityController
     )
     @GetMapping("/{classId}/session/{sessionId}")
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_NON_TEACHING_STAFF', 'ROLE_TEACHER')")
-    public ResponseEntity<RestResponse<ClassInfoResponse>> getClassBySession(@PathVariable Long classId, @PathVariable Long sessionId)
+    public ResponseEntity<RestResponse<ClassInfoResponse>> getClassBySession(@PathVariable Long classId, @RequestAttribute("schoolId") Long schoolId)
     {
-        ClassInfoResponse classDto = classEntityService.getClassByClassIdAndSessionId(classId, sessionId);
+        ClassInfoResponse classDto = classEntityService.getClassByClassIdAndSessionId(schoolId, classId);
         RestResponse<ClassInfoResponse> response = RestResponse.<ClassInfoResponse>builder()
                 .data(classDto)
                 .message("Class fetched successfully")
@@ -104,7 +105,7 @@ public class ClassEntityController
                     @Parameter(name = "id", description = "ID of the class to update", required = true)
             },
             responses = {
-                    @ApiResponse(responseCode = "200", description = "Class name updated successfully"),
+                    @ApiResponse(responseCode = "20 0", description = "Class name updated successfully"),
                     @ApiResponse(responseCode = "400", description = "Invalid request or inactive session or Class not fount", content = @Content),
             }
     )
@@ -112,10 +113,11 @@ public class ClassEntityController
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<RestResponse<ClassInfoResponse>> updateClassName(
             @PathVariable Long id,
-            @RequestBody ClassRequestDto classRequestDto
+            @RequestBody ClassRequestDto classRequestDto,
+            @RequestAttribute("schoolId") Long schoolId
     )
     {
-        ClassInfoResponse updatedClass = classEntityService.updateClassNameById(id, classRequestDto);
+        ClassInfoResponse updatedClass = classEntityService.updateClassNameById(schoolId, id, classRequestDto);
         RestResponse<ClassInfoResponse> response = RestResponse.<ClassInfoResponse>builder()
                 .data(updatedClass)
                 .message("Class name updated successfully")
@@ -139,9 +141,9 @@ public class ClassEntityController
     )
     @DeleteMapping("/{classId}/session/{sessionId}")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public ResponseEntity<RestResponse<String>> deleteClass(@PathVariable Long classId, @PathVariable Long sessionId)
+    public ResponseEntity<RestResponse<String>> deleteClass(@PathVariable Long classId, @PathVariable Long sessionId, @RequestAttribute("schoolId") Long schoolId)
     {
-        classEntityService.deleteClassByIdAndSessionId(classId, sessionId);
+        classEntityService.deleteClassByIdAndSessionId(schoolId, classId, sessionId);
         RestResponse<String> response = RestResponse.<String>builder()
                 .data(null)
                 .message("Class deleted successfully")

@@ -64,4 +64,8 @@ public class TransferCertificateRequest extends BaseEntity
 
     private LocalDate adminActionDate;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "school_id")
+    private School school;
+
 }

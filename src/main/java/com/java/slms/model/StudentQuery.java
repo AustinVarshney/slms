@@ -35,4 +35,8 @@ public class StudentQuery extends BaseEntity
 
     @Enumerated(EnumType.STRING)
     private QueryStatus status;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "school_id")
+    private School school;
 }

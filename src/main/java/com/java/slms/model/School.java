@@ -1,17 +1,27 @@
 package com.java.slms.model;
 
-import jakarta.persistence.Entity;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
+import jakarta.persistence.*;
+import lombok.*;
 
-//@Entity
-//@Data
-//@NoArgsConstructor
-//@AllArgsConstructor
-public class School
+@Entity
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class School extends BaseEntity
 {
-    private Long schoolId;
-//    privat
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true)
+    private String schoolName;
+
+    private String schoolEmail;
+
+    private String schoolWebsite;
+
+    private String schoolAddress;
+
+    private String schoolContactNumber;
 }

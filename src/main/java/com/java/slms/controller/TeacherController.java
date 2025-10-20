@@ -3,6 +3,10 @@ package com.java.slms.controller;
 import com.java.slms.dto.TeacherDto;
 import com.java.slms.payload.RestResponse;
 import com.java.slms.service.TeacherService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -12,11 +16,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/teachers")
@@ -29,7 +28,7 @@ public class TeacherController
 
     private final TeacherService teacherService;
 
-//    @Operation(
+    //    @Operation(
 //            summary = "Create a teacher",
 //            description = "Creates a new teacher record.",
 //            responses = {
@@ -50,7 +49,6 @@ public class TeacherController
 //                        .build()
 //        );
 //    }
-
     @Operation(
             summary = "Get teacher by ID",
             description = "Retrieves a teacher by their ID.",
@@ -60,10 +58,12 @@ public class TeacherController
             }
     )
     @GetMapping("/{id}")
-    public ResponseEntity<RestResponse<TeacherDto>> getTeacherById(@PathVariable Long id)
+    public ResponseEntity<RestResponse<TeacherDto>> getTeacherById(
+            @RequestAttribute("schoolId") Long schoolId,
+            @PathVariable Long id)
     {
-        log.info("Fetching teacher with ID: {}", id);
-        TeacherDto teacher = teacherService.getTeacherById(id);
+        log.info("Fetching teacher with ID: {} for school ID: {}", id, schoolId);
+        TeacherDto teacher = teacherService.getTeacherById(id, schoolId);
         return ResponseEntity.ok(
                 RestResponse.<TeacherDto>builder()
                         .data(teacher)
@@ -83,15 +83,15 @@ public class TeacherController
     )
     @GetMapping("/me")
     @PreAuthorize("hasRole('ROLE_TEACHER')")
-    public ResponseEntity<RestResponse<TeacherDto>> getCurrentTeacher()
+    public ResponseEntity<RestResponse<TeacherDto>> getCurrentTeacher(@RequestAttribute("schoolId") Long schoolId)
     {
         String email = SecurityContextHolder
                 .getContext()
                 .getAuthentication()
                 .getName();
 
-        log.info("Fetching teacher with Email: {}", email);
-        TeacherDto teacher = teacherService.getTeacherByEmail(email);
+        log.info("Fetching teacher with Email: {} for school ID: {}", email, schoolId);
+        TeacherDto teacher = teacherService.getTeacherByEmail(email, schoolId);
         return ResponseEntity.ok(
                 RestResponse.<TeacherDto>builder()
                         .data(teacher)
@@ -103,17 +103,18 @@ public class TeacherController
 
     @Operation(
             summary = "Get all teachers",
-            description = "Retrieves all teachers.",
+            description = "Retrieves all teachers for the school.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "All teachers retrieved successfully"),
                     @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content)
             }
     )
     @GetMapping
-    public ResponseEntity<RestResponse<List<TeacherDto>>> getAllTeachers()
+    public ResponseEntity<RestResponse<List<TeacherDto>>> getAllTeachers(
+            @RequestAttribute("schoolId") Long schoolId)
     {
-        log.info("Fetching all teachers...");
-        List<TeacherDto> teachers = teacherService.getAllTeachers();
+        log.info("Fetching all teachers for school ID: {}", schoolId);
+        List<TeacherDto> teachers = teacherService.getAllTeachers(schoolId);
         return ResponseEntity.ok(
                 RestResponse.<List<TeacherDto>>builder()
                         .data(teachers)
@@ -125,18 +126,19 @@ public class TeacherController
 
     @Operation(
             summary = "Get active teachers",
-            description = "Retrieves all active teachers.",
+            description = "Retrieves all active teachers for the school.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "Active teachers retrieved successfully"),
                     @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content)
             }
     )
     @GetMapping("/active")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_NON_TEACHING_STAFF')")
-    public ResponseEntity<RestResponse<List<TeacherDto>>> getActiveTeachers()
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER')")
+    public ResponseEntity<RestResponse<List<TeacherDto>>> getActiveTeachers(
+            @RequestAttribute("schoolId") Long schoolId)
     {
-        log.info("Fetching all active teachers...");
-        List<TeacherDto> teachers = teacherService.getActiveTeachers();
+        log.info("Fetching all active teachers for school ID: {}", schoolId);
+        List<TeacherDto> teachers = teacherService.getActiveTeachers(schoolId);
         return ResponseEntity.ok(
                 RestResponse.<List<TeacherDto>>builder()
                         .data(teachers)
@@ -148,38 +150,42 @@ public class TeacherController
 
     @Operation(
             summary = "Deactivate teacher",
-            description = "Marks a teacher as inactive by ID.",
+            description = "Marks a teacher as inactive by ID for the given school.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "Teacher deactivated successfully"),
                     @ApiResponse(responseCode = "400", description = "Invalid ID or teacher already inactive", content = @Content)
             }
     )
     @PutMapping("/{id}")
-    public ResponseEntity<RestResponse<Void>> inActiveTeacher(@PathVariable Long id)
+    public ResponseEntity<RestResponse<Void>> inActiveTeacher(
+            @RequestAttribute("schoolId") Long schoolId,
+            @PathVariable Long id)
     {
-        log.info("Inactivating teacher with ID: {}", id);
-        teacherService.inActiveTeacher(id);
+        log.info("Inactivating teacher with ID: {} for school ID: {}", id, schoolId);
+        teacherService.inActiveTeacher(id, schoolId);
         return ResponseEntity.ok(
                 RestResponse.<Void>builder()
-                        .message("Teacher deleted successfully")
+                        .message("Teacher deactivated successfully")
                         .status(HttpStatus.OK.value())
                         .build()
         );
     }
-    
+
     @Operation(
-            summary = "Activate teacher",
-            description = "Marks a teacher as active by ID.",
+            summary = "Reactivate teacher",
+            description = "Marks a teacher as active by ID for the given school.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "Teacher activated successfully"),
                     @ApiResponse(responseCode = "400", description = "Invalid ID or teacher not found", content = @Content)
             }
     )
     @PutMapping("/activate/{id}")
-    public ResponseEntity<RestResponse<Void>> activateTeacher(@PathVariable Long id)
+    public ResponseEntity<RestResponse<Void>> activateTeacher(
+            @RequestAttribute("schoolId") Long schoolId,
+            @PathVariable Long id)
     {
-        log.info("Activating teacher with ID: {}", id);
-        teacherService.activateTeacher(id);
+        log.info("Activating teacher with ID: {} for school ID: {}", id, schoolId);
+        teacherService.activateTeacher(id, schoolId);
         return ResponseEntity.ok(
                 RestResponse.<Void>builder()
                         .message("Teacher activated successfully")

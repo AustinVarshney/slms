@@ -9,7 +9,6 @@ import java.time.LocalDate;
 @Setter
 public class StaffLeaveRequestDto
 {
-    private Long teacherId;
     private LocalDate startDate;
     private LocalDate endDate;
     private String reason;

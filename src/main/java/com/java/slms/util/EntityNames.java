@@ -11,7 +11,7 @@ public class EntityNames
     public static final String SUBJECT = "Subject";
     public static final String FEE_STRUCTURE = "FeeStructure";
     public static final String FEE = "Fee";
-    public static final String EXAM = "Exam";
+    public static final String EXAM = "ExamType";
     public static final String SCORE = "Score";
     public static final String ATTENDANCE = "Attendance";
     public static final String TIMETABLE = "Timetable";

@@ -14,19 +14,19 @@ import java.util.List;
 public interface TransferCertificateRequestService
 {
     @Transactional
-    TransferCertificateRequestDto createTransferCertificateRequest(String studentPan, TCReasonDto tcReasonDto);
+    TransferCertificateRequestDto createTransferCertificateRequest(String studentPan, TCReasonDto reasonDto, Long schoolId);
 
-    List<TransferCertificateRequestDto> getAllRequestsByStudentPan(String studentPan);
+    List<TransferCertificateRequestDto> getAllRequestsByStudentPan(String studentPan, Long schoolId);
 
     @Transactional
-    TransferCertificateRequestDto processRequestDecision(Long requestId, String adminReply, RequestStatus decision);
+    TransferCertificateRequestDto processRequestDecision(Long requestId, String adminReply, RequestStatus decision, Long schoolId);
 
     @Transactional(readOnly = true)
-    List<TransferCertificateRequestDto> getAllRequests(RequestStatus status);
+    List<TransferCertificateRequestDto> getAllRequests(RequestStatus status, Long schoolId);
 
-    List<TransferCertificateRequestDto> getAllRequestForwardedByAdminToClassTeacher(Teacher teacher);
+    List<TransferCertificateRequestDto> getAllRequestForwardedByAdminToClassTeacher(Teacher teacher, Long schoolId);
 
-    void forwardTCRequestToClassTeacher(Long tcRequestId, Admin admin, AdminToTeacherDto adminToTeacherDto);
+    void forwardTCRequestToClassTeacher(Long tcRequestId, Admin admin, AdminToTeacherDto adminToTeacherDto, Long schoolId);
 
-    void replyTCRequestToAdmin(Long tcRequestId, Teacher teacher, TeacherToAdminDto teacherToAdminDto);
+    void replyTCRequestToAdmin(Long tcRequestId, Teacher teacher, TeacherToAdminDto teacherToAdminDto, Long schoolId);
 }

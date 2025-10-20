@@ -4,7 +4,10 @@ import com.java.slms.util.FeeCatalogStatus;
 import com.java.slms.util.FeeStatus;
 import com.java.slms.util.Gender;
 import com.java.slms.util.UserStatus;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDate;
 import java.util.Date;
@@ -41,6 +44,7 @@ public class StudentResponseDto
 
     private String sessionName;
     private Long sessionId;
+    private Long schoolId;
 
     private Date createdAt;
     private Date updatedAt;

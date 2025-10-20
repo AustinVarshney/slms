@@ -1,25 +1,22 @@
 package com.java.slms.controller;
 
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.RestController;
-
 import com.java.slms.dto.CalendarRequestDto;
 import com.java.slms.dto.CalendarResponseDto;
 import com.java.slms.payload.RestResponse;
 import com.java.slms.service.CalendarService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/calendar")
@@ -28,7 +25,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Slf4j
 public class CalendarController
 {
-
     private final CalendarService calendarService;
 
     @Operation(
@@ -41,9 +37,11 @@ public class CalendarController
     )
     @PostMapping
     @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public ResponseEntity<RestResponse<CalendarResponseDto>> addCalendarEvent(@RequestBody CalendarRequestDto calendarRequestDto)
+    public ResponseEntity<RestResponse<CalendarResponseDto>> addCalendarEvent(
+            @RequestBody CalendarRequestDto calendarRequestDto
+            , @RequestAttribute("schoolId") Long schoolId)
     {
-        CalendarResponseDto created = calendarService.addCalendarEvent(calendarRequestDto);
+        CalendarResponseDto created = calendarService.addCalendarEvent(calendarRequestDto, schoolId);
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 RestResponse.<CalendarResponseDto>builder()
                         .data(created)
@@ -63,9 +61,10 @@ public class CalendarController
     )
     @GetMapping
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_STUDENT', 'ROLE_NON_TEACHING_STAFF')")
-    public ResponseEntity<RestResponse<List<CalendarResponseDto>>> getAllCalendarEvents()
+    public ResponseEntity<RestResponse<List<CalendarResponseDto>>> getAllCalendarEvents(
+            @RequestAttribute("schoolId") Long schoolId)
     {
-        List<CalendarResponseDto> list = calendarService.getAllCalendarEvents();
+        List<CalendarResponseDto> list = calendarService.getAllCalendarEvents(schoolId);
         return ResponseEntity.ok(
                 RestResponse.<List<CalendarResponseDto>>builder()
                         .data(list)
@@ -88,9 +87,11 @@ public class CalendarController
     )
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_STUDENT', 'ROLE_NON_TEACHING_STAFF')")
-    public ResponseEntity<RestResponse<CalendarResponseDto>> getCalendarEventById(@PathVariable Long id)
+    public ResponseEntity<RestResponse<CalendarResponseDto>> getCalendarEventById(
+            @PathVariable Long id
+            , @RequestAttribute("schoolId") Long schoolId)
     {
-        CalendarResponseDto dto = calendarService.getCalendarEventById(id);
+        CalendarResponseDto dto = calendarService.getCalendarEventById(id, schoolId);
         return ResponseEntity.ok(
                 RestResponse.<CalendarResponseDto>builder()
                         .data(dto)
@@ -113,9 +114,12 @@ public class CalendarController
     )
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public ResponseEntity<RestResponse<CalendarResponseDto>> updateCalendarEvent(@PathVariable Long id, @RequestBody CalendarRequestDto calendarRequestDto)
+    public ResponseEntity<RestResponse<CalendarResponseDto>> updateCalendarEvent(
+            @PathVariable Long id,
+            @RequestBody CalendarRequestDto calendarRequestDto
+            , @RequestAttribute("schoolId") Long schoolId)
     {
-        CalendarResponseDto updated = calendarService.updateCalendarEvent(id, calendarRequestDto);
+        CalendarResponseDto updated = calendarService.updateCalendarEvent(id, calendarRequestDto, schoolId);
         return ResponseEntity.ok(
                 RestResponse.<CalendarResponseDto>builder()
                         .data(updated)
@@ -138,9 +142,11 @@ public class CalendarController
     )
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public ResponseEntity<RestResponse<String>> deleteCalendarEvent(@PathVariable Long id)
+    public ResponseEntity<RestResponse<String>> deleteCalendarEvent(
+            @PathVariable Long id
+            , @RequestAttribute("schoolId") Long schoolId)
     {
-        calendarService.deleteCalendarEvent(id);
+        calendarService.deleteCalendarEvent(id, schoolId);
         return ResponseEntity.ok(
                 RestResponse.<String>builder()
                         .data(null)
@@ -153,6 +159,9 @@ public class CalendarController
     @Operation(
             summary = "Get calendar events (optionally filtered by session ID)",
             description = "Fetches all calendar events. If sessionId is provided, filters calendar events by that session.",
+            parameters = {
+                    @Parameter(name = "sessionId", description = "Session ID to filter calendar events", required = false)
+            },
             responses = {
                     @ApiResponse(responseCode = "200", description = "Calendar events retrieved"),
                     @ApiResponse(responseCode = "404", description = "Session not found", content = @Content)
@@ -162,16 +171,15 @@ public class CalendarController
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<RestResponse<List<CalendarResponseDto>>> getCalendarEventsBySessionId(
             @RequestParam(required = false) Long sessionId
-    )
+            , @RequestAttribute("schoolId") Long schoolId)
     {
         log.info(sessionId != null
-                        ? "Fetching calendar events for session ID: {}"
-                        : "Fetching all calendar events (no session filter)",
-                sessionId);
+                ? "Fetching calendar events for session ID: {}"
+                : "Fetching all calendar events (no session filter)", sessionId);
 
         List<CalendarResponseDto> events = (sessionId != null)
-                ? calendarService.getCalendarEventsBySessionId(sessionId)
-                : calendarService.getAllCalendarEvents();
+                ? calendarService.getCalendarEventsBySessionId(sessionId, schoolId)
+                : calendarService.getAllCalendarEvents(schoolId);
 
         return ResponseEntity.ok(
                 RestResponse.<List<CalendarResponseDto>>builder()
@@ -194,11 +202,12 @@ public class CalendarController
     )
     @GetMapping("/current-session")
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_STUDENT', 'ROLE_NON_TEACHING_STAFF')")
-    public ResponseEntity<RestResponse<List<CalendarResponseDto>>> getCalendarEventsForCurrentSession()
+    public ResponseEntity<RestResponse<List<CalendarResponseDto>>> getCalendarEventsForCurrentSession(
+            @RequestAttribute("schoolId") Long schoolId)
     {
         log.info("Fetching calendar events for the current active session");
 
-        List<CalendarResponseDto> events = calendarService.getCalendarEventsForCurrentSession();
+        List<CalendarResponseDto> events = calendarService.getCalendarEventsForCurrentSession(schoolId);
 
         return ResponseEntity.ok(
                 RestResponse.<List<CalendarResponseDto>>builder()
@@ -208,7 +217,4 @@ public class CalendarController
                         .build()
         );
     }
-
-
-
 }

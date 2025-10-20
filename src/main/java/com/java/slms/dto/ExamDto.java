@@ -20,4 +20,11 @@ public class ExamDto
     private String className;
     private Double maximumMarks;
     private Double passingMarks;
+    
+    // Additional fields for frontend compatibility
+    private Long classExamId;
+    private String examType;
+    private Long subjectId;
+    private String subjectName;
+    private String description;
 }

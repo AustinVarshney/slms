@@ -47,7 +47,7 @@ public class SecurityConfig
                         .requestMatchers(
                                 "/api/auth/login",
                                 "/api/auth/student/login",
-                                "/api/auth/register/staff",  // Allow public teacher registration
+                                "/api/auth/register/admin",
                                 "/api/users/*/change-password",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**"

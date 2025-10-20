@@ -15,8 +15,6 @@ import com.java.slms.repository.FeeRepository;
 import com.java.slms.repository.SessionRepository;
 import com.java.slms.repository.StudentRepository;
 import com.java.slms.service.FeeService;
-import com.java.slms.util.EntityFetcher;
-import com.java.slms.util.EntityNames;
 import com.java.slms.util.FeeMonth;
 import com.java.slms.util.FeeStatus;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +23,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -40,24 +41,18 @@ public class FeeServiceImpl implements FeeService
     private final SessionRepository sessionRepository;
 
     @Override
-    public void payFeesOfStudent(FeeRequestDTO feeRequestDTO)
+    public void payFeesOfStudent(FeeRequestDTO feeRequestDTO, Long schoolId)
     {
-        Student student = EntityFetcher.fetchByIdOrThrow(studentRepository, feeRequestDTO.getStudentPanNumber(), EntityNames.STUDENT);
+        Student student = studentRepository
+                .findByPanNumberIgnoreCaseAndSchool_Id(feeRequestDTO.getStudentPanNumber(), schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found with PAN: "
+                        + feeRequestDTO.getStudentPanNumber() + " in school ID: " + schoolId));
+
         FeeStructure feeStructure = student.getCurrentClass().getFeeStructures();
-        Session activeSession = getActiveSession();
+        Session session = sessionRepository.findBySessionIdAndSchoolId(feeRequestDTO.getSessionId(), schoolId).orElseThrow(() -> new ResourceNotFoundException("Session not found with ID: " + feeRequestDTO.getSessionId() + " for schoolId: " + schoolId));
 
-        if (!student.getSession().getId().equals(activeSession.getId()))
-        {
-            throw new WrongArgumentException("Student does not belong to the active session");
-        }
-
-        if (!feeStructure.getSession().getId().equals(activeSession.getId()))
-        {
-            throw new WrongArgumentException("FeeStructure does not belong to the active session");
-        }
-
-        List<Fee> fees = feeRepository.findByStudent_PanNumberAndMonth(
-                feeRequestDTO.getStudentPanNumber(), feeRequestDTO.getMonth()
+        List<Fee> fees = feeRepository.findFeesByPanNumberAndSchoolIdAndMonth(
+                feeRequestDTO.getStudentPanNumber(), schoolId, feeRequestDTO.getMonth()
         );
 
         if (fees.isEmpty())
@@ -91,79 +86,27 @@ public class FeeServiceImpl implements FeeService
     }
 
     @Override
-    public List<FeeCatalogDto> getAllFeeCatalogsInActiveSesssion()
+    public List<FeeCatalogDto> getAllFeeCatalogsInActiveSession(Long schoolId)
     {
-        Session activeSession = getActiveSession();
-        List<Student> students = studentRepository.findBySession_Id(activeSession.getId());
+        List<Student> students = studentRepository.findStudentsBySchoolIdAndActiveSession(schoolId);
 
         return students.stream()
-                .map(this::buildCatalogForStudent)
+                .map(student -> buildCatalogForStudent(student, schoolId))
                 .collect(Collectors.toList());
     }
 
     @Override
-    public FeeCatalogDto getFeeCatalogByStudentPanNumber(String panNumber)
+    public FeeCatalogDto getFeeCatalogByStudentPanNumber(String panNumber, Long schoolId)
     {
-        Student student = studentRepository.findById(panNumber)
+        Student student = studentRepository.findByPanNumberIgnoreCaseAndSchool_Id(panNumber, schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found with PAN: " + panNumber));
 
-        return buildCatalogForStudent(student);
+        return buildCatalogForStudent(student, schoolId);
     }
 
-    @Transactional
-    @Override
-    public void generateFeesForStudent(String panNumber)
+    private FeeCatalogDto buildCatalogForStudent(Student student, Long schoolId)
     {
-        Student student = studentRepository.findById(panNumber)
-                .orElseThrow(() -> new ResourceNotFoundException("Student not found with PAN: " + panNumber));
-
-        // Check if fees already exist for this student
-        List<Fee> existingFees = feeRepository.findByStudent_PanNumberOrderByYearAscMonthAsc(panNumber);
-        if (!existingFees.isEmpty())
-        {
-            log.info("Fees already exist for student with PAN: {}", panNumber);
-            return;
-        }
-
-        ClassEntity classEntity = student.getCurrentClass();
-        Session session = student.getSession();
-
-        if (classEntity == null || session == null)
-        {
-            throw new WrongArgumentException("Student must have a class and session assigned");
-        }
-
-        FeeStructure feeStructure = classEntity.getFeeStructures();
-        if (feeStructure == null)
-        {
-            throw new ResourceNotFoundException("No fee structure found for class: " + classEntity.getClassName());
-        }
-
-        List<Fee> feeEntries = new ArrayList<>();
-        LocalDate currentMonth = session.getStartDate().withDayOfMonth(1);
-
-        for (int i = 0; i < 12; i++)
-        {
-            Fee fee = new Fee();
-            fee.setMonth(FeeMonth.valueOf(currentMonth.getMonth().toString()));
-            fee.setYear(currentMonth.getYear());
-            fee.setStatus(FeeStatus.PENDING);
-            fee.setAmount(feeStructure.getFeesAmount());
-            fee.setFeeStructure(feeStructure);
-            fee.setDueDate(currentMonth.withDayOfMonth(15));
-            fee.setStudent(student);
-
-            feeEntries.add(fee);
-            currentMonth = currentMonth.plusMonths(1);
-        }
-
-        feeRepository.saveAll(feeEntries);
-        log.info("Generated {} fee entries for student with PAN: {}", feeEntries.size(), panNumber);
-    }
-
-    private FeeCatalogDto buildCatalogForStudent(Student student)
-    {
-        List<Fee> fees = feeRepository.findByStudent_PanNumberOrderByYearAscMonthAsc(student.getPanNumber());
+        List<Fee> fees = feeRepository.findByStudentPanNumberAndSchoolIdOrderByYearAscMonthAsc(student.getPanNumber(), schoolId);
 
         Map<FeeMonth, Fee> feeMap = fees.stream()
                 .collect(Collectors.toMap(Fee::getMonth, Function.identity(), (existing, replacement) -> existing));
@@ -224,26 +167,79 @@ public class FeeServiceImpl implements FeeService
 
     @Transactional
     @Override
-    public void markPendingFeesAsOverdue()
+    public void markPendingFeesAsOverdue(Long schoolId)
     {
         LocalDate today = LocalDate.now();
-        Session activeSession = getActiveSession();
-
         List<Fee> overdueFees = feeRepository
-                .findByStatusAndDueDateLessThanEqualAndFeeStructure_Session_Id(
-                        FeeStatus.PENDING, today, activeSession.getId()
-                );
+                .findOverdueFeesByStudentAndActiveSession(
+                        FeeStatus.PENDING, today, schoolId);
 
         overdueFees.forEach(fee -> fee.setStatus(FeeStatus.OVERDUE));
-        feeRepository.saveAll(overdueFees); // Batch update
+        feeRepository.saveAll(overdueFees);
 
         log.info("Marked {} pending fees as OVERDUE as of {}", overdueFees.size(), today);
     }
 
-    // Helper
-    private Session getActiveSession()
+    @Override
+    @Transactional
+    public void generateFeesForStudent(String panNumber)
     {
-        return sessionRepository.findByActiveTrue()
-                .orElseThrow(() -> new ResourceNotFoundException("No active session found"));
+        Student student = studentRepository.findById(panNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found with PAN: " + panNumber));
+
+        ClassEntity currentClass = student.getCurrentClass();
+        if (currentClass == null)
+        {
+            throw new ResourceNotFoundException("Student with PAN " + panNumber + " is not enrolled in any class");
+        }
+
+        FeeStructure feeStructure = currentClass.getFeeStructures();
+        if (feeStructure == null)
+        {
+            throw new ResourceNotFoundException("No fee structure found for class: " + currentClass.getClassName());
+        }
+
+        Session activeSession = sessionRepository.findBySchoolIdAndActiveTrue(student.getSchool().getId())
+                .orElseThrow(() -> new ResourceNotFoundException("No active session found for school ID: " + student.getSchool().getId()));
+
+        // Generate fees for all months
+        for (FeeMonth month : FeeMonth.values())
+        {
+            // Check if fee already exists for this student, month, and session
+            boolean exists = feeRepository.existsByStudentPanNumberAndMonthAndSession(panNumber, month, activeSession);
+            if (!exists)
+            {
+                Fee fee = new Fee();
+                fee.setStudent(student);
+                fee.setMonth(month);
+                fee.setFeeStructure(feeStructure);
+                fee.setAmount(feeStructure.getFeesAmount());
+                fee.setStatus(FeeStatus.PENDING);
+                fee.setDueDate(calculateDueDate(month, activeSession));
+                fee.setYear(activeSession.getStartDate().getYear());
+                fee.setSchool(student.getSchool());
+
+                feeRepository.save(fee);
+                log.info("Generated fee for student {} for month {}", panNumber, month);
+            }
+        }
+    }
+
+    private LocalDate calculateDueDate(FeeMonth month, Session session)
+    {
+        // Calculate due date as 10th of each month
+        int monthNumber = month.ordinal() + 4; // APRIL = 0, so +4 gives 4 (April)
+        if (monthNumber > 12)
+        {
+            monthNumber -= 12; // Wrap around to next year
+        }
+        
+        int year = session.getStartDate().getYear();
+        if (monthNumber < session.getStartDate().getMonthValue())
+        {
+            year++; // If month is before session start month, it's next year
+        }
+
+        return LocalDate.of(year, monthNumber, 10);
     }
 }

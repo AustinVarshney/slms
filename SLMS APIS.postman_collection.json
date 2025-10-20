@@ -12,16 +12,6 @@
 				{
 					"name": "Get All Students - Admin",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU4OTg5NjM0LCJleHAiOjE3NTg5OTMyMzR9.NuWSU_of9yl-Jgz6HvQogRafCxGdNo8euy9WX9UCfWo",
-									"type": "string"
-								}
-							]
-						},
 						"method": "GET",
 						"header": [],
 						"url": {
@@ -251,6 +241,37 @@
 						}
 					},
 					"response": []
+				},
+				{
+					"name": "Promote Student to a ClassId - Admin",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "[\r\n  \"ABC136\"\r\n]\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/students/promote-to/3",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"students",
+								"promote-to",
+								"3"
+							]
+						}
+					},
+					"response": []
 				}
 			]
 		},
@@ -264,7 +285,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"className\" : \"8A-2025\",\r\n    \"sessionId\": 1,\r\n    \"feesAmount\":8000,\r\n    \"classTeacherId\":3\r\n}",
+							"raw": "{\r\n    \"className\" : \"8A\",\r\n    \"feesAmount\":8000,\r\n    \"classTeacherId\":5\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -326,7 +347,7 @@
 							"raw": ""
 						},
 						"url": {
-							"raw": "http://localhost:8080/api/classes/1/session/1",
+							"raw": "http://localhost:8080/api/classes/1",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -335,8 +356,6 @@
 							"path": [
 								"api",
 								"classes",
-								"1",
-								"session",
 								"1"
 							]
 						}
@@ -406,22 +425,13 @@
 					"response": []
 				}
 			],
-			"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-						"key": "token",
-						"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU2NTczNzM5LCJleHAiOjE3NTY1NzczMzl9.Ev0u_in6vhmF0FxzE14g1qhn0Mkp4Z78ambv8EJoXFk",
-						"type": "string"
-					}
-				]
-			},
 			"event": [
 				{
 					"listen": "prerequest",
 					"script": {
 						"type": "text/javascript",
 						"packages": {},
+						"requests": {},
 						"exec": [
 							""
 						]
@@ -432,6 +442,7 @@
 					"script": {
 						"type": "text/javascript",
 						"packages": {},
+						"requests": {},
 						"exec": [
 							""
 						]
@@ -445,14 +456,11 @@
 				{
 					"name": "Create & Assign Subjects to Teachers - Admin",
 					"request": {
-						"auth": {
-							"type": "noauth"
-						},
 						"method": "POST",
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"classId\": 3,\r\n  \"subjects\": [\r\n    {\r\n      \"subjectName\": \"Physics\",\r\n      \"teacherId\": 5\r\n    },\r\n    {\r\n      \"subjectName\": \"Chemistry\",\r\n      \"teacherId\": 4\r\n    },\r\n    {\r\n      \"subjectName\": \"Maths\",\r\n      \"teacherId\": 3\r\n    }\r\n  ]\r\n}\r\n",
+							"raw": "{\r\n  \"classId\": 3,\r\n  \"subjects\": [\r\n    {\r\n      \"subjectName\": \"Physics\",\r\n      \"teacherId\": 1\r\n    },\r\n    {\r\n      \"subjectName\": \"Chemistry\",\r\n      \"teacherId\": 2\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -913,7 +921,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"name\": \"Teacher and Admin\",\r\n  \"email\": \"TeacherAndAdmin11111@example.com\",\r\n  \"qualification\": \"MSc\",\r\n  \"salaryGrade\": \"A1\",\r\n  \"contactNumber\": \"+1234567890\",\r\n  \"roles\": [\"ROLE_TEACHER\"],\r\n  \"password\": \"securePassword123\",\r\n  \"designation\": \"Senior Teacher\",\r\n   \"joiningDate\": \"2025-08-21\"\r\n}\r\n",
+							"raw": "{\r\n  \"name\": \"Teacher\",\r\n  \"email\": \"teacher@example.com\",\r\n  \"qualification\": \"MSc\",\r\n  \"salaryGrade\": \"A1\",\r\n  \"contactNumber\": \"+1234567890\",\r\n  \"roles\": [\"ROLE_TEACHER\"],\r\n  \"password\": \"securePassword123\",\r\n  \"designation\": \"Senior Teacher\",\r\n   \"joiningDate\": \"2025-08-21\",\r\n   \"allowedLeaves\":40\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -977,7 +985,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"panNumber\": \"ABC135\",\r\n  \"name\": \"Rahul Kumar\",\r\n  \"photo\": \"rahul_kumar.jpg\",\r\n  \"password\": \"securePassword123\",\r\n\r\n  \"parentName\": \"Rajesh Kumar\",\r\n  \"mobileNumber\": \"9876543210\",\r\n\r\n  \"dateOfBirth\": \"2008-05-15\",\r\n  \"gender\": \"MALE\",\r\n\r\n  \"address\": \"123 Main Street, New Delhi, India\",\r\n  \"emergencyContact\": \"9876543211\",\r\n  \"bloodGroup\": \"B+\",\r\n\r\n  \"admissionDate\": \"2020-04-01\",\r\n  \"previousSchool\": \"Delhi Public School\",\r\n\r\n  \"classId\": 1,\r\n  \"sessionId\":1\r\n}\r\n",
+							"raw": "{\r\n  \"panNumber\": \"ABC135\",\r\n  \"name\": \"Rahul Kumar\",\r\n  \"photo\": \"rahul_kumar.jpg\",\r\n  \"password\": \"securePassword123\",\r\n\r\n  \"parentName\": \"Rajesh Kumar\",\r\n  \"mobileNumber\": \"9876543210\",\r\n\r\n  \"dateOfBirth\": \"2008-05-15\",\r\n  \"gender\": \"MALE\",\r\n\r\n  \"address\": \"123 Main Street, New Delhi, India\",\r\n  \"emergencyContact\": \"9876543211\",\r\n  \"bloodGroup\": \"B+\",\r\n\r\n  \"admissionDate\": \"2020-04-01\",\r\n  \"previousSchool\": \"Delhi Public School\",\r\n\r\n  \"classId\": 1\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1011,7 +1019,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"panNumber\": \"ABC155\",\r\n  \"password\": \"securePassword123\"\r\n}",
+							"raw": "{\r\n  \"panNumber\": \"ABC136\",\r\n  \"password\": \"securePassword123\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1078,6 +1086,37 @@
 									"value": "",
 									"disabled": true
 								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Register Admin with School Details",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"email\": \"admin@companysyyd.com\",\r\n  \"password\": \"temporaryStrongPassword!123\",\r\n  \"contactNumber\": \"8745126647\",\r\n  \"designation\": \"MANAGER\",\r\n  \"qualification\": \"MSc in Education\",\r\n  \"name\": \"Santa Singh\",\r\n  \"schoolName\": \"ABCDEdddF Public School\",\r\n  \"schoolEmail\": \"contact@abcpublicschool.com\",\r\n  \"schoolWebsite\": \"https://www.abcpublicschool.com\",\r\n  \"schoolContactNumber\": \"9876543210\"\r\n  }\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/auth/register/admin",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"auth",
+								"register",
+								"admin"
 							]
 						}
 					},
@@ -1374,21 +1413,11 @@
 				{
 					"name": "Create Session",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU2OTc3MjA0LCJleHAiOjE3NTY5ODA4MDR9.s6BtXFqidNiHvWOjG0qamOWixppHuJvPSE5pA_GKAAA",
-									"type": "string"
-								}
-							]
-						},
 						"method": "POST",
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"name\": \"2025-2026\",\r\n  \"startDate\": \"2025-04-01\",\r\n  \"endDate\": \"2026-03-31\"\r\n}",
+							"raw": "{\r\n  \"name\": \"2025-2026\",\r\n  \"startDate\": \"2026-04-01\",\r\n  \"endDate\": \"2027-04-01\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1413,6 +1442,16 @@
 				{
 					"name": "Get All Sessions",
 					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55c3l5ZC5jb20iLCJyb2xlcyI6WyJST0xFX0FETUlOIl0sInNjaG9vbElkIjoxMSwiaWF0IjoxNzYwNDIyNjUxLCJleHAiOjE3NjA0MjYyNTF9.eAmsoRh589Pmqer-NVV_9qC58DlLrLSEc-bHK7Cu30M",
+									"type": "string"
+								}
+							]
+						},
 						"method": "GET",
 						"header": [],
 						"url": {
@@ -1433,10 +1472,20 @@
 				{
 					"name": "Get Session by ID",
 					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55c3l5ZC5jb20iLCJyb2xlcyI6WyJST0xFX0FETUlOIl0sInNjaG9vbElkIjoxMSwiaWF0IjoxNzYwNDIyNjUxLCJleHAiOjE3NjA0MjYyNTF9.eAmsoRh589Pmqer-NVV_9qC58DlLrLSEc-bHK7Cu30M",
+									"type": "string"
+								}
+							]
+						},
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "http://localhost:8080/api/sessions/1",
+							"raw": "http://localhost:8080/api/sessions/2",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -1445,7 +1494,7 @@
 							"path": [
 								"api",
 								"sessions",
-								"1"
+								"2"
 							]
 						}
 					},
@@ -1454,11 +1503,21 @@
 				{
 					"name": "Update Session",
 					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55c3l5ZC5jb20iLCJyb2xlcyI6WyJST0xFX0FETUlOIl0sInNjaG9vbElkIjoxMSwiaWF0IjoxNzYwNDIyNjUxLCJleHAiOjE3NjA0MjYyNTF9.eAmsoRh589Pmqer-NVV_9qC58DlLrLSEc-bHK7Cu30M",
+									"type": "string"
+								}
+							]
+						},
 						"method": "PUT",
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"name\": \"2024-25 Revised\",\r\n  \"startDate\": \"2024-04-05\",\r\n  \"endDate\": \"2025-03-30\",\r\n  \"active\": false\r\n}\r\n",
+							"raw": "{\r\n  \"name\": \"2024-25 Revised\",\r\n  \"startDate\": \"2024-04-05\",\r\n  \"endDate\": \"2025-04-05\",  // 12 months apart\r\n  \"active\": false\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1466,7 +1525,7 @@
 							}
 						},
 						"url": {
-							"raw": "http://localhost:8080/api/sessions/1",
+							"raw": "http://localhost:8080/api/sessions/2",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -1475,7 +1534,7 @@
 							"path": [
 								"api",
 								"sessions",
-								"1"
+								"2"
 							]
 						}
 					},
@@ -1505,6 +1564,65 @@
 						}
 					},
 					"response": []
+				},
+				{
+					"name": "Delete Session",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55c3l5ZC5jb20iLCJyb2xlcyI6WyJST0xFX0FETUlOIl0sInNjaG9vbElkIjoxMSwiaWF0IjoxNzYwNDI2MzM1LCJleHAiOjE3NjA0Mjk5MzV9.wp7r1EVC5r5MRX8kLYj-NB33UOsakdrHhbwDGAXqHmM",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/sessions/2",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"sessions",
+								"2"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {},
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {},
+						"exec": [
+							""
+						]
+					}
 				}
 			]
 		},
@@ -2306,16 +2424,6 @@
 					"response": []
 				}
 			],
-			"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-						"key": "token",
-						"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU5ODM0NTA1LCJleHAiOjE3NTk4MzgxMDV9.1WcmpJIlAAB3H7F_l6PRMrH1wisVTONGU8Ux9nZIPJs",
-						"type": "string"
-					}
-				]
-			},
 			"event": [
 				{
 					"listen": "prerequest",
@@ -2745,16 +2853,6 @@
 					"response": []
 				}
 			],
-			"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-						"key": "token",
-						"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU5ODM5NjAxLCJleHAiOjE3NTk4NDMyMDF9.OyfyLC8QS5epMtSCTEYczO3e3Eh8blVrRRWDJXC_NBQ",
-						"type": "string"
-					}
-				]
-			},
 			"event": [
 				{
 					"listen": "prerequest",
@@ -3125,7 +3223,7 @@
 							"bearer": [
 								{
 									"key": "token",
-									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJUZWFjaGVyMTExMUBleGFtcGxlLmNvbSIsInJvbGVzIjpbIlJPTEVfVEVBQ0hFUiJdLCJpYXQiOjE3NjAxMDgxMTQsImV4cCI6MTc2MDExMTcxNH0.PSl2SeGXdW0e8D_G6l2QfsK-SmLcKbJBNFcdzRBZFHw",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJUZWFjaGVyQW5kQWRtaW5kZGRkMTFAZXhhbXBsZS5jb20iLCJyb2xlcyI6WyJST0xFX1RFQUNIRVIiXSwic2Nob29sSWQiOjMsImlhdCI6MTc2MDY4MTY2NiwiZXhwIjoxNzYwNjg1MjY2fQ.H1XXz_CB3niPtzk1dzv68Vs0mYAmk4_2nznGS_tNocA",
 									"type": "string"
 								}
 							]
@@ -3134,7 +3232,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"teacherId\": 1,\r\n  \"startDate\": \"2025-10-15\",\r\n  \"endDate\": \"2025-10-17\",\r\n  \"reason\": \"Medical leave\"\r\n}\r\n",
+							"raw": "{\r\n  \"startDate\": \"2025-10-15\",\r\n  \"endDate\": \"2025-10-17\",\r\n  \"reason\": \"Medical leave\"\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -3168,7 +3266,7 @@
 							"bearer": [
 								{
 									"key": "token",
-									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJUZWFjaGVyQW5kQWRtaW4xMTExMUBleGFtcGxlLmNvbSIsInJvbGVzIjpbIlJPTEVfVEVBQ0hFUiJdLCJpYXQiOjE3NjAxMTAyMzQsImV4cCI6MTc2MDExMzgzNH0.Cm6tSfsEZ57ASi6lXFp4ZgxN4S2aK_WbI239tm3gQ6E",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJUZWFjaGVyQW5kQWRtaW5kZGRkMTFAZXhhbXBsZS5jb20iLCJyb2xlcyI6WyJST0xFX1RFQUNIRVIiXSwic2Nob29sSWQiOjMsImlhdCI6MTc2MDY4MTY2NiwiZXhwIjoxNzYwNjg1MjY2fQ.H1XXz_CB3niPtzk1dzv68Vs0mYAmk4_2nznGS_tNocA",
 									"type": "string"
 								}
 							]
@@ -3201,16 +3299,6 @@
 						"disableBodyPruning": true
 					},
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzYwMTExMTMxLCJleHAiOjE3NjAxMTQ3MzF9.gyYIdKtwLzPpvDhzACcKmPbfCicVeFF5Flm8kphz8bk",
-									"type": "string"
-								}
-							]
-						},
 						"method": "GET",
 						"header": [],
 						"body": {
@@ -3413,7 +3501,7 @@
 							"bearer": [
 								{
 									"key": "token",
-									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJUZWFjaGVyQW5kQWRtaW4xMTExMUBleGFtcGxlLmNvbSIsInJvbGVzIjpbIlJPTEVfVEVBQ0hFUiJdLCJpYXQiOjE3NjAyMDcxMzYsImV4cCI6MTc2MDIxMDczNn0.qDIjLYcgd0JDJ5wRFqPvKQOKJjV5r0EMBcHlEpHixeU",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJUZWFjaGVyQW5kQWRtaW5kZGRkMTFAZXhhbXBsZS5jb20iLCJyb2xlcyI6WyJST0xFX1RFQUNIRVIiXSwic2Nob29sSWQiOjMsImlhdCI6MTc2MDY4MTY2NiwiZXhwIjoxNzYwNjg1MjY2fQ.H1XXz_CB3niPtzk1dzv68Vs0mYAmk4_2nznGS_tNocA",
 									"type": "string"
 								}
 							]
@@ -3422,7 +3510,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"status\" : \"APPROVED\",\r\n    \"responseMessage\" : \"Ja Maje le beta\"\r\n}"
+							"raw": ""
 						},
 						"url": {
 							"raw": "http://localhost:8080/api/leave/teacher?status=PENDING",
@@ -3447,6 +3535,631 @@
 					"response": []
 				}
 			]
+		},
+		{
+			"name": "Exam Type",
+			"item": [
+				{
+					"name": "Create Exam Type - Admin",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzYwMjg4MDY0LCJleHAiOjE3NjAyOTE2NjR9.jyQxSZ1Sb5xgXga2kwGd6k8aZDqWJdkbBuxg6elBOXY",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"name\": \"Midterm\",\r\n  \"description\": \"Midterm examination\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/exam-types",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"exam-types"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get ExamType by ID - Admin",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzYwMjg4MDY0LCJleHAiOjE3NjAyOTE2NjR9.jyQxSZ1Sb5xgXga2kwGd6k8aZDqWJdkbBuxg6elBOXY",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"name\": \"Midterm\",\r\n  \"description\": \"Midterm examination\"\r\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/exam-types/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"exam-types",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "All ExamTypes - Admin",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzYwMjg4MDY0LCJleHAiOjE3NjAyOTE2NjR9.jyQxSZ1Sb5xgXga2kwGd6k8aZDqWJdkbBuxg6elBOXY",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/exam-types",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"exam-types"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Updated Exam Type - Admin",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzYwMjg4MDY0LCJleHAiOjE3NjAyOTE2NjR9.jyQxSZ1Sb5xgXga2kwGd6k8aZDqWJdkbBuxg6elBOXY",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"name\": \"Midterm Updated\",\r\n  \"description\": \"Updated midterm exam description\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/exam-types/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"exam-types",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete - Admin",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzYwMjg4MDY0LCJleHAiOjE3NjAyOTE2NjR9.jyQxSZ1Sb5xgXga2kwGd6k8aZDqWJdkbBuxg6elBOXY",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"name\": \"Midterm Updated\",\r\n  \"description\": \"Updated midterm exam description\"\r\n}\r\n"
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/exam-types/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"exam-types",
+								"1"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {},
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {},
+						"exec": [
+							""
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "ClassExam Management - Admin",
+			"item": [
+				{
+					"name": "Add ExamType with ClassName",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"examTypeId\": 3,\r\n  \"classExams\": [\r\n    {\r\n      \"classId\": 5,\r\n      \"maxMarks\": 100,\r\n      \"passingMarks\": 33,\r\n      \"examDate\": \"2025-11-10\"\r\n    },\r\n    {\r\n      \"classId\": 6,\r\n      \"maxMarks\": 80,\r\n      \"passingMarks\": 26,\r\n      \"examDate\": \"2025-11-12\"\r\n    }\r\n  ]\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/class-exams/assign",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"class-exams",
+								"assign"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get ClassExam by ClassId",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"examTypeId\": 3,\r\n  \"classExams\": [\r\n    {\r\n      \"classId\": 5,\r\n      \"maxMarks\": 100,\r\n      \"passingMarks\": 33,\r\n      \"examDate\": \"2025-11-10\"\r\n    },\r\n    {\r\n      \"classId\": 6,\r\n      \"maxMarks\": 80,\r\n      \"passingMarks\": 26,\r\n      \"examDate\": \"2025-11-12\"\r\n    }\r\n  ]\r\n}\r\n"
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/class-exams/class/3",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"class-exams",
+								"class",
+								"3"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Class Exam",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"maxMarks\": 80,\r\n  \"passingMarks\": 26,\r\n  \"examDate\": \"2025-11-12\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/class-exams/5/2",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"class-exams",
+								"5",
+								"2"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Class Exam",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/class-exams/5/2",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"class-exams",
+								"5",
+								"2"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "StaffLeaveAllowance - Admin",
+			"item": [
+				{
+					"name": "Add Leave Allowance to Staff",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"staffId\": 3,\r\n  \"allowedLeaves\": 12\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/staff-leave-allowances",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"staff-leave-allowances"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Edit Leave Allowance",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"staffId\": 3,\r\n  \"allowedLeaves\": 15\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/staff-leave-allowances/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"staff-leave-allowances",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Leave Allowance of a staff in a session",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"staffId\": 3,\r\n  \"allowedLeaves\": 15\r\n}\r\n"
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/staff-leave-allowances/staff/3/session/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"staff-leave-allowances",
+								"staff",
+								"3",
+								"session",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get all staff leave allowance",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"staffId\": 3,\r\n  \"allowedLeaves\": 15\r\n}\r\n"
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/staff-leave-allowances/session/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"staff-leave-allowances",
+								"session",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get my leave allowance In Current Session- Any role except Admin",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Marks - Admin",
+			"item": [
+				{
+					"name": "Add Marks By Classid and SubjectId - Admin",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"examTypeId\": 1,\r\n  \"maxMarks\": 100,\r\n  \"passingMarks\": 33,\r\n  \"marks\": [\r\n    {\r\n      \"panNumber\": \"ABC136\",\r\n      \"marks\": 89\r\n    }\r\n  ]\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/student-marks/class/3/subject/3",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"student-marks",
+								"class",
+								"3",
+								"subject",
+								"3"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Current Student Marks - Student",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBQkMxMzYiLCJyb2xlcyI6WyJST0xFX1NUVURFTlQiXSwic2Nob29sSWQiOjEsImlhdCI6MTc2MDcxODEwMiwiZXhwIjoxNzYwNzIxNzAyfQ.a8bcupaOnN22krPpZVBOchW557wxtcxtXrsqlI7a9oI",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/student-marks",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"student-marks"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Student marks By Pan",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwic2Nob29sSWQiOjEsImlhdCI6MTc2MDcxODk2MywiZXhwIjoxNzYwNzIyNTYzfQ.SRC55wuFPetzhNSMGlOwxAT8jsMljYJirzYnJYnCOB8",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/student-marks/students/ABC136/marks",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"student-marks",
+								"students",
+								"ABC136",
+								"marks"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Exam Summary By Pan - Admin",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwic2Nob29sSWQiOjEsImlhdCI6MTc2MDcxODk2MywiZXhwIjoxNzYwNzIyNTYzfQ.SRC55wuFPetzhNSMGlOwxAT8jsMljYJirzYnJYnCOB8",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/student-marks/students/ABC136/exam-summary",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"student-marks",
+								"students",
+								"ABC136",
+								"exam-summary"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Exam Summary of Student - Studebt",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBQkMxMzYiLCJyb2xlcyI6WyJST0xFX1NUVURFTlQiXSwic2Nob29sSWQiOjEsImlhdCI6MTc2MDcxODEwMiwiZXhwIjoxNzYwNzIxNzAyfQ.a8bcupaOnN22krPpZVBOchW557wxtcxtXrsqlI7a9oI",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/student-marks/exam-summary",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"student-marks",
+								"exam-summary"
+							]
+						}
+					},
+					"response": []
+				}
+			]
 		}
 	],
 	"auth": {
@@ -3454,7 +4167,7 @@
 		"bearer": [
 			{
 				"key": "token",
-				"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzU4NTI1NTk5LCJleHAiOjE3NTg1MjkxOTl9.I1DVoGZ3IYeCNWNr0kN0ehXSQiUYxq55IerM9ZRoY3Q",
+				"value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwic2Nob29sSWQiOjEsImlhdCI6MTc2MDcwMzIzOCwiZXhwIjoxNzYwNzA2ODM4fQ.sCX_cd2yWSlmdUjOgSK6QpVt_6PoP5xkOI8Cbg32dYQ",
 				"type": "string"
 			}
 		]
@@ -3465,6 +4178,7 @@
 			"script": {
 				"type": "text/javascript",
 				"packages": {},
+				"requests": {},
 				"exec": [
 					""
 				]
@@ -3475,6 +4189,7 @@
 			"script": {
 				"type": "text/javascript",
 				"packages": {},
+				"requests": {},
 				"exec": [
 					""
 				]

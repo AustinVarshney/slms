@@ -5,6 +5,12 @@ import com.java.slms.payload.RestResponse;
 import com.java.slms.service.AttendanceService;
 import com.java.slms.service.SessionService;
 import com.java.slms.util.FeeMonth;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -15,12 +21,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
-
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequiredArgsConstructor
@@ -41,9 +41,11 @@ public class AttendanceController
     )
     @PostMapping()
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER')")
-    public ResponseEntity<RestResponse<?>> markAttendance(@RequestBody AttendanceDto attendanceDto)
+    public ResponseEntity<RestResponse<?>> markAttendance(
+            @RequestBody AttendanceDto attendanceDto,
+            @RequestAttribute("schoolId") Long schoolId)
     {
-        attendanceService.markTodaysAttendance(attendanceDto);
+        attendanceService.markTodaysAttendance(attendanceDto, schoolId);
         RestResponse<?> response = RestResponse.builder()
                 .data(null)
                 .message("Attendance marked successfully ")
@@ -68,10 +70,11 @@ public class AttendanceController
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<RestResponse<AttendanceUpdateResult>> updateAttendanceForAdmin(
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @RequestBody AttendanceDto attendanceDto)
+            @RequestBody AttendanceDto attendanceDto,
+            @RequestAttribute("schoolId") Long schoolId)
     {
 
-        AttendanceUpdateResult attendanceUpdateResult = attendanceService.updateAttendanceForAdmin(attendanceDto, date);
+        AttendanceUpdateResult attendanceUpdateResult = attendanceService.updateAttendanceForAdmin(attendanceDto, date, schoolId);
 
         return ResponseEntity.ok(
                 RestResponse.<AttendanceUpdateResult>builder()
@@ -88,7 +91,8 @@ public class AttendanceController
             parameters = {
                     @Parameter(name = "pan", description = "PAN number of the student", required = true),
                     @Parameter(name = "sessionId", description = "ID of the session", required = true),
-                    @Parameter(name = "month", description = "Month for attendance filter (optional)")
+                    @Parameter(name = "month", description = "Month for attendance filter (optional)"),
+                    @Parameter(name = "schoolId", description = "School ID", required = true, in = ParameterIn.DEFAULT)
             },
             responses = {
                     @ApiResponse(responseCode = "200", description = "Attendance records fetched successfully"),
@@ -100,10 +104,11 @@ public class AttendanceController
     public ResponseEntity<RestResponse<List<AttendanceInfoDto>>> getAllAttendanceByPanAndSessionIdAndMonth(
             @PathVariable String pan,
             @PathVariable Long sessionId,
-            @RequestParam(required = false) FeeMonth month)
+            @RequestParam(required = false) FeeMonth month,
+            @RequestAttribute("schoolId") Long schoolId)
     {
 
-        List<AttendanceInfoDto> attendanceInfoList = attendanceService.getAllAttendanceByPanAndSessionId(pan, sessionId, month);
+        List<AttendanceInfoDto> attendanceInfoList = attendanceService.getAllAttendanceByPanAndSessionId(pan, sessionId, month, schoolId);
 
         return ResponseEntity.ok(
                 RestResponse.<List<AttendanceInfoDto>>builder()
@@ -119,7 +124,8 @@ public class AttendanceController
             summary = "Get attendance records of the current student by month",
             description = "Fetch attendance records for the logged-in student filtered by optional month.",
             parameters = {
-                    @Parameter(name = "month", description = "Month for attendance filter (optional)")
+                    @Parameter(name = "month", description = "Month for attendance filter (optional)"),
+                    @Parameter(name = "schoolId", description = "School ID", required = true, in = ParameterIn.DEFAULT)
             },
             responses = {
                     @ApiResponse(responseCode = "200", description = "Attendance records fetched successfully"),
@@ -129,11 +135,12 @@ public class AttendanceController
     @GetMapping("/me")
     @PreAuthorize("hasRole('ROLE_STUDENT')")
     public ResponseEntity<RestResponse<List<AttendanceInfoDto>>> getAttendanceOfCurrentStudentByMonth(
-            @RequestParam(required = false) FeeMonth month)
+            @RequestParam(required = false) FeeMonth month,
+            @RequestAttribute("schoolId") Long schoolId)
     {
 
         String panNumber = SecurityContextHolder.getContext().getAuthentication().getName();
-        SessionDto activeSession = sessionService.getCurrentSession();
+        SessionDto activeSession = sessionService.getCurrentSession(schoolId);
 
         FeeMonth currentMonth = month;
 
@@ -148,7 +155,7 @@ public class AttendanceController
         }
 
         List<AttendanceInfoDto> records = attendanceService.getAllAttendanceByPanAndSessionId(
-                panNumber, activeSession.getId(), currentMonth);
+                panNumber, activeSession.getId(), currentMonth, schoolId);
 
         return ResponseEntity.ok(
                 RestResponse.<List<AttendanceInfoDto>>builder()
@@ -165,7 +172,8 @@ public class AttendanceController
             parameters = {
                     @Parameter(name = "classId", description = "Class ID", required = true),
                     @Parameter(name = "sessionId", description = "Session ID", required = true),
-                    @Parameter(name = "month", description = "Month for attendance filter (optional)")
+                    @Parameter(name = "month", description = "Month for attendance filter (optional)"),
+                    @Parameter(name = "schoolId", description = "School ID", required = true, in = ParameterIn.DEFAULT)
             },
             responses = {
                     @ApiResponse(responseCode = "200", description = "Attendance records fetched successfully"),
@@ -177,10 +185,11 @@ public class AttendanceController
     public ResponseEntity<RestResponse<List<AttendanceByClassDto>>> getAttendanceByClassAndSessionAndMonth(
             @PathVariable Long classId,
             @PathVariable Long sessionId,
-            @RequestParam(required = false) FeeMonth month)
+            @RequestParam(required = false) FeeMonth month,
+            @RequestAttribute("schoolId") Long schoolId)
     {
 
-        List<AttendanceByClassDto> attendanceList = attendanceService.getAttendanceByClassAndSession(classId, sessionId, month);
+        List<AttendanceByClassDto> attendanceList = attendanceService.getAttendanceByClassAndSession(classId, sessionId, month, schoolId);
 
         return ResponseEntity.ok(
                 RestResponse.<List<AttendanceByClassDto>>builder()

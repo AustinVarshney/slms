@@ -8,13 +8,13 @@ import java.util.List;
 
 public interface TimeTableService
 {
-    public TimetableResponseDTO createTimetable(TimetableRequestDTO dto);
+    TimetableResponseDTO createTimetable(TimetableRequestDTO dto, Long schoolId);
 
-    List<TimetableResponseDTO> getTimetableByTeacherIdInCurrentSession(Long teacherId);
+    List<TimetableResponseDTO> getTimetableByTeacherIdInCurrentSession(Long teacherId, Long schoolId);
 
-    List<TimetableResponseDTO> getTimetableByClassAndOptionalDay(Long classId, DayOfWeek day);
+    List<TimetableResponseDTO> getTimetableByClassAndOptionalDay(Long classId, DayOfWeek day, Long schoolId);
 
-    TimetableResponseDTO updateTimetable(Long id, TimetableRequestDTO dto);
+    TimetableResponseDTO updateTimetable(Long id, TimetableRequestDTO dto, Long schoolId);
 
-    void deleteTimetable(Long id);
+    void deleteTimetable(Long id, Long schoolId);
 }

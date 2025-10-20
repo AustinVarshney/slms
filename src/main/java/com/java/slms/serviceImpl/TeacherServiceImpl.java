@@ -30,75 +30,92 @@ public class TeacherServiceImpl implements TeacherService
     private final UserRepository userRepository;
     private final SessionRepository sessionRepository;
     private final StaffLeaveAllowanceRepository staffLeaveAllowanceRepository;
+    private final SchoolRepository schoolRepository;
+    private final StaffRepository staffRepository;
     private final ClassEntityRepository classEntityRepository;
 
     @Override
-    public TeacherDto createTeacher(TeacherDto teacherDto)
+    public TeacherDto createTeacher(TeacherDto teacherDto, Long schoolId)
     {
         log.info("Creating teacher with email: {}", teacherDto.getEmail());
 
-        if (teacherRepository.findByEmailIgnoreCase(teacherDto.getEmail()).isPresent())
+        if (teacherRepository.findByEmailIgnoreCaseAndSchoolId(teacherDto.getEmail(), schoolId).isPresent())
         {
-            throw new AlreadyExistException("Teacher already exists with email: " + teacherDto.getEmail());
+            throw new AlreadyExistException("A teacher already exists with the email: " + teacherDto.getEmail() +
+                    ". If you believe this is an issue with expired credentials, please try re-register.");
         }
+
+        School school = schoolRepository.findById(schoolId).orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + schoolId));
 
         Teacher teacher = modelMapper.map(teacherDto, Teacher.class);
         teacher.setStatus(UserStatus.ACTIVE);
+        teacher.setSchool(school);
         Teacher savedTeacher = teacherRepository.save(teacher);
 
-        Session activeSession = sessionRepository.findByActiveTrue()
-                .orElseThrow(() -> new ResourceNotFoundException("No active session found"));
+        // Create leave allowance for the teacher in the active session
+        Session activeSession = sessionRepository.findBySchoolIdAndActiveTrue(schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("No active session found for school ID: " + schoolId));
 
+        Staff staff = new Staff();
+        staff.setStaffType(RoleEnum.ROLE_TEACHER);
+        staff.setSchool(school);
+        staff.setEmail(teacher.getEmail());
+        Staff savedStaff = staffRepository.save(staff);
+
+        // Create staff leave allowance
         StaffLeaveAllowance staffLeaveAllowance = new StaffLeaveAllowance();
         staffLeaveAllowance.setSession(activeSession);
-        staffLeaveAllowance.setTeacher(savedTeacher);
-        staffLeaveAllowance.setAllowedLeaves(teacherDto.getAllowedLeaves());
+        staffLeaveAllowance.setStaff(savedStaff);
+        staffLeaveAllowance.setSchool(school);
+        Integer allowedLeaves = teacherDto.getAllowedLeaves();
+        staffLeaveAllowance.setAllowedLeaves(allowedLeaves != null ? allowedLeaves : 10);
         staffLeaveAllowanceRepository.save(staffLeaveAllowance);
 
         log.info("Teacher created with ID: {}", savedTeacher.getId());
-        return convertToDto(savedTeacher);
+        return convertToDto(savedTeacher, schoolId);
     }
 
     @Override
-    public TeacherDto getTeacherById(Long id)
+    public TeacherDto getTeacherById(Long id, Long schoolId)
     {
         log.info("Fetching teacher with ID: {}", id);
-        Teacher teacher = teacherRepository.findById(id)
+        Teacher teacher = teacherRepository.findByTeacherIdAndSchoolId(id, schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Teacher not found with ID: " + id));
-        return convertToDto(teacher);
+        return convertToDto(teacher, schoolId);
     }
 
     @Override
-    public List<TeacherDto> getAllTeachers()
+    public List<TeacherDto> getAllTeachers(Long schoolId)
     {
         log.info("Fetching all teachers");
-        return teacherRepository.findAll().stream()
-                .map(this::convertToDto)
+        return teacherRepository.findAllBySchoolId(schoolId).stream()
+                .map(teacher -> convertToDto(teacher, schoolId))
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<TeacherDto> getActiveTeachers()
+    public List<TeacherDto> getActiveTeachers(Long schoolId)
     {
-        List<Teacher> teachers = teacherRepository.findByStatus(UserStatus.ACTIVE);
-        return teachers.stream().map(this::convertToDto).toList();
+        List<Teacher> teachers = teacherRepository.findAllBySchoolIdAndActive(schoolId);
+        return teachers.stream()
+                .map(teacher -> convertToDto(teacher, schoolId))
+                .collect(Collectors.toList());
     }
 
     @Override
-    public Teacher getActiveTeacherByEmail(String email)
+    public Teacher getActiveTeacherByEmail(String email, Long schoolId)
     {
         log.info("Fetching active teacher by email: {}", email);
 
-        return teacherRepository.findByEmailIgnoreCaseAndStatus(email, UserStatus.ACTIVE)
+        return teacherRepository.findByEmailIgnoreCaseAndSchoolIdAndStatusActive(email, schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Teacher not found with email: " + email));
     }
 
-
     @Override
     @Transactional
-    public void inActiveTeacher(Long id)
+    public void inActiveTeacher(Long id, Long schoolId)
     {
-        Teacher teacher = teacherRepository.findById(id).orElseThrow(() ->
+        Teacher teacher = teacherRepository.findByTeacherIdAndSchoolId(id, schoolId).orElseThrow(() ->
                 new ResourceNotFoundException("Teacher not found with ID: " + id));
         
         // If already inactive, just return (idempotent operation)
@@ -107,24 +124,23 @@ public class TeacherServiceImpl implements TeacherService
             return;
         }
 
-        List<Subject> assignedSubjects = teacher.getSubjects();
-        for (Subject subject : assignedSubjects)
-        {
-            subject.setTeacher(null);
-        }
-        subjectRepository.saveAll(assignedSubjects);
-
+        // DO NOT remove teacher from subjects - keep the assignment
+        // This allows the teacher to be reactivated with the same subjects
+        // The frontend/backend should check teacher status when needed
+        
         teacher.setStatus(UserStatus.INACTIVE);
         teacherRepository.save(teacher);
         EntityFetcher.removeRoleFromUser(teacher.getUser().getId(), RoleEnum.ROLE_TEACHER, userRepository);
 
     }
-    
+
     @Override
     @Transactional
-    public void activateTeacher(Long id)
+    public void activateTeacher(Long id, Long schoolId)
     {
-        Teacher teacher = teacherRepository.findById(id).orElseThrow(() ->
+        log.info("Activating teacher with ID: {} for school ID: {}", id, schoolId);
+        
+        Teacher teacher = teacherRepository.findByTeacherIdAndSchoolId(id, schoolId).orElseThrow(() ->
                 new ResourceNotFoundException("Teacher not found with ID: " + id));
         
         // If already active, just return (idempotent operation)
@@ -133,24 +149,39 @@ public class TeacherServiceImpl implements TeacherService
             return;
         }
 
+        // Set teacher status to active
         teacher.setStatus(UserStatus.ACTIVE);
         teacherRepository.save(teacher);
-        EntityFetcher.addRoleToUser(teacher.getUser().getId(), RoleEnum.ROLE_TEACHER, userRepository);
         
-        log.info("Teacher with ID {} has been reactivated", id);
+        // Restore ROLE_TEACHER to user AND enable the user account
+        User user = teacher.getUser();
+        if (user != null) {
+            // Enable the user account
+            user.setEnabled(true);
+            
+            // Check if user already has ROLE_TEACHER
+            if (!user.getRoles().contains(RoleEnum.ROLE_TEACHER)) {
+                user.getRoles().add(RoleEnum.ROLE_TEACHER);
+            }
+            userRepository.save(user);
+            log.info("Enabled user account and added ROLE_TEACHER back to user with ID: {}", user.getId());
+        }
+        
+        log.info("Teacher with ID {} has been successfully activated", id);
     }
 
     @Override
-    public TeacherDto getTeacherByEmail(String email)
+    public TeacherDto getTeacherByEmail(String email, Long schoolId)
     {
         log.info("Fetching teacher with email: {}", email);
-        Teacher teacher = teacherRepository.findByEmailIgnoreCase(email)
+        Teacher teacher = teacherRepository.findByEmailIgnoreCaseAndSchoolIdAndStatusActive(email, schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Teacher not found with email: " + email));
 
-        return convertToDto(teacher);
+        return convertToDto(teacher, schoolId);
     }
 
-    private TeacherDto convertToDto(Teacher teacher)
+
+    private TeacherDto convertToDto(Teacher teacher, Long schoolId)
     {
         TeacherDto dto = modelMapper.map(teacher, TeacherDto.class);
 
@@ -187,17 +218,23 @@ public class TeacherServiceImpl implements TeacherService
                 .collect(Collectors.toList());
         dto.setClassName(classNames);
 
-        Session activeSession = sessionRepository.findByActiveTrue()
-                .orElseThrow(() -> new ResourceNotFoundException("No active session found"));
+        Optional<Session> activeSessionOpt = sessionRepository.findBySchoolIdAndActiveTrue(schoolId);
 
-        if (activeSession != null)
+        if (activeSessionOpt.isPresent())
         {
+            Session activeSession = activeSessionOpt.get();
+
+            Staff staff = staffRepository
+                    .findByEmailAndSchoolIdIgnoreCase(
+                            teacher.getEmail(), schoolId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Staff record not found"));
+
             Optional<StaffLeaveAllowance> allowanceOpt =
-                    staffLeaveAllowanceRepository.findByTeacherAndSession(teacher, activeSession);
+                    staffLeaveAllowanceRepository.findByStaffAndSessionAndSchoolId(staff, activeSession, schoolId);
 
             allowanceOpt.ifPresent(allowance -> dto.setAllowedLeaves(allowance.getAllowedLeaves()));
-        }
 
+        }
         // 4. Timestamps
         dto.setCreatedAt(teacher.getCreatedAt());
         dto.setUpdatedAt(teacher.getUpdatedAt());

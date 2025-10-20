@@ -4,9 +4,11 @@ package com.java.slms.controller;
 import com.java.slms.dto.LeaveActionRequest;
 import com.java.slms.dto.StudentLeaveRequestDTO;
 import com.java.slms.dto.StudentLeaveResponse;
-import com.java.slms.dto.TeacherDto;
+import com.java.slms.model.Student;
+import com.java.slms.model.Teacher;
 import com.java.slms.payload.RestResponse;
 import com.java.slms.service.StudentLeaveService;
+import com.java.slms.service.StudentService;
 import com.java.slms.service.TeacherService;
 import com.java.slms.util.LeaveStatus;
 import io.swagger.v3.oas.annotations.Operation;
@@ -30,6 +32,7 @@ public class StudentLeaveController
 {
     private final StudentLeaveService studentLeaveService;
     private final TeacherService teacherService;
+    private final StudentService studentService;
 
     @PostMapping("/request")
     @PreAuthorize("hasRole('ROLE_STUDENT')")
@@ -42,16 +45,16 @@ public class StudentLeaveController
                     @ApiResponse(responseCode = "404", description = "Student or session not found", content = @Content)
             }
     )
-    public ResponseEntity<RestResponse<Void>> requestLeave(@RequestBody StudentLeaveRequestDTO dto)
+    public ResponseEntity<RestResponse<Void>> requestLeave(@RequestBody StudentLeaveRequestDTO dto, @RequestAttribute("schoolId") Long schoolId)
     {
         String panNumber = SecurityContextHolder
                 .getContext()
                 .getAuthentication()
                 .getName();
 
-        dto.setStudentPan(panNumber);
+        Student student = studentService.findByPanNumberIgnoreCaseAndSchool_IdAndStatusActive(panNumber, schoolId);
 
-        studentLeaveService.createLeaveRequest(dto);
+        studentLeaveService.createLeaveRequest(dto, student, schoolId);
 
         RestResponse<Void> response = RestResponse.<Void>builder()
                 .data(null)
@@ -72,14 +75,14 @@ public class StudentLeaveController
                     @ApiResponse(responseCode = "404", description = "Student or session not found", content = @Content)
             }
     )
-    public ResponseEntity<RestResponse<List<StudentLeaveResponse>>> getMyLeaves()
+    public ResponseEntity<RestResponse<List<StudentLeaveResponse>>> getMyLeaves(@RequestAttribute("schoolId") Long schoolId)
     {
         String panNumber = SecurityContextHolder
                 .getContext()
                 .getAuthentication()
                 .getName();
 
-        List<StudentLeaveResponse> leaveList = studentLeaveService.getLeavesForLoggedInStudent(panNumber);
+        List<StudentLeaveResponse> leaveList = studentLeaveService.getLeavesForLoggedInStudent(panNumber, schoolId);
 
         RestResponse<List<StudentLeaveResponse>> response = RestResponse.<List<StudentLeaveResponse>>builder()
                 .data(leaveList)
@@ -101,16 +104,16 @@ public class StudentLeaveController
     )
     @PutMapping("/action/{leaveId}")
     @PreAuthorize("hasAnyRole('ROLE_TEACHER')")
-    public ResponseEntity<RestResponse<?>> takeActionOnLeave(@PathVariable Long leaveId, @RequestBody LeaveActionRequest request)
+    public ResponseEntity<RestResponse<?>> takeActionOnLeave(@PathVariable Long leaveId, @RequestBody LeaveActionRequest request, @RequestAttribute("schoolId") Long schoolId)
     {
         String teacherEmail = SecurityContextHolder
                 .getContext()
                 .getAuthentication()
                 .getName();
 
-        TeacherDto teacher = teacherService.getTeacherByEmail(teacherEmail);
+        Teacher teacher = teacherService.getActiveTeacherByEmail(teacherEmail, schoolId);
 
-        studentLeaveService.takeActionOnLeave(leaveId, teacher.getId(), request);
+        studentLeaveService.takeActionOnLeave(leaveId, teacher.getId(), schoolId, request);
 
         RestResponse<?> response = RestResponse.builder()
                 .data(null)
@@ -131,7 +134,8 @@ public class StudentLeaveController
             }
     )
     public ResponseEntity<RestResponse<List<StudentLeaveResponse>>> getLeavesForTeacher(
-            @RequestParam(required = false) LeaveStatus status
+            @RequestParam(required = false) LeaveStatus status,
+            @RequestAttribute("schoolId") Long schoolId
     )
     {
         String teacherEmail = SecurityContextHolder
@@ -139,9 +143,9 @@ public class StudentLeaveController
                 .getAuthentication()
                 .getName();
 
-        TeacherDto teacher = teacherService.getTeacherByEmail(teacherEmail);
+        Teacher teacher = teacherService.getActiveTeacherByEmail(teacherEmail, schoolId);
 
-        List<StudentLeaveResponse> leaves = studentLeaveService.getLeavesForTeacher(teacher.getId(), status);
+        List<StudentLeaveResponse> leaves = studentLeaveService.getLeavesForTeacher(teacher.getId(), status, schoolId);
 
         RestResponse<List<StudentLeaveResponse>> response = RestResponse.<List<StudentLeaveResponse>>builder()
                 .data(leaves)

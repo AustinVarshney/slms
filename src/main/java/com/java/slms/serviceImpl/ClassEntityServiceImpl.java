@@ -1,26 +1,19 @@
 package com.java.slms.serviceImpl;
 
+
 import com.java.slms.dto.*;
 import com.java.slms.exception.AlreadyExistException;
 import com.java.slms.exception.ResourceNotFoundException;
 import com.java.slms.exception.WrongArgumentException;
-import com.java.slms.model.ClassEntity;
-import com.java.slms.model.FeeStructure;
-import com.java.slms.model.Session;
-import com.java.slms.model.Teacher;
-import com.java.slms.repository.ClassEntityRepository;
-import com.java.slms.repository.FeeStructureRepository;
-import com.java.slms.repository.SessionRepository;
-import com.java.slms.repository.TeacherRepository;
+import com.java.slms.model.*;
+import com.java.slms.repository.*;
 import com.java.slms.service.ClassEntityService;
 import com.java.slms.service.FeeService;
 import com.java.slms.service.StudentService;
-import com.java.slms.util.EntityFetcher;
-import com.java.slms.util.EntityNames;
-import com.java.slms.util.UserStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +25,7 @@ import java.util.Optional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Primary
 public class ClassEntityServiceImpl implements ClassEntityService
 {
     private final ClassEntityRepository classEntityRepository;
@@ -41,246 +35,190 @@ public class ClassEntityServiceImpl implements ClassEntityService
     private final FeeStructureRepository feeStructureRepository;
     private final StudentService studentService;
     private final FeeService feeService;
+    private final SchoolRepository schoolRepository;
 
     @Override
     @Transactional
-    public ClassResponseDto addClass(ClassRequestDto classRequestDto)
+    public ClassResponseDto addClass(Long schoolId, ClassRequestDto classRequestDto)
     {
-        Optional<ClassEntity> existingClass = classEntityRepository
-                .findByClassNameIgnoreCaseAndSessionId(classRequestDto.getClassName(), classRequestDto.getSessionId());
+        School school = schoolRepository.findById(schoolId).orElseThrow(() -> new ResourceNotFoundException("School not found with Id : " + schoolId));
+
+        Session session = sessionRepository.findBySchoolIdAndActiveTrue(schoolId).orElseThrow(() -> new WrongArgumentException("Session not found or does not belong to the provided school, or is not active."));
+
+        // Combine class name + session name
+        String finalClassName = classRequestDto.getClassName().trim() + " - " + session.getName().trim();
+
+        // Check for duplicate class with combined name
+        Optional<ClassEntity> existingClass = classEntityRepository.findByClassNameIgnoreCaseAndSessionIdAndSchoolId(finalClassName, session.getId(), schoolId);
 
         if (existingClass.isPresent())
         {
-            log.warn("Class already exists with name '{}' for session ID {}", classRequestDto.getClassName(), classRequestDto.getSessionId());
+            log.warn("Class already exists with name '{}' for session ID {}", finalClassName, session.getId());
             throw new AlreadyExistException("Class already exists with this name for the selected active session.");
         }
 
-        Session session = EntityFetcher.fetchByIdOrThrow(
-                sessionRepository,
-                classRequestDto.getSessionId(),
-                EntityNames.SESSION
-        );
+        // Set final class name into DTO
+        classRequestDto.setClassName(finalClassName);
 
-        if (!session.isActive())
+        // Handle teacher assignment
+        Teacher teacher = null;
+        if (classRequestDto.getClassTeacherId() != null)
         {
-            log.warn("Cannot add class to inactive session with ID {}", classRequestDto.getSessionId());
-            throw new WrongArgumentException("Cannot add class to an inactive session");
+            teacher = teacherRepository.findByTeacherIdAndSchoolIdAndStatusActive(classRequestDto.getClassTeacherId(), schoolId).orElseThrow(() -> new ResourceNotFoundException("Teacher with ID " + classRequestDto.getClassTeacherId() + " not found for school ID " + schoolId));
+
+            if (isTeacherAssignedToAnotherClass(schoolId, classRequestDto.getClassTeacherId()))
+            {
+                throw new WrongArgumentException("Teacher with id " + classRequestDto.getClassTeacherId() + " is already assigned to another class.");
+            }
         }
 
-        // Class teacher is now required
-        if (classRequestDto.getClassTeacherId() == null)
-        {
-            throw new WrongArgumentException("Class teacher is required when creating a class.");
-        }
-
-        Teacher teacher = teacherRepository.findById(classRequestDto.getClassTeacherId())
-                .orElseThrow(() -> new ResourceNotFoundException("Teacher not present with id " + classRequestDto.getClassTeacherId()));
-
-        if (teacher.getStatus().equals(UserStatus.INACTIVE))
-        {
-            throw new WrongArgumentException("Teacher with id " + classRequestDto.getClassTeacherId() + " is inactive.");
-        }
-
-        if (isTeacherAssignedToAnotherClass(classRequestDto.getClassTeacherId()))
-        {
-            throw new WrongArgumentException("Teacher with id " + classRequestDto.getClassTeacherId() + " is already assigned to another class.");
-        }
-
+        // Map and save class
         ClassEntity classEntity = modelMapper.map(classRequestDto, ClassEntity.class);
         classEntity.setSession(session);
         classEntity.setClassTeacher(teacher);
         classEntity.setId(null);
+        classEntity.setSchool(school);
         ClassEntity savedEntity = classEntityRepository.save(classEntity);
 
-        FeeStructure feeStructure = FeeStructure.builder()
-                .feesAmount(classRequestDto.getFeesAmount())
-                .session(session)
-                .classEntity(savedEntity)
-                .build();
+        // Save fee structure
+        FeeStructure feeStructure = FeeStructure.builder().feesAmount(classRequestDto.getFeesAmount()).session(session).classEntity(savedEntity).school(school).build();
 
         feeStructureRepository.save(feeStructure);
 
+        // Build response
         ClassResponseDto response = modelMapper.map(savedEntity, ClassResponseDto.class);
         response.setFeesAmount(classRequestDto.getFeesAmount());
-        
-        // Class teacher is always present now
-        response.setClassTeacherId(savedEntity.getClassTeacher().getId());
-        response.setClassTeacherName(savedEntity.getClassTeacher().getName());
 
-        if (savedEntity.getStudents() != null && !savedEntity.getStudents().isEmpty())
+        if (savedEntity.getClassTeacher() != null)
         {
-            response.setTotalStudents(savedEntity.getStudents().size());
+            response.setClassTeacherId(savedEntity.getClassTeacher().getId());
+            response.setClassTeacherName(savedEntity.getClassTeacher().getName());
         }
         else
         {
-            response.setTotalStudents(0);
+            response.setClassTeacherId(null);
+            response.setClassTeacherName(null);
         }
+
+        response.setTotalStudents(savedEntity.getStudents() != null ? savedEntity.getStudents().size() : 0);
 
         return response;
     }
 
     @Override
-    public List<ClassInfoResponse> getAllClassInActiveSession()
+    public List<ClassInfoResponse> getAllClassInActiveSession(Long schoolId)
     {
         log.info("Fetching all classes with session and fee details");
 
-        // Get the active session
-        Session activeSession = sessionRepository.findByActiveTrue()
-                .orElseThrow(() -> new ResourceNotFoundException("No active session found"));
+        Session activeSession = sessionRepository.findBySchoolIdAndActiveTrue(schoolId).orElseThrow(() -> new ResourceNotFoundException("No active session found"));
 
-        // Fetch classes only for the active session
-        List<ClassEntity> classEntities = classEntityRepository.findBySession_Id(activeSession.getId());
+        List<ClassEntity> classEntities = classEntityRepository.findBySession_IdAndSchool_Id(activeSession.getId(), schoolId);
 
-        return classEntities.stream()
-                .map(classEntity ->
-                {
-                    Long classId = classEntity.getId();
-                    Long sessionId = activeSession.getId();
+        return classEntities.stream().map(classEntity ->
+        {
+            Long classId = classEntity.getId();
+            Long sessionId = activeSession.getId();
 
-                    FeeStructure feeStructure = feeStructureRepository.findByClassEntity_IdAndSession_Id(classId, sessionId)
-                            .orElseThrow(() -> new ResourceNotFoundException("Fee structure not found for class ID " + classId + " and session ID " + sessionId));
+            FeeStructure feeStructure = feeStructureRepository.findByClassEntity_IdAndSession_IdAndSchool_Id(classId, sessionId, schoolId).orElseThrow(() -> new ResourceNotFoundException("Fee structure not found for class ID " + classId + " and session ID " + sessionId));
 
-                    ClassInfoResponse dto = modelMapper.map(classEntity, ClassInfoResponse.class);
-                    dto.setSessionId(sessionId);
-                    dto.setSessionName(activeSession.getName());
+            ClassInfoResponse dto = modelMapper.map(classEntity, ClassInfoResponse.class);
+            dto.setSessionId(sessionId);
+            dto.setSessionName(activeSession.getName());
 
-                    // Safely handle null class teacher
-                    if (classEntity.getClassTeacher() != null)
-                    {
-                        dto.setClassTeacherId(classEntity.getClassTeacher().getId());
-                        dto.setClassTeacherName(classEntity.getClassTeacher().getName());
-                    }
-                    else
-                    {
-                        dto.setClassTeacherId(null);
-                        dto.setClassTeacherName(null);
-                    }
+            if (classEntity.getClassTeacher() != null)
+            {
+                dto.setClassTeacherId(classEntity.getClassTeacher().getId());
+                dto.setClassTeacherName(classEntity.getClassTeacher().getName());
+            }
 
-                    dto.setFeesAmount(feeStructure != null ? feeStructure.getFeesAmount() : null);
-                    dto.setTotalStudents(classEntity.getStudents() != null ? classEntity.getStudents().size() : 0);
+            dto.setFeesAmount(feeStructure.getFeesAmount());
+            dto.setTotalStudents(classEntity.getStudents() != null ? classEntity.getStudents().size() : 0);
 
-                    List<StudentResponseDto> students = studentService.getStudentsByClassId(classId);
-                    dto.setStudents(students);
-                    dto.setFeeCollectionRate(calculateFeeCollectionRate(students));
+            List<StudentResponseDto> students = studentService.getStudentsByClassId(classId, schoolId);
+            dto.setStudents(students);
+            dto.setFeeCollectionRate(calculateFeeCollectionRate(students, schoolId));
 
-                    return dto;
-                })
-                .toList();
+            return dto;
+        }).toList();
     }
 
     @Override
-    public ClassInfoResponse getClassByClassIdAndSessionId(Long classId, Long sessionId)
+    public ClassInfoResponse getClassByClassIdAndSessionId(Long schoolId, Long classId)
     {
-        ClassEntity classEntity = classEntityRepository.findByIdAndSessionId(classId, sessionId)
-                .orElseThrow(() ->
-                {
-                    log.error("Class not found with ClassId: {} and SessionId: {}", classId, sessionId);
-                    return new ResourceNotFoundException("Class not found with ClassId: " + classId + " and SessionId: " + sessionId);
-                });
+        ClassEntity classEntity = classEntityRepository.findByIdAndSchoolId(classId, schoolId).orElseThrow(() -> new ResourceNotFoundException("Class not found with ClassId: " + classId));
 
-        FeeStructure feeStructure = feeStructureRepository.findByClassEntity_IdAndSession_Id(classId, sessionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Fee structure not found for class and session"));
-
+        FeeStructure feeStructure = feeStructureRepository.findByClassIdAndSchoolId(classId, schoolId).orElseThrow(() -> new ResourceNotFoundException("Fee structure not found for class and session"));
 
         ClassInfoResponse dto = modelMapper.map(classEntity, ClassInfoResponse.class);
         dto.setSessionId(classEntity.getSession().getId());
         dto.setSessionName(classEntity.getSession().getName());
         dto.setFeesAmount(feeStructure.getFeesAmount());
-        
-        // Handle potential null class teacher for backward compatibility
+
         if (classEntity.getClassTeacher() != null)
         {
             dto.setClassTeacherId(classEntity.getClassTeacher().getId());
             dto.setClassTeacherName(classEntity.getClassTeacher().getName());
         }
-        else
-        {
-            dto.setClassTeacherId(null);
-            dto.setClassTeacherName(null);
-        }
-        
+
         dto.setTotalStudents(classEntity.getStudents() != null ? classEntity.getStudents().size() : 0);
-        List<StudentResponseDto> students = studentService.getStudentsByClassId(classId);
-        dto.setFeeCollectionRate(calculateFeeCollectionRate(students));
+
+        List<StudentResponseDto> students = studentService.getStudentsByClassId(classId, schoolId);
+        dto.setFeeCollectionRate(calculateFeeCollectionRate(students, schoolId));
         dto.setStudents(students);
         return dto;
     }
 
-    public void deleteClassByIdAndSessionId(Long classId, Long sessionId)
+    public void deleteClassByIdAndSessionId(Long schoolId, Long classId, Long sessionId)
     {
-        ClassEntity classEntity = classEntityRepository.findByIdAndSessionId(classId, sessionId)
-                .orElseThrow(() ->
-                {
-                    log.error("Class not found with ClassId: {} and SessionId: {}", classId, sessionId);
-                    return new ResourceNotFoundException("Class not found with ClassId: " + classId + " and SessionId: " + sessionId);
-                });
+        ClassEntity classEntity = classEntityRepository.findByIdAndSessionIdAndSchoolId(classId, sessionId, schoolId).orElseThrow(() -> new ResourceNotFoundException("Class not found with ClassId: " + classId + " and SessionId: " + sessionId));
 
         if (!classEntity.getSession().isActive())
         {
-            log.error("Cannot delete class from inactive session with ID {}", classEntity.getSession().getId());
-            throw new WrongArgumentException("Cannot add class to an inactive session");
+            throw new WrongArgumentException("Cannot delete class from an inactive session");
         }
 
         classEntityRepository.delete(classEntity);
     }
 
     @Override
-    public ClassInfoResponse updateClassNameById(Long id, ClassRequestDto classRequestDto)
+    public ClassInfoResponse updateClassNameById(Long schoolId, Long id, ClassRequestDto classRequestDto)
     {
-        ClassEntity existingClass = classEntityRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Class not found with ID: " + id));
+        ClassEntity existingClass = classEntityRepository.findByIdAndSchoolId(id, schoolId).orElseThrow(() -> new ResourceNotFoundException("Class not found with ID: " + id));
 
-        Session session = EntityFetcher.fetchByIdOrThrow(
-                sessionRepository,
-                classRequestDto.getSessionId(),
-                EntityNames.SESSION
-        );
+        Session session = sessionRepository.findBySchoolIdAndActiveTrue(schoolId).orElseThrow(() -> new WrongArgumentException("Session not found or does not belong to the provided school, or is not active."));
 
-        Optional<ClassEntity> duplicateClass = classEntityRepository
-                .findByClassNameIgnoreCaseAndSessionId(classRequestDto.getClassName(), classRequestDto.getSessionId());
+        // Construct combined class name
+        String finalClassName = classRequestDto.getClassName().trim() + " - " + session.getName().trim();
+        classRequestDto.setClassName(finalClassName);
+
+        Optional<ClassEntity> duplicateClass = classEntityRepository.findByClassNameIgnoreCaseAndSessionIdAndSchoolId(finalClassName, session.getId(), schoolId);
 
         if (duplicateClass.isPresent() && !duplicateClass.get().getId().equals(id))
         {
-            throw new AlreadyExistException("Class already exists with name: " + classRequestDto.getClassName() +
-                    " for the selected session.");
+            throw new AlreadyExistException("Class already exists with name: " + finalClassName + " for the selected session.");
         }
 
-        if (!session.isActive())
-        {
-            log.warn("Cannot update class due to inactive session with ID {}", classRequestDto.getSessionId());
-            throw new WrongArgumentException("Cannot update class due to inactive session");
-        }
-
-        // Check if teacher is valid and assigned properly
         Teacher teacher = null;
         if (classRequestDto.getClassTeacherId() != null)
         {
-            teacher = teacherRepository.findById(classRequestDto.getClassTeacherId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Teacher not present with id " + classRequestDto.getClassTeacherId()));
+            teacher = teacherRepository.findByTeacherIdAndSchoolIdAndStatusActive(classRequestDto.getClassTeacherId(), schoolId).orElseThrow(() -> new ResourceNotFoundException("Teacher with ID " + classRequestDto.getClassTeacherId() + " not found for school ID " + schoolId));
 
-            if (teacher.getStatus().equals(UserStatus.INACTIVE))
-            {
-                throw new WrongArgumentException("Teacher with id " + classRequestDto.getClassTeacherId() + " is inactive.");
-            }
-
-            if (isTeacherAssignedToAnotherClass(classRequestDto.getClassTeacherId()) &&
-                    (existingClass.getClassTeacher() == null || !existingClass.getClassTeacher().getId().equals(classRequestDto.getClassTeacherId())))
+            if (isTeacherAssignedToAnotherClass(schoolId, classRequestDto.getClassTeacherId()) && (existingClass.getClassTeacher() == null || !existingClass.getClassTeacher().getId().equals(classRequestDto.getClassTeacherId())))
             {
                 throw new WrongArgumentException("Teacher with id " + classRequestDto.getClassTeacherId() + " is already assigned to another class.");
             }
         }
 
-        existingClass.setClassName(classRequestDto.getClassName());
+        existingClass.setClassName(finalClassName);
         existingClass.setSession(session);
         existingClass.setClassTeacher(teacher);
 
-        FeeStructure feeStructure = feeStructureRepository.findByClassEntity_IdAndSession_Id(id, classRequestDto.getSessionId())
-                .orElseThrow(() -> new ResourceNotFoundException("Fee structure not found for class and session"));
+        FeeStructure feeStructure = feeStructureRepository.findByClassEntity_IdAndSession_IdAndSchool_Id(id, session.getId(), schoolId).orElseThrow(() -> new ResourceNotFoundException("Fee structure not found for class and session"));
 
         feeStructure.setFeesAmount(classRequestDto.getFeesAmount());
         feeStructure.setSession(session);
         feeStructure.setClassEntity(existingClass);
-        feeStructureRepository.save(feeStructure);  // Explicit save for clarity
+        feeStructureRepository.save(feeStructure);
 
         ClassEntity updatedClass = classEntityRepository.save(existingClass);
 
@@ -301,8 +239,7 @@ public class ClassEntityServiceImpl implements ClassEntityService
         return dto;
     }
 
-
-    private double calculateFeeCollectionRate(List<StudentResponseDto> students)
+    private double calculateFeeCollectionRate(List<StudentResponseDto> students, Long schoolId)
     {
         double totalOfRates = 0.0;
         int countedStudents = 0;
@@ -311,7 +248,7 @@ public class ClassEntityServiceImpl implements ClassEntityService
         {
             try
             {
-                FeeCatalogDto feeCatalog = feeService.getFeeCatalogByStudentPanNumber(studentDto.getPanNumber());
+                FeeCatalogDto feeCatalog = feeService.getFeeCatalogByStudentPanNumber(studentDto.getPanNumber(), schoolId);
                 if (feeCatalog.getTotalAmount() > 0)
                 {
                     double rate = feeCatalog.getTotalPaid() / feeCatalog.getTotalAmount();
@@ -332,29 +269,18 @@ public class ClassEntityServiceImpl implements ClassEntityService
             return 0.0;
         }
 
-        double averageRate = totalOfRates / countedStudents;
-
-        // Multiply by 100 for percentage and round to 2 decimal places
-        BigDecimal bd = new BigDecimal(averageRate * 100);
+        BigDecimal bd = new BigDecimal((totalOfRates / countedStudents) * 100);
         bd = bd.setScale(2, RoundingMode.HALF_UP);
-
         return bd.doubleValue();
     }
 
-    /**
-     * Helper method to check if a teacher is already assigned to another class
-     * in the active session.
-     */
-    private boolean isTeacherAssignedToAnotherClass(Long teacherId)
+    private boolean isTeacherAssignedToAnotherClass(Long schoolId, Long teacherId)
     {
         if (teacherId == null)
         {
             return false;
         }
-        List<ClassInfoResponse> activeClasses = getAllClassInActiveSession();
-        return activeClasses.stream()
-                .anyMatch(classInfo -> teacherId.equals(classInfo.getClassTeacherId()));
+        List<ClassInfoResponse> activeClasses = getAllClassInActiveSession(schoolId);
+        return activeClasses.stream().anyMatch(classInfo -> teacherId.equals(classInfo.getClassTeacherId()));
     }
-
-
 }

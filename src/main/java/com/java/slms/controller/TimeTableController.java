@@ -1,10 +1,9 @@
 package com.java.slms.controller;
 
-import com.java.slms.dto.StudentResponseDto;
-import com.java.slms.dto.TeacherDto;
 import com.java.slms.dto.TimetableRequestDTO;
 import com.java.slms.dto.TimetableResponseDTO;
-import com.java.slms.model.User;
+import com.java.slms.model.Student;
+import com.java.slms.model.Teacher;
 import com.java.slms.payload.RestResponse;
 import com.java.slms.service.StudentService;
 import com.java.slms.service.TeacherService;
@@ -12,8 +11,8 @@ import com.java.slms.service.TimeTableService;
 import com.java.slms.util.DayOfWeek;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,10 +47,11 @@ public class TimeTableController
     @PostMapping
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<RestResponse<TimetableResponseDTO>> createTimetable(
-            @RequestBody TimetableRequestDTO dto)
+            @RequestBody TimetableRequestDTO dto
+            , @RequestAttribute("schoolId") Long schoolId)
     {
         log.info("Creating timetable for classId={}, subjectId={}, day={}", dto.getClassId(), dto.getSubjectId(), dto.getDay());
-        TimetableResponseDTO saved = timetableService.createTimetable(dto);
+        TimetableResponseDTO saved = timetableService.createTimetable(dto, schoolId);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(RestResponse.<TimetableResponseDTO>builder()
                         .data(saved)
@@ -77,11 +77,12 @@ public class TimeTableController
     public ResponseEntity<RestResponse<List<TimetableResponseDTO>>> getTimetableByClassAndOptionalDay(
             @PathVariable Long classId,
             @RequestParam(value = "day", required = false) DayOfWeek day
+            , @RequestAttribute("schoolId") Long schoolId
     )
     {
         log.info("Fetching timetable for classId={}{}", classId, day != null ? " on day=" + day : "");
 
-        List<TimetableResponseDTO> data = timetableService.getTimetableByClassAndOptionalDay(classId, day);
+        List<TimetableResponseDTO> data = timetableService.getTimetableByClassAndOptionalDay(classId, day, schoolId);
 
         return ResponseEntity.ok(RestResponse.<List<TimetableResponseDTO>>builder()
                 .data(data)
@@ -108,6 +109,7 @@ public class TimeTableController
     @PreAuthorize("hasRole('ROLE_STUDENT')")
     public ResponseEntity<RestResponse<List<TimetableResponseDTO>>> getTimetableByCurrentStudent(
             @RequestParam(value = "day", required = false) DayOfWeek day
+            , @RequestAttribute("schoolId") Long schoolId
     )
     {
         String panNumber = SecurityContextHolder
@@ -115,11 +117,11 @@ public class TimeTableController
                 .getAuthentication()
                 .getName();
 
-        StudentResponseDto student = studentService.getStudentByPAN(panNumber);
+        Student student = studentService.getActiveStudentByPan(panNumber, schoolId);
 
-        log.info("Fetching timetable for classId={}{}", student.getClassId(), day != null ? " on day=" + day : "");
+        log.info("Fetching timetable for classId={}{}", student.getCurrentClass().getId(), day != null ? " on day=" + day : "");
 
-        List<TimetableResponseDTO> data = timetableService.getTimetableByClassAndOptionalDay(student.getClassId(), day);
+        List<TimetableResponseDTO> data = timetableService.getTimetableByClassAndOptionalDay(student.getCurrentClass().getId(), day, schoolId);
 
         return ResponseEntity.ok(RestResponse.<List<TimetableResponseDTO>>builder()
                 .data(data)
@@ -140,10 +142,10 @@ public class TimeTableController
             }
     )
     @GetMapping("/teacher/{teacherId}")
-    public ResponseEntity<RestResponse<List<TimetableResponseDTO>>> getByTeacherId(@PathVariable Long teacherId)
+    public ResponseEntity<RestResponse<List<TimetableResponseDTO>>> getByTeacherId(@PathVariable Long teacherId, @RequestAttribute("schoolId") Long schoolId)
     {
         log.info("Fetching timetable for teacherId={}", teacherId);
-        List<TimetableResponseDTO> data = timetableService.getTimetableByTeacherIdInCurrentSession(teacherId);
+        List<TimetableResponseDTO> data = timetableService.getTimetableByTeacherIdInCurrentSession(teacherId, schoolId);
         return ResponseEntity.ok(RestResponse.<List<TimetableResponseDTO>>builder()
                 .data(data)
                 .message("Timetable fetched successfully")
@@ -165,17 +167,17 @@ public class TimeTableController
     )
     @GetMapping("/teacher/me")
     @PreAuthorize("hasRole('ROLE_TEACHER')")
-    public ResponseEntity<RestResponse<List<TimetableResponseDTO>>> getByTimeTableOfCurrentTeacher()
+    public ResponseEntity<RestResponse<List<TimetableResponseDTO>>> getByTimeTableOfCurrentTeacher(@RequestAttribute("schoolId") Long schoolId)
     {
         String email = SecurityContextHolder
                 .getContext()
                 .getAuthentication()
                 .getName();
 
-        TeacherDto teacher = teacherService.getTeacherByEmail(email);
+        Teacher teacher = teacherService.getActiveTeacherByEmail(email, schoolId);
 
         log.info("Fetching timetable for teacherId={}", teacher.getId());
-        List<TimetableResponseDTO> data = timetableService.getTimetableByTeacherIdInCurrentSession(teacher.getId());
+        List<TimetableResponseDTO> data = timetableService.getTimetableByTeacherIdInCurrentSession(teacher.getId(), schoolId);
         return ResponseEntity.ok(RestResponse.<List<TimetableResponseDTO>>builder()
                 .data(data)
                 .message("Timetable fetched successfully")
@@ -197,10 +199,10 @@ public class TimeTableController
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<RestResponse<TimetableResponseDTO>> updateTimetable(
-            @PathVariable Long id, @RequestBody TimetableRequestDTO dto)
+            @PathVariable Long id, @RequestBody TimetableRequestDTO dto, @RequestAttribute("schoolId") Long schoolId)
     {
         log.info("Updating timetable with id={}", id);
-        TimetableResponseDTO updated = timetableService.updateTimetable(id, dto);
+        TimetableResponseDTO updated = timetableService.updateTimetable(id, dto, schoolId);
         return ResponseEntity.ok(RestResponse.<TimetableResponseDTO>builder()
                 .data(updated)
                 .message("Timetable updated successfully")
@@ -221,10 +223,10 @@ public class TimeTableController
     )
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public ResponseEntity<RestResponse<Void>> deleteTimetable(@PathVariable Long id)
+    public ResponseEntity<RestResponse<Void>> deleteTimetable(@PathVariable Long id, @RequestAttribute("schoolId") Long schoolId)
     {
         log.info("Deleting timetable with id={}", id);
-        timetableService.deleteTimetable(id);
+        timetableService.deleteTimetable(id, schoolId);
         return ResponseEntity.ok(RestResponse.<Void>builder()
                 .message("Timetable deleted successfully")
                 .status(HttpStatus.OK.value())

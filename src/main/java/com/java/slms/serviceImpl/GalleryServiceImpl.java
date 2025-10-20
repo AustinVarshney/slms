@@ -5,8 +5,10 @@ import com.java.slms.dto.GalleryRequestDto;
 import com.java.slms.dto.GalleryResponseDto;
 import com.java.slms.exception.ResourceNotFoundException;
 import com.java.slms.model.Gallery;
+import com.java.slms.model.School;
 import com.java.slms.model.Session;
 import com.java.slms.repository.GalleryRepository;
+import com.java.slms.repository.SchoolRepository;
 import com.java.slms.repository.SessionRepository;
 import com.java.slms.service.CloudinaryService;
 import com.java.slms.service.GalleryService;
@@ -28,120 +30,64 @@ public class GalleryServiceImpl implements GalleryService
     private final SessionRepository sessionRepository;
     private final CloudinaryService cloudinaryService;
     private final ModelMapper modelMapper;
+    private final SchoolRepository schoolRepository;
 
     @Override
-    public GalleryResponseDto addGallery(GalleryRequestDto dto)
+    public GalleryResponseDto addGallery(GalleryRequestDto dto, Long schoolId)
     {
-        Session session = sessionRepository.findById(dto.getSessionId())
+        School school = schoolRepository.findById(schoolId).orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + schoolId));
+
+        Session session = sessionRepository.findBySessionIdAndSchoolId(dto.getSessionId(), schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Session not found with ID: " + dto.getSessionId()));
 
-        Gallery gallery = Gallery.builder()
-                .title(dto.getTitle())
-                .description(dto.getDescription())
-                .imageUrl(dto.getImageUrl())
-                .cloudinaryPublicId(dto.getCloudinaryPublicId())
-                .uploadedByType(dto.getUploadedByType())
-                .uploadedById(dto.getUploadedById())
-                .uploadedByName(dto.getUploadedByName())
-                .session(session)
-                .build();
-        
+        Gallery gallery = modelMapper.map(dto, Gallery.class);
+        gallery.setSession(session);
+        gallery.setId(null);
+        gallery.setSchool(school);
         gallery = galleryRepository.save(gallery);
 
         return toResponseDto(gallery);
     }
-    
-    @Override
-    public GalleryResponseDto uploadGalleryImage(MultipartFile file, String title, String description,
-                                                 String uploadedByType, Long uploadedById,
-                                                 String uploadedByName, Long sessionId) throws IOException {
-        // Validate inputs
-        if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("File cannot be empty");
-        }
-        
-        // Validate file type
-        String contentType = file.getContentType();
-        if (contentType == null || !contentType.startsWith("image/")) {
-            throw new IllegalArgumentException("File must be an image");
-        }
-        
-        // Validate file size (max 10MB)
-        if (file.getSize() > 10 * 1024 * 1024) {
-            throw new IllegalArgumentException("File size must not exceed 10MB");
-        }
-        
-        Session session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Session not found with ID: " + sessionId));
-
-        try {
-            // Upload to Cloudinary
-            Map<String, Object> uploadResult = cloudinaryService.uploadImage(file, "gallery");
-            String imageUrl = (String) uploadResult.get("secure_url");
-            String publicId = (String) uploadResult.get("public_id");
-
-            // Create gallery entity
-            Gallery gallery = Gallery.builder()
-                    .title(title != null && !title.trim().isEmpty() ? title : "Untitled")
-                    .description(description != null ? description : "")
-                    .imageUrl(imageUrl)
-                    .cloudinaryPublicId(publicId)
-                    .uploadedByType(uploadedByType)
-                    .uploadedById(uploadedById)
-                    .uploadedByName(uploadedByName)
-                    .session(session)
-                    .build();
-
-            gallery = galleryRepository.save(gallery);
-            return toResponseDto(gallery);
-        } catch (IOException e) {
-            throw new IOException("Failed to upload image to Cloudinary: " + e.getMessage(), e);
-        }
-    }
 
     @Override
-    public List<GalleryResponseDto> getAllGalleryItems()
+    public List<GalleryResponseDto> getAllGalleryItems(Long schoolId)
     {
-        return galleryRepository.findAll()
+        return galleryRepository.findAllBySchoolId(schoolId)
                 .stream()
                 .map(this::toResponseDto)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public GalleryResponseDto getGalleryById(Long id)
+    public GalleryResponseDto getGalleryById(Long id, Long schoolId)
     {
-        Gallery gallery = galleryRepository.findById(id)
+        Gallery gallery = galleryRepository.findByIdAndSchoolId(id, schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Gallery item not found with ID: " + id));
         return toResponseDto(gallery);
     }
 
     @Override
-    public GalleryResponseDto updateGallery(Long id, GalleryRequestDto dto)
+    public GalleryResponseDto updateGallery(Long id, GalleryRequestDto dto, Long schoolId)
     {
-        Gallery gallery = galleryRepository.findById(id)
+        Gallery gallery = galleryRepository.findByIdAndSchoolId(id, schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Gallery item not found with ID: " + id));
-
-        Session session = sessionRepository.findById(dto.getSessionId())
-                .orElseThrow(() -> new ResourceNotFoundException("Session not found with ID: " + dto.getSessionId()));
-
-        gallery.setTitle(dto.getTitle());
-        gallery.setDescription(dto.getDescription());
-        gallery.setImageUrl(dto.getImageUrl());
-        gallery.setCloudinaryPublicId(dto.getCloudinaryPublicId());
-        gallery.setUploadedByType(dto.getUploadedByType());
-        gallery.setUploadedById(dto.getUploadedById());
-        gallery.setUploadedByName(dto.getUploadedByName());
-        gallery.setSession(session);
+        
+        // Update only title and description
+        if (dto.getTitle() != null) {
+            gallery.setTitle(dto.getTitle());
+        }
+        if (dto.getDescription() != null) {
+            gallery.setDescription(dto.getDescription());
+        }
+        
         gallery = galleryRepository.save(gallery);
-
         return toResponseDto(gallery);
     }
 
     @Override
-    public void deleteGallery(Long id)
+    public void deleteGallery(Long id, Long schoolId)
     {
-        Gallery gallery = galleryRepository.findById(id)
+        Gallery gallery = galleryRepository.findByIdAndSchoolId(id, schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Gallery item not found with ID: " + id));
         
         // Delete from Cloudinary if publicId exists
@@ -158,28 +104,32 @@ public class GalleryServiceImpl implements GalleryService
     }
 
     @Override
-    public List<GalleryResponseDto> getGalleryItemsBySessionId(Long sessionId)
+    public List<GalleryResponseDto> getGalleryItemsBySessionId(Long sessionId, Long schoolId)
     {
-        Session session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Session not found with ID: " + sessionId));
-
-        return galleryRepository.findBySession_Id(sessionId)
+        return galleryRepository.findBySessionIdAndSchoolId(sessionId, schoolId)
                 .stream()
                 .map(this::toResponseDto)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<GalleryResponseDto> addBulkGalleryImages(BulkGalleryRequestDto dto)
+    public List<GalleryResponseDto> addBulkGalleryImages(BulkGalleryRequestDto dto, Long schoolId)
     {
-        Session session = sessionRepository.findById(dto.getSessionId())
+        Session session = sessionRepository.findBySessionIdAndSchoolId(dto.getSessionId(), schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Session not found with ID: " + dto.getSessionId()));
 
+        School school = schoolRepository.findById(schoolId).orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + schoolId));
+
         List<Gallery> galleries = dto.getImages().stream()
-                .map(imageUrl -> Gallery.builder()
-                        .imageUrl(imageUrl)
-                        .title("Bulk Upload")
-                        .description("Uploaded via bulk upload")
+                .map(imageData -> Gallery.builder()
+                        .imageUrl(imageData.getImageUrl())
+                        .cloudinaryPublicId(imageData.getCloudinaryPublicId())
+                        .title(imageData.getTitle())
+                        .description(imageData.getDescription())
+                        .uploadedByType(dto.getUploadedByType())
+                        .uploadedById(dto.getUploadedById())
+                        .uploadedByName(dto.getUploadedByName())
+                        .school(school)
                         .session(session)
                         .build())
                 .collect(Collectors.toList());
@@ -196,15 +146,15 @@ public class GalleryServiceImpl implements GalleryService
     {
         return GalleryResponseDto.builder()
                 .id(gallery.getId())
+                .imageUrl(gallery.getImageUrl())
                 .title(gallery.getTitle())
                 .description(gallery.getDescription())
-                .imageUrl(gallery.getImageUrl())
                 .cloudinaryPublicId(gallery.getCloudinaryPublicId())
                 .uploadedByType(gallery.getUploadedByType())
                 .uploadedById(gallery.getUploadedById())
                 .uploadedByName(gallery.getUploadedByName())
-                .sessionId(gallery.getSession() != null ? gallery.getSession().getId() : null)
-                .sessionName(gallery.getSession() != null ? gallery.getSession().getName() : null)
+                .sessionId(gallery.getSession().getId())
+                .schoolId(gallery.getSchool().getId())
                 .createdAt(gallery.getCreatedAt())
                 .updatedAt(gallery.getUpdatedAt())
                 .build();

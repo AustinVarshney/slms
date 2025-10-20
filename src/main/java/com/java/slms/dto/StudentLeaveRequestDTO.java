@@ -9,9 +9,6 @@ import java.time.LocalDate;
 @Setter
 public class StudentLeaveRequestDTO
 {
-    private String studentPan;
-    private Long sessionId;
-    private Long teacherId;
     private LocalDate startDate;
     private LocalDate endDate;
     private String reason;

@@ -4,7 +4,9 @@ import com.java.slms.dto.BroadcastMessageDto;
 import com.java.slms.dto.NotificationDto;
 import com.java.slms.exception.ResourceNotFoundException;
 import com.java.slms.model.Notification;
+import com.java.slms.model.School;
 import com.java.slms.repository.NotificationRepository;
+import com.java.slms.repository.SchoolRepository;
 import com.java.slms.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +26,7 @@ public class NotificationServiceImpl implements NotificationService
 {
     private final NotificationRepository notificationRepository;
     private final ModelMapper modelMapper;
+    private final SchoolRepository schoolRepository;
 
     @Override
     @Transactional
@@ -47,8 +50,11 @@ public class NotificationServiceImpl implements NotificationService
 
     @Override
     @Transactional
-    public List<NotificationDto> broadcastMessage(BroadcastMessageDto broadcastDto, String senderName)
+    public List<NotificationDto> broadcastMessage(BroadcastMessageDto broadcastDto, String senderName, Long schoolId)
     {
+        School school = schoolRepository.findById(schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("School not found"));
+        
         List<Notification> notifications = new ArrayList<>();
         
         for (String recipientId : broadcastDto.getRecipientIds())
@@ -62,6 +68,7 @@ public class NotificationServiceImpl implements NotificationService
             notification.setIsRead(false);
             notification.setPriority(broadcastDto.getPriority() != null ? 
                 broadcastDto.getPriority() : Notification.NotificationPriority.MEDIUM);
+            notification.setSchool(school);
             
             notifications.add(notification);
         }

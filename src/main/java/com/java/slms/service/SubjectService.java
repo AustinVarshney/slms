@@ -7,18 +7,18 @@ import java.util.List;
 
 public interface SubjectService
 {
-    SubjectDto addSubject(SubjectDto subjectDto);
 
-    List<SubjectDto> getAllSubjects();
+    SubjectDto addSubject(SubjectDto subjectDto, Long schoolId);
 
-    SubjectDto getSubjectById(Long id);
+    List<SubjectDto> addSubjectsByClass(SubjectsBulkDto bulkDto, Long schoolId);
 
-    void deleteSubject(Long subjectId, Long classId);
+    List<SubjectDto> getAllSubjects(Long schoolId);
 
-    SubjectDto updateSubjectInfoById(Long subjectId, SubjectDto subjectDto);
+    SubjectDto getSubjectById(Long subjectId, Long schoolId);
 
-    List<SubjectDto> addSubjectsByClass(SubjectsBulkDto bulkDto);
+    List<SubjectDto> getSubjectsByClassId(Long classId, Long schoolId);
 
-    List<SubjectDto> getSubjectsByClassId(Long classId);
+    SubjectDto updateSubjectInfoById(Long subjectId, SubjectDto subjectDto, Long schoolId);
 
+    void deleteSubject(Long subjectId, Long schoolId);
 }

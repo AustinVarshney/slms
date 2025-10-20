@@ -15,6 +15,7 @@ public class TeacherQueryResponse
     private String subject;
     private String content;
     private String response;
+    private Long schoolId;
     private QueryStatus status;
     private LocalDateTime createdAt;
     private LocalDateTime respondedAt;

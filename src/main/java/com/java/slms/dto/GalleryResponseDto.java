@@ -20,7 +20,7 @@ public class GalleryResponseDto
     private Long uploadedById;
     private String uploadedByName;
     private Long sessionId;
-    private String sessionName;
+    private Long schoolId;
     private Date createdAt;
     private Date updatedAt;
 }

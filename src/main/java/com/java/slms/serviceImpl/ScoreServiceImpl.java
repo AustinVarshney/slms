@@ -28,6 +28,7 @@ public class ScoreServiceImpl implements ScoreService
     private final SubjectRepository subjectRepository;
     private final ClassEntityRepository classEntityRepository;
     private final ExamRepository examRepository;
+    private final ClassExamRepository classExamRepository;
     private final ModelMapper modelMapper;
 
     @Override
@@ -387,6 +388,7 @@ public class ScoreServiceImpl implements ScoreService
                 score.setSubject(subject);
                 score.setMarks(entry.getMarks());
                 score.setGrade(entry.getGrade());
+                score.setSchool(student.getSchool()); // Set school from student
             }
             
             score = scoreRepository.save(score);
@@ -498,43 +500,78 @@ public class ScoreServiceImpl implements ScoreService
         resultsDTO.setClassName(student.getCurrentClass().getClassName());
         resultsDTO.setSection(student.getCurrentClass().getClassName()); // Using className as section is not available
         
-        // Get all exams for this student's class
-        List<Exam> exams = examRepository.findByClassEntity_Id(student.getCurrentClass().getId());
+        // Get all ClassExams for this student's class
+        List<ClassExam> classExams = classExamRepository.findByClassIdAndSchoolId(
+            student.getCurrentClass().getId(), 
+            student.getSchool().getId()
+        );
+        
+        // Get all subjects for the class
+        List<Subject> classSubjects = subjectRepository.findByClassEntity_Id(student.getCurrentClass().getId());
+        
         List<StudentResultsDTO.ExamResult> examResults = new ArrayList<>();
         
-        for (Exam exam : exams) {
+        for (ClassExam classExam : classExams) {
             StudentResultsDTO.ExamResult examResult = new StudentResultsDTO.ExamResult();
-            examResult.setExamId(exam.getId());
-            examResult.setExamName(exam.getName());
-            examResult.setExamDate(exam.getExamDate() != null ? exam.getExamDate().toString() : "");
+            examResult.setExamId(classExam.getId()); // Using ClassExam ID
+            examResult.setExamName(classExam.getExamType().getName());
+            examResult.setExamDate(classExam.getExamDate() != null ? classExam.getExamDate().toString() : "");
             
-            // Get scores for all subjects in this exam
-            List<Score> scores = scoreRepository.findByStudentAndExam(student, exam);
+            // Get scores for all subjects in this ClassExam
             List<StudentResultsDTO.SubjectScore> subjectScores = new ArrayList<>();
             
             double totalObtained = 0;
             double totalMax = 0;
+            int subjectsWithScores = 0;
             
-            for (Score score : scores) {
-                StudentResultsDTO.SubjectScore subjectScore = new StudentResultsDTO.SubjectScore();
-                subjectScore.setSubjectId(score.getSubject().getId());
-                subjectScore.setSubjectName(score.getSubject().getSubjectName());
-                subjectScore.setMarks(score.getMarks());
-                subjectScore.setMaxMarks(exam.getMaximumMarks());
-                subjectScore.setGrade(score.getGrade());
+            for (Subject subject : classSubjects) {
+                // Find the Exam for this ClassExam + Subject combination
+                Optional<Exam> examOpt = examRepository.findByClassExamIdAndSubjectIdAndSchoolId(
+                    classExam.getId(), 
+                    subject.getId(), 
+                    student.getSchool().getId()
+                );
                 
+                StudentResultsDTO.SubjectScore subjectScore = new StudentResultsDTO.SubjectScore();
+                subjectScore.setSubjectId(subject.getId());
+                subjectScore.setSubjectName(subject.getSubjectName());
+                subjectScore.setMaxMarks(classExam.getMaxMarks().doubleValue());
+                
+                if (examOpt.isPresent()) {
+                    Exam exam = examOpt.get();
+                    Optional<Score> scoreOpt = scoreRepository.findByStudentAndExamAndSubject(student, exam, subject);
+                    
+                    if (scoreOpt.isPresent()) {
+                        Score score = scoreOpt.get();
+                        subjectScore.setMarks(score.getMarks());
+                        subjectScore.setGrade(score.getGrade());
+                        totalObtained += score.getMarks();
+                        subjectsWithScores++;
+                    } else {
+                        // Score not entered yet
+                        subjectScore.setMarks(null);
+                        subjectScore.setGrade("Not Added");
+                    }
+                } else {
+                    // Exam not created for this subject yet
+                    subjectScore.setMarks(null);
+                    subjectScore.setGrade("Not Added");
+                }
+                
+                totalMax += classExam.getMaxMarks().doubleValue();
                 subjectScores.add(subjectScore);
-                totalObtained += score.getMarks();
-                totalMax += exam.getMaximumMarks();
             }
             
             examResult.setSubjectScores(subjectScores);
             examResult.setTotalMarks(totalMax);
             examResult.setObtainedMarks(totalObtained);
-            examResult.setPercentage(totalMax > 0 ? (totalObtained / totalMax) * 100 : 0);
-            examResult.setOverallGrade(calculateGrade(examResult.getPercentage()));
+            examResult.setPercentage(subjectsWithScores > 0 && totalMax > 0 ? (totalObtained / totalMax) * 100 : 0);
+            examResult.setOverallGrade(subjectsWithScores > 0 ? calculateGrade(examResult.getPercentage()) : "Pending");
             
-            examResults.add(examResult);
+            // Only add exam result if at least one subject has scores
+            if (subjectsWithScores > 0) {
+                examResults.add(examResult);
+            }
         }
         
         resultsDTO.setExamResults(examResults);

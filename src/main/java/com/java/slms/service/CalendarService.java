@@ -7,17 +7,17 @@ import java.util.List;
 
 public interface CalendarService
 {
-    CalendarResponseDto addCalendarEvent(CalendarRequestDto calendarRequestDto);
+    CalendarResponseDto addCalendarEvent(CalendarRequestDto calendarRequestDto, Long schoolId);
 
-    List<CalendarResponseDto> getAllCalendarEvents();
+    List<CalendarResponseDto> getAllCalendarEvents(Long schoolId);
 
-    List<CalendarResponseDto> getCalendarEventsBySessionId(Long sessionId);
+    CalendarResponseDto getCalendarEventById(Long id, Long schoolId);
 
-    CalendarResponseDto getCalendarEventById(Long id);
+    CalendarResponseDto updateCalendarEvent(Long id, CalendarRequestDto calendarRequestDto, Long schoolId);
 
-    CalendarResponseDto updateCalendarEvent(Long id, CalendarRequestDto calendarRequestDto);
+    void deleteCalendarEvent(Long id, Long schoolId);
 
-    void deleteCalendarEvent(Long id);
+    List<CalendarResponseDto> getCalendarEventsBySessionId(Long sessionId, Long schoolId);
 
-    List<CalendarResponseDto> getCalendarEventsForCurrentSession();
+    List<CalendarResponseDto> getCalendarEventsForCurrentSession(Long schoolId);
 }

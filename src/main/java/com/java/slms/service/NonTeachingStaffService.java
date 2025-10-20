@@ -1,26 +1,36 @@
 package com.java.slms.service;
 
 import com.java.slms.dto.UserRequest;
+import com.java.slms.model.NonTeachingStaff;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 public interface NonTeachingStaffService
 {
+    // Create new Fee Staff
+    UserRequest createFeeStaff(UserRequest feeStaffDto, Long schoolId);
 
-    UserRequest createFeeStaff(UserRequest feeStaffDto);
+    // Get Fee Staff by ID
+    UserRequest getFeeStaffById(Long id, Long schoolId);
 
-    UserRequest getFeeStaffById(Long id);
+    // Get all Fee Staff in a school
+    List<UserRequest> getAllFeeStaff(Long schoolId);
 
-    List<UserRequest> getAllFeeStaff();
+    // Get all active Fee Staff in a school
+    List<UserRequest> getActiveFeeStaff(Long schoolId);
 
-    List<UserRequest> getActiveFeeStaff();
+    // Update Fee Staff details
+    UserRequest updateFeeStaff(Long id, UserRequest feeStaffDto, Long schoolId);
 
-    UserRequest updateFeeStaff(Long id, UserRequest feeStaffDto);
+    // Get Non-Teaching Staff by email and school ID
+    NonTeachingStaff getNonTeachingStaffByEmailAndSchool(String email, Long schoolId);
 
+    // Inactivate a Non-Teaching Staff
     @Transactional
-    void inActiveNonTeachingStaff(Long id);
+    void inActiveNonTeachingStaff(Long id, Long schoolId);
 
+    // Activate a Non-Teaching Staff
     @Transactional
     void activateNonTeachingStaff(Long id);
 }

@@ -21,4 +21,6 @@ public class FeeResponseDTO
     private Double remainingAmount;
     private FeeStatus status;
     private Date paidOn;
+    private Long schoolId;
+
 }

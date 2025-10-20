@@ -51,6 +51,10 @@ public class Notification
     @Column(name = "read_at")
     private LocalDateTime readAt;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "school_id")
+    private School school;
+
     public enum RecipientType {
         STUDENT,
         TEACHER,

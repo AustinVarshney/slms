@@ -4,6 +4,11 @@ import com.java.slms.dto.CreateOrUpdateSessionRequest;
 import com.java.slms.dto.SessionDto;
 import com.java.slms.payload.RestResponse;
 import com.java.slms.service.SessionService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -12,12 +17,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/sessions")
@@ -40,10 +39,11 @@ public class SessionController
     )
     @PostMapping
     public ResponseEntity<RestResponse<SessionDto>> createSession(
+            @RequestAttribute("schoolId") Long schoolId,
             @RequestBody CreateOrUpdateSessionRequest request)
     {
         log.info("Attempting to create a new session from {} to {}", request.getStartDate(), request.getEndDate());
-        SessionDto saved = sessionService.createSession(request);
+        SessionDto saved = sessionService.createSession(schoolId, request);
         log.info("Session created with ID: {}", saved.getId());
 
         return ResponseEntity.status(HttpStatus.CREATED).body(
@@ -64,10 +64,11 @@ public class SessionController
             }
     )
     @GetMapping
-    public ResponseEntity<RestResponse<List<SessionDto>>> getAllSessions()
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_STUDENT')")
+    public ResponseEntity<RestResponse<List<SessionDto>>> getAllSessions(@RequestAttribute("schoolId") Long schoolId)
     {
         log.info("Fetching all sessions");
-        List<SessionDto> sessions = sessionService.getAllSessions();
+        List<SessionDto> sessions = sessionService.getAllSessions(schoolId);
         log.info("Retrieved {} sessions", sessions.size());
 
         return ResponseEntity.ok(
@@ -90,12 +91,12 @@ public class SessionController
                     @ApiResponse(responseCode = "400", description = "Session not found or invalid ID", content = @Content)
             }
     )
-    @GetMapping("/{id}")
-    public ResponseEntity<RestResponse<SessionDto>> getSessionById(@PathVariable Long id)
+    @GetMapping("/{sessionId}")
+    public ResponseEntity<RestResponse<SessionDto>> getSessionById(@PathVariable Long sessionId, @RequestAttribute("schoolId") Long schoolId)
     {
-        log.info("Fetching session with ID: {}", id);
-        SessionDto session = sessionService.getSessionById(id);
-        log.info("Session fetched successfully: ID {}", id);
+        log.info("Fetching session with ID: {}", sessionId);
+        SessionDto session = sessionService.getSessionById(schoolId, sessionId);
+        log.info("Session fetched successfully: ID {}", sessionId);
 
         return ResponseEntity.ok(
                 RestResponse.<SessionDto>builder()
@@ -120,10 +121,11 @@ public class SessionController
     @PutMapping("/{id}")
     public ResponseEntity<RestResponse<SessionDto>> updateSession(
             @PathVariable Long id,
+            @RequestAttribute("schoolId") Long schoolId,
             @RequestBody CreateOrUpdateSessionRequest request)
     {
         log.info("Updating session with ID: {}", id);
-        SessionDto updated = sessionService.updateSession(id, request);
+        SessionDto updated = sessionService.updateSession(id, schoolId, request);
         log.info("Session updated: ID {}", id);
 
         return ResponseEntity.ok(
@@ -144,18 +146,49 @@ public class SessionController
             }
     )
     @PutMapping("/deactivate")
-    public ResponseEntity<RestResponse<Void>> deactivateCurrentSession()
+    public ResponseEntity<RestResponse<Void>> deactivateCurrentSession(@RequestAttribute("schoolId") Long schoolId)
     {
         log.info("Deactivating current active session");
-        sessionService.deactivateCurrentSession();
+        sessionService.deactivateCurrentSession(schoolId);
         log.info("Current session deactivated");
 
         return ResponseEntity.ok(
                 RestResponse.<Void>builder()
-                        .message("Session Deactivated")
+                        .message("Session Deactivated Successfully")
                         .status(HttpStatus.OK.value())
                         .build()
         );
     }
+
+    @Operation(
+            summary = "Delete session by ID",
+            description = "Deletes an existing session using its ID and the school ID.",
+            parameters = {
+                    @Parameter(name = "id", description = "ID of the session to delete", required = true),
+                    @Parameter(name = "schoolId", description = "ID of the school", required = true)
+            },
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Session deleted successfully"),
+                    @ApiResponse(responseCode = "400", description = "Session not found, or session is active", content = @Content)
+            }
+    )
+    @DeleteMapping("/{id}")
+    public ResponseEntity<RestResponse<Void>> deleteSession(
+            @PathVariable Long id,
+            @RequestAttribute("schoolId") Long schoolId
+    )
+    {
+        log.info("Attempting to delete session with ID: {} for school {}", id, schoolId);
+        sessionService.deleteSession(schoolId, id);
+        log.info("Session with ID: {} deleted successfully", id);
+
+        return ResponseEntity.ok(
+                RestResponse.<Void>builder()
+                        .message("Session deleted successfully")
+                        .status(HttpStatus.OK.value())
+                        .build()
+        );
+    }
+
 
 }

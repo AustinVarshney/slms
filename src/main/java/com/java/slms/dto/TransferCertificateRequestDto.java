@@ -23,6 +23,7 @@ public class TransferCertificateRequestDto
     private String sessionName;
     private Long classId;
     private String className;
+    private Long schoolId;
 
     // Alias for studentPanNumber (some frontend code uses studentPan)
     public String getStudentPan() {

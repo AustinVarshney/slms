@@ -20,9 +20,9 @@ public class StaffLeaveAllowance extends BaseEntity
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "teacher_id", nullable = false)
-    private Teacher teacher;
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @JoinColumn(name = "staff_id", nullable = false)
+    private Staff staff;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "session_id", nullable = false)
@@ -30,4 +30,8 @@ public class StaffLeaveAllowance extends BaseEntity
 
     @Column(name = "allowed_leaves", nullable = false)
     private int allowedLeaves;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "school_id")
+    private School school;
 }

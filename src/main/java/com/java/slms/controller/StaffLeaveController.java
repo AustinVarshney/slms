@@ -4,11 +4,9 @@ import com.java.slms.dto.StaffLeaveRequestDto;
 import com.java.slms.dto.StaffLeaveResponseDto;
 import com.java.slms.dto.StaffLeaveStatusUpdateDto;
 import com.java.slms.model.Admin;
-import com.java.slms.model.StaffLeaveRecord;
-import com.java.slms.model.Teacher;
 import com.java.slms.payload.RestResponse;
 import com.java.slms.service.AdminService;
-import com.java.slms.service.StaffLeaveService;
+import com.java.slms.service.StaffLeaveRecordService;
 import com.java.slms.service.TeacherService;
 import com.java.slms.util.LeaveStatus;
 import io.swagger.v3.oas.annotations.Operation;
@@ -31,7 +29,7 @@ import java.util.List;
 @Tag(name = "Staff Leave Controller", description = "APIs for staff leave requests")
 public class StaffLeaveController
 {
-    private final StaffLeaveService staffLeaveService;
+    private final StaffLeaveRecordService staffLeaveService;
     private final TeacherService teacherService;
     private final AdminService adminService;
 
@@ -45,9 +43,16 @@ public class StaffLeaveController
             }
     )
     @PostMapping("/request")
-    public ResponseEntity<RestResponse<String>> raiseLeaveRequest(@RequestBody StaffLeaveRequestDto dto)
+    public ResponseEntity<RestResponse<String>> raiseLeaveRequest(
+            @RequestBody StaffLeaveRequestDto dto,
+            @RequestAttribute("schoolId") Long schoolId)
     {
-        staffLeaveService.raiseLeaveRequest(dto);
+        String email = SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getName();
+
+        staffLeaveService.raiseLeaveRequest(dto, schoolId, email);
 
         return ResponseEntity.ok(
                 RestResponse.<String>builder()
@@ -68,13 +73,12 @@ public class StaffLeaveController
     )
     @GetMapping("/my-leaves")
     public ResponseEntity<RestResponse<List<StaffLeaveResponseDto>>> getMyLeaves(
-            @RequestParam(name = "status", required = false) LeaveStatus status)
+            @RequestParam(name = "status", required = false) LeaveStatus status,
+            @RequestAttribute("schoolId") Long schoolId)
     {
-
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        Teacher teacher = teacherService.getActiveTeacherByEmail(email);
 
-        List<StaffLeaveResponseDto> leaves = staffLeaveService.getMyLeaves(teacher.getId(), status);
+        List<StaffLeaveResponseDto> leaves = staffLeaveService.getMyLeaves(email, status, schoolId);
 
         return ResponseEntity.ok(
                 RestResponse.<List<StaffLeaveResponseDto>>builder()
@@ -98,10 +102,10 @@ public class StaffLeaveController
     public ResponseEntity<RestResponse<List<StaffLeaveResponseDto>>> getAllLeavesForAdmin(
             @RequestParam(required = false) LeaveStatus status,
             @RequestParam(required = false) Long sessionId,
-            @RequestParam(required = false) Long teacherId)
+            @RequestParam(required = false) Long staffId,
+            @RequestAttribute("schoolId") Long schoolId)
     {
-
-        List<StaffLeaveResponseDto> leaves = staffLeaveService.getAllLeavesForAdmin(status, sessionId, teacherId);
+        List<StaffLeaveResponseDto> leaves = staffLeaveService.getAllLeavesForAdmin(status, sessionId, staffId, schoolId);
 
         return ResponseEntity.ok(
                 RestResponse.<List<StaffLeaveResponseDto>>builder()
@@ -124,12 +128,13 @@ public class StaffLeaveController
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<RestResponse<String>> updateLeaveStatus(
             @PathVariable Long leaveId,
-            @RequestBody StaffLeaveStatusUpdateDto dto)
+            @RequestBody StaffLeaveStatusUpdateDto dto,
+            @RequestAttribute("schoolId") Long schoolId)
     {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        Admin admin = adminService.getActiveAdminByEmail(email);
+        Admin admin = adminService.getAdminInfo(email, schoolId);
 
-        staffLeaveService.updateLeaveStatus(leaveId, admin, dto);
+        staffLeaveService.updateLeaveStatus(leaveId, admin, dto, schoolId);
 
         return ResponseEntity.ok(
                 RestResponse.<String>builder()
@@ -139,5 +144,4 @@ public class StaffLeaveController
                         .build()
         );
     }
-
 }

@@ -27,11 +27,12 @@ public class NotificationController
     @PostMapping("/broadcast")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<RestResponse<List<NotificationDto>>> broadcastMessage(
-            @RequestBody BroadcastMessageDto broadcastDto)
+            @RequestBody BroadcastMessageDto broadcastDto,
+            @RequestAttribute("schoolId") Long schoolId)
     {
         String senderName = SecurityContextHolder.getContext().getAuthentication().getName();
         
-        List<NotificationDto> notifications = notificationService.broadcastMessage(broadcastDto, senderName);
+        List<NotificationDto> notifications = notificationService.broadcastMessage(broadcastDto, senderName, schoolId);
         
         return ResponseEntity.ok(
                 RestResponse.<List<NotificationDto>>builder()

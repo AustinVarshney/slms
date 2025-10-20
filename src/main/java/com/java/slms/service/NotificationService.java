@@ -9,7 +9,7 @@ public interface NotificationService
 {
     NotificationDto createNotification(NotificationDto notificationDto);
     
-    List<NotificationDto> broadcastMessage(BroadcastMessageDto broadcastDto, String senderName);
+    List<NotificationDto> broadcastMessage(BroadcastMessageDto broadcastDto, String senderName, Long schoolId);
     
     List<NotificationDto> getNotificationsByRecipient(String recipientId);
     

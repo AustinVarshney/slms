@@ -1,10 +1,5 @@
 package com.java.slms.model;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
-import com.java.slms.util.FeeCatalogStatus;
-import com.java.slms.util.FeeStatus;
 import com.java.slms.util.Gender;
 import com.java.slms.util.UserStatus;
 import jakarta.persistence.*;
@@ -23,6 +18,11 @@ import java.util.List;
         name = "student",
         uniqueConstraints = {
                 @UniqueConstraint(columnNames = {"class_roll_number", "class_id", "session_id"})
+        },
+        indexes = {
+                @Index(name = "idx_panNumber", columnList = "panNumber"),
+                @Index(name = "idx_school_id", columnList = "school_id"),
+                @Index(name = "idx_status", columnList = "status")
         }
 )
 public class Student extends BaseEntity
@@ -86,9 +86,11 @@ public class Student extends BaseEntity
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Attendance> attendanceRecords;
 
-    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Score> scores;
-
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Fee> fees;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "school_id")
+    private School school;
+
 }

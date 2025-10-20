@@ -55,5 +55,7 @@ public class Fee extends BaseEntity
     @Column(nullable = false)
     private FeeMonth month;
 
-
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "school_id")
+    private School school;
 }

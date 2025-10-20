@@ -1,11 +1,13 @@
 package com.java.slms.serviceImpl;
 
 import com.java.slms.dto.StudentRequestDto;
+import com.java.slms.repository.SessionRepository;
 import com.java.slms.service.ExcelStudentParseService;
 import com.java.slms.util.Gender;
 import com.java.slms.util.UserStatus;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
+import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -20,24 +22,26 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Service
+@RequiredArgsConstructor
 public class ExcelStudentParserServiceImpl implements ExcelStudentParseService
 {
+    private final SessionRepository sessionRepository;
 
     // Existing Excel upload method
-    public List<StudentRequestDto> uploadStudents(MultipartFile file) throws IOException, CsvValidationException
+    public List<StudentRequestDto> uploadStudents(MultipartFile file, Long schoolId) throws IOException, CsvValidationException
     {
         if (file.getOriginalFilename().endsWith(".csv"))
         {
-            return uploadCsvStudents(file);  // If it's a CSV file, parse it using the CSV method
+            return uploadCsvStudents(file, schoolId);  // If it's a CSV file, parse it using the CSV method
         }
         else
         {
-            return uploadExcelStudents(file);  // Else parse as Excel
+            return uploadExcelStudents(file, schoolId);  // Else parse as Excel
         }
     }
 
     // Method to parse CSV files
-    public List<StudentRequestDto> uploadCsvStudents(MultipartFile file) throws IOException, CsvValidationException
+    public List<StudentRequestDto> uploadCsvStudents(MultipartFile file, Long schoolId) throws IOException, CsvValidationException
     {
         List<StudentRequestDto> studentList = new ArrayList<>();
 
@@ -82,7 +86,7 @@ public class ExcelStudentParserServiceImpl implements ExcelStudentParseService
     }
 
     // Existing method to handle Excel file parsing
-    private List<StudentRequestDto> uploadExcelStudents(MultipartFile file) throws IOException
+    private List<StudentRequestDto> uploadExcelStudents(MultipartFile file, Long schoolId) throws IOException
     {
         List<StudentRequestDto> studentList = new ArrayList<>();
 

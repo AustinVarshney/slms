@@ -1,6 +1,5 @@
 package com.java.slms.dto;
 
-import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -17,6 +16,7 @@ public class SubjectDto
     private Long teacherId;
     private Long sessionId;
     private String teacherName;
+    private Long schoolId;
     private Date createdAt;
     private Date deletedAt;
     private Date updatedAt;

@@ -8,8 +8,12 @@ import com.java.slms.service.AdminService;
 import com.java.slms.service.TeacherService;
 import com.java.slms.service.TransferCertificateRequestService;
 import com.java.slms.util.RequestStatus;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -20,11 +24,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.tags.Tag;
-
 @RestController
 @RequestMapping("/api/tc")
 @RequiredArgsConstructor
@@ -32,29 +31,31 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "Transfer Certificate Requests", description = "APIs to manage transfer certificate requests")
 public class TransferRequestController
 {
+
     private final TransferCertificateRequestService transferCertificateService;
     private final AdminService adminService;
     private final TeacherService teacherService;
 
-    @Operation(
-            summary = "Submit a transfer certificate request",
+    @Operation(summary = "Submit a transfer certificate request",
             description = "Allows a student to submit a transfer certificate request.",
+            parameters = {
+                    @Parameter(name = "schoolId", description = "School ID from request attribute", required = true)
+            },
             responses = {
-                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request submitted successfully"),
-                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request or already existing request", content = @Content)
-            }
-    )
+                    @ApiResponse(responseCode = "201", description = "Request submitted successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid request or already existing request", content = @Content)
+            })
     @PreAuthorize("hasRole('ROLE_STUDENT')")
     @PostMapping("/request")
     public ResponseEntity<RestResponse<TransferCertificateRequestDto>> createTransferCertificateRequest(
-            @RequestBody TCReasonDto reasonDto)
+            @RequestBody TCReasonDto reasonDto,
+            @RequestAttribute("schoolId") Long schoolId)
     {
-        String studentPan = SecurityContextHolder
-                .getContext()
-                .getAuthentication()
-                .getName();
 
-        TransferCertificateRequestDto createdRequest = transferCertificateService.createTransferCertificateRequest(studentPan, reasonDto);
+        String studentPan = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        TransferCertificateRequestDto createdRequest =
+                transferCertificateService.createTransferCertificateRequest(studentPan, reasonDto, schoolId);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 RestResponse.<TransferCertificateRequestDto>builder()
@@ -65,24 +66,24 @@ public class TransferRequestController
         );
     }
 
-    @Operation(
-            summary = "Get current student's transfer certificate requests",
-            description = "Fetch all transfer certificate requests submitted by the logged-in student.",
+    @Operation(summary = "Get current student's transfer certificate requests",
+            parameters = {
+                    @Parameter(name = "schoolId", description = "School ID from request attribute", required = true)
+            },
             responses = {
-                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Requests fetched successfully"),
-                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request", content = @Content)
-            }
-    )
+                    @ApiResponse(responseCode = "200", description = "Requests fetched successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content)
+            })
     @PreAuthorize("hasRole('ROLE_STUDENT')")
     @GetMapping("/requests/me")
-    public ResponseEntity<RestResponse<List<TransferCertificateRequestDto>>> getAllRequestsByCurrentStudent()
+    public ResponseEntity<RestResponse<List<TransferCertificateRequestDto>>> getAllRequestsByCurrentStudent(
+            @RequestAttribute("schoolId") Long schoolId)
     {
-        String studentPan = SecurityContextHolder
-                .getContext()
-                .getAuthentication()
-                .getName();
 
-        List<TransferCertificateRequestDto> requests = transferCertificateService.getAllRequestsByStudentPan(studentPan);
+        String studentPan = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        List<TransferCertificateRequestDto> requests =
+                transferCertificateService.getAllRequestsByStudentPan(studentPan, schoolId);
 
         return ResponseEntity.ok(
                 RestResponse.<List<TransferCertificateRequestDto>>builder()
@@ -93,23 +94,23 @@ public class TransferRequestController
         );
     }
 
-    @Operation(
-            summary = "Get transfer certificate requests by student PAN",
-            description = "Allows admin to fetch all transfer certificate requests for a specific student.",
+    @Operation(summary = "Get transfer certificate requests by student PAN",
             parameters = {
-                    @Parameter(name = "studentPan", description = "PAN number of the student", required = true)
+                    @Parameter(name = "studentPan", description = "PAN number of the student", required = true),
+                    @Parameter(name = "schoolId", description = "School ID from request attribute", required = true)
             },
             responses = {
-                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Requests fetched successfully"),
-                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request", content = @Content)
-            }
-    )
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER')")
+                    @ApiResponse(responseCode = "200", description = "Requests fetched successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content)
+            })
+    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_TEACHER')")
     @GetMapping("/requests/{studentPan}")
     public ResponseEntity<RestResponse<List<TransferCertificateRequestDto>>> getAllRequestsByStudentPan(
-            @PathVariable String studentPan)
+            @PathVariable String studentPan,
+            @RequestAttribute("schoolId") Long schoolId)
     {
-        List<TransferCertificateRequestDto> requests = transferCertificateService.getAllRequestsByStudentPan(studentPan);
+
+        List<TransferCertificateRequestDto> requests = transferCertificateService.getAllRequestsByStudentPan(studentPan, schoolId);
 
         return ResponseEntity.ok(
                 RestResponse.<List<TransferCertificateRequestDto>>builder()
@@ -120,27 +121,28 @@ public class TransferRequestController
         );
     }
 
-    @Operation(
-            summary = "Process a transfer certificate request",
-            description = "Allows admin to approve or reject a transfer certificate request.",
+    @Operation(summary = "Process a transfer certificate request",
             parameters = {
-                    @Parameter(name = "requestId", description = "ID of the transfer certificate request", required = true)
+                    @Parameter(name = "requestId", description = "ID of the transfer certificate request", required = true),
+                    @Parameter(name = "schoolId", description = "School ID from request attribute", required = true)
             },
             responses = {
-                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
-                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid decision or invalid request", content = @Content)
-            }
-    )
+                    @ApiResponse(responseCode = "200", description = "Request processed successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid decision or invalid request", content = @Content)
+            })
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     @PutMapping("/process/{requestId}")
     public ResponseEntity<RestResponse<TransferCertificateRequestDto>> processRequest(
             @PathVariable Long requestId,
-            @RequestBody ProcessRequestDto processRequestDto)
+            @RequestBody ProcessRequestDto processRequestDto,
+            @RequestAttribute("schoolId") Long schoolId)
     {
+
         TransferCertificateRequestDto responseDto = transferCertificateService.processRequestDecision(
                 requestId,
                 processRequestDto.getAdminReply(),
-                processRequestDto.getDecision()
+                processRequestDto.getDecision(),
+                schoolId
         );
 
         String message = responseDto.getStatus() == RequestStatus.APPROVED ?
@@ -154,40 +156,37 @@ public class TransferRequestController
                 .build());
     }
 
-    @Operation(
-            summary = "Get all transfer certificate requests",
-            description = "Allows admin to fetch all transfer certificate requests, optionally filtered by status.",
+    @Operation(summary = "Get all transfer certificate requests",
             parameters = {
-                    @Parameter(name = "status", description = "Filter requests by status (optional)")
+                    @Parameter(name = "status", description = "Filter requests by status (optional)"),
+                    @Parameter(name = "schoolId", description = "School ID from request attribute", required = true)
             },
             responses = {
-                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Requests fetched successfully"),
-                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request", content = @Content)
-            }
-    )
+                    @ApiResponse(responseCode = "200", description = "Requests fetched successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content)
+            })
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     @GetMapping("/requests")
     public ResponseEntity<RestResponse<List<TransferCertificateRequestDto>>> getAllRequests(
-            @RequestParam(required = false) RequestStatus status)
+            @RequestParam(required = false) RequestStatus status,
+            @RequestAttribute("schoolId") Long schoolId)
     {
-        List<TransferCertificateRequestDto> requests = transferCertificateService.getAllRequests(status);
 
-        String message = "Transfer Certificate requests fetched successfully. Total requests: " + requests.size();
+        List<TransferCertificateRequestDto> requests = transferCertificateService.getAllRequests(status, schoolId);
 
         return ResponseEntity.ok(
                 RestResponse.<List<TransferCertificateRequestDto>>builder()
                         .data(requests)
-                        .message(message)
+                        .message("Transfer Certificate requests fetched successfully. Total requests: " + requests.size())
                         .status(HttpStatus.OK.value())
                         .build()
         );
     }
 
-    @Operation(
-            summary = "Forward TC request to class teacher",
-            description = "Allows admin to forward a transfer certificate request to the respective class teacher.",
+    @Operation(summary = "Forward TC request to class teacher",
             parameters = {
-                    @Parameter(name = "tcRequestId", description = "ID of the TC request", required = true)
+                    @Parameter(name = "tcRequestId", description = "ID of the TC request", required = true),
+                    @Parameter(name = "schoolId", description = "School ID from request attribute", required = true)
             },
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     description = "Message from admin to class teacher",
@@ -195,31 +194,23 @@ public class TransferRequestController
                     content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(implementation = AdminToTeacherDto.class)
-                    )
-            ),
+                    )),
             responses = {
                     @ApiResponse(responseCode = "200", description = "TC request successfully forwarded to class teacher"),
-                    @ApiResponse(responseCode = "400", description = "Invalid request (e.g., already approved or not found)", content = @Content)
-            }
-    )
+                    @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content)
+            })
     @PutMapping("/{tcRequestId}/forward-to-teacher")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<RestResponse<Void>> forwardTCRequestToTeacher(
             @PathVariable Long tcRequestId,
-            @RequestBody AdminToTeacherDto adminToTeacherDto)
+            @RequestBody AdminToTeacherDto adminToTeacherDto,
+            @RequestAttribute("schoolId") Long schoolId)
     {
-        String email = SecurityContextHolder
-                .getContext()
-                .getAuthentication()
-                .getName();
 
-        Admin admin = adminService.getActiveAdminByEmail(email);
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        Admin admin = adminService.getAdminInfo(email, schoolId);
 
-        log.info("Forwarding TC request ID {} to class teacher", tcRequestId);
-
-        transferCertificateService.forwardTCRequestToClassTeacher(tcRequestId, admin, adminToTeacherDto);
-
-        log.info("Successfully forwarded TC request ID {}", tcRequestId);
+        transferCertificateService.forwardTCRequestToClassTeacher(tcRequestId, admin, adminToTeacherDto, schoolId);
 
         return ResponseEntity.ok(
                 RestResponse.<Void>builder()
@@ -229,11 +220,10 @@ public class TransferRequestController
         );
     }
 
-    @Operation(
-            summary = "Reply to a transfer certificate request from teacher to admin",
-            description = "Allows a class teacher to respond (approve or reject) to a TC request forwarded by the admin.",
+    @Operation(summary = "Reply to a transfer certificate request from teacher to admin",
             parameters = {
-                    @Parameter(name = "tcRequestId", description = "ID of the TC request", required = true)
+                    @Parameter(name = "tcRequestId", description = "ID of the TC request", required = true),
+                    @Parameter(name = "schoolId", description = "School ID from request attribute", required = true)
             },
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     description = "Response from class teacher with message and decision",
@@ -241,32 +231,23 @@ public class TransferRequestController
                     content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(implementation = TeacherToAdminDto.class)
-                    )
-            ),
+                    )),
             responses = {
                     @ApiResponse(responseCode = "200", description = "Response submitted successfully"),
-                    @ApiResponse(responseCode = "400", description = "Invalid request (e.g., not assigned to teacher or already responded)", content = @Content)
-            }
-    )
-    @PreAuthorize("hasRole('ROLE_TEACHER')")
+                    @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content)
+            })
     @PutMapping("/{tcRequestId}/reply-to-admin")
+    @PreAuthorize("hasRole('ROLE_TEACHER')")
     public ResponseEntity<RestResponse<Void>> replyToTCRequestFromTeacher(
             @PathVariable Long tcRequestId,
-            @RequestBody TeacherToAdminDto teacherToAdminDto)
+            @RequestBody TeacherToAdminDto teacherToAdminDto,
+            @RequestAttribute("schoolId") Long schoolId)
     {
 
-        log.info("Teacher replying to TC request ID {} with decision: {}", tcRequestId, teacherToAdminDto.getTeacherReplyToAdmin());
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        Teacher teacher = teacherService.getActiveTeacherByEmail(email, schoolId);
 
-        String email = SecurityContextHolder
-                .getContext()
-                .getAuthentication()
-                .getName();
-
-        Teacher teacher = teacherService.getActiveTeacherByEmail(email);
-
-        transferCertificateService.replyTCRequestToAdmin(tcRequestId, teacher, teacherToAdminDto);
-
-        log.info("Reply submitted successfully for TC request ID {}", tcRequestId);
+        transferCertificateService.replyTCRequestToAdmin(tcRequestId, teacher, teacherToAdminDto, schoolId);
 
         return ResponseEntity.ok(
                 RestResponse.<Void>builder()
@@ -276,27 +257,25 @@ public class TransferRequestController
         );
     }
 
-    @Operation(
-            summary = "Get all TC requests forwarded to class teacher",
-            description = "Returns a list of all transfer certificate requests that have been forwarded by the admin to the currently logged-in class teacher.",
+    @Operation(summary = "Get all TC requests forwarded to class teacher",
+            parameters = {
+                    @Parameter(name = "schoolId", description = "School ID from request attribute", required = true)
+            },
             responses = {
                     @ApiResponse(responseCode = "200", description = "List fetched successfully"),
                     @ApiResponse(responseCode = "403", description = "Unauthorized access", content = @Content)
-            }
-    )
+            })
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     @GetMapping("/forwarded-to-class-teacher")
-    public ResponseEntity<RestResponse<List<TransferCertificateRequestDto>>> getAllRequestsForwardedToClassTeacher()
+    public ResponseEntity<RestResponse<List<TransferCertificateRequestDto>>> getAllRequestsForwardedToClassTeacher(
+            @RequestAttribute("schoolId") Long schoolId)
     {
-        String email = SecurityContextHolder
-                .getContext()
-                .getAuthentication()
-                .getName();
 
-        Teacher teacher = teacherService.getActiveTeacherByEmail(email);
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        Teacher teacher = teacherService.getActiveTeacherByEmail(email, schoolId);
 
         List<TransferCertificateRequestDto> forwardedRequests =
-                transferCertificateService.getAllRequestForwardedByAdminToClassTeacher(teacher);
+                transferCertificateService.getAllRequestForwardedByAdminToClassTeacher(teacher, schoolId);
 
         return ResponseEntity.ok(
                 RestResponse.<List<TransferCertificateRequestDto>>builder()
@@ -306,6 +285,5 @@ public class TransferRequestController
                         .build()
         );
     }
-
 
 }

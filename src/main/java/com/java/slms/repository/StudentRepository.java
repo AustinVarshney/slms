@@ -1,8 +1,6 @@
 package com.java.slms.repository;
 
 import com.java.slms.model.Student;
-import com.java.slms.model.User;
-import com.java.slms.util.UserStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -21,39 +19,90 @@ public interface StudentRepository extends JpaRepository<Student, String>
     boolean existsByClassNameAndPanNumberIgnoreCase(@Param("className") String className,
                                                     @Param("panNumber") String panNumber);
 
-
-    // Find students who are marked present today
-    @Query("SELECT a.student FROM Attendance a WHERE a.present = true AND DATE(a.date) = CURRENT_DATE")
-    List<Student> findStudentsPresentToday();
-
     @Query("SELECT DISTINCT s FROM Student s JOIN s.attendanceRecords a " +
-            "WHERE a.present = true AND a.date BETWEEN :start AND :end")
+            "WHERE s.school.id = :schoolId AND a.present = true AND a.date BETWEEN :start AND :end")
     List<Student> findStudentsPresentToday(
+            @Param("schoolId") Long schoolId,
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end
     );
 
     @Query("SELECT DISTINCT s FROM Student s JOIN s.attendanceRecords a " +
-            "WHERE s.currentClass.id = :classId AND a.present = true AND a.date BETWEEN :start AND :end")
+            "WHERE s.currentClass.id = :classId AND s.school.id = :schoolId AND a.present = true AND a.date BETWEEN :start AND :end")
     List<Student> findStudentsPresentTodayByClassId(
             @Param("classId") Long classId,
+            @Param("schoolId") Long schoolId,
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end
     );
 
-    List<Student> findByStatusAndCurrentClass_Id(UserStatus status, Long classId);
+    @Query("SELECT COALESCE(MAX(s.classRollNumber), 0) " +
+            "FROM Student s " +
+            "WHERE s.currentClass.id = :classId " +
+            "AND s.school.id = :schoolId")
+    Integer findMaxClassRollNumberByCurrentClassIdAndSchoolId(
+            @Param("classId") Long classId,
+            @Param("schoolId") Long schoolId);
 
-    List<Student> findByCurrentClass_Id(Long classId);
+    @Query("SELECT s FROM Student s " +
+            "WHERE LOWER(s.panNumber) = LOWER(:panNumber) " +
+            "AND s.school.id = :schoolId " +
+            "AND s.status = 'ACTIVE'")
+    Optional<Student> findByPanNumberIgnoreCaseAndSchool_IdAndStatusActive(
+            @Param("panNumber") String panNumber,
+            @Param("schoolId") Long schoolId);
 
-    List<Student> findByStatus(UserStatus status);
+    @Query("SELECT s FROM Student s " +
+            "WHERE LOWER(s.panNumber) = LOWER(:panNumber)")
+    Optional<Student> findByPanNumberIgnoreCase(
+            @Param("panNumber") String panNumber);
 
-    Optional<Student> findByPanNumberAndStatus(String panNumber, UserStatus status);
 
-    @Query("SELECT COALESCE(MAX(s.classRollNumber), 0) FROM Student s WHERE s.currentClass.id = :classId")
-    Integer findMaxClassRollNumberByCurrentClassId(@Param("classId") Long classId);
+    @Query("SELECT s FROM Student s " +
+            "WHERE LOWER(s.panNumber) = LOWER(:panNumber) " +
+            "AND s.school.id = :schoolId ")
+    Optional<Student> findByPanNumberIgnoreCaseAndSchool_Id(
+            @Param("panNumber") String panNumber,
+            @Param("schoolId") Long schoolId);
 
-    List<Student> findByPanNumberIn(List<String> panNumbers);
+    @Query("SELECT s FROM Student s " +
+            "WHERE LOWER(s.panNumber) = LOWER(:panNumber) " +
+            "AND s.school.id = :schoolId " +
+            "AND s.status = 'INACTIVE'")
+    Optional<Student> findByPanNumberIgnoreCaseAndSchool_IdAndStatusInactive(
+            @Param("panNumber") String panNumber,
+            @Param("schoolId") Long schoolId);
 
-    List<Student> findBySession_Id(Long sessionId);
+    @Query("SELECT s FROM Student s " +
+            "WHERE LOWER(s.panNumber) = LOWER(:panNumber) " +
+            "AND s.school.id = :schoolId")
+    Optional<Student> findByPanNumberIgnoreCaseAndSchoolId(
+            @Param("panNumber") String panNumber,
+            @Param("schoolId") Long schoolId);
+
+    @Query("SELECT s FROM Student s WHERE s.currentClass.id = :currentClassId " +
+            "AND s.school.id = :schoolId AND s.status = 'ACTIVE'")
+    List<Student> findByCurrentClassIdAndSchoolIdAndStatusActive(
+            @Param("currentClassId") Long currentClassId,
+            @Param("schoolId") Long schoolId);
+
+    @Query("SELECT s FROM Student s WHERE s.school.id = :schoolId")
+    List<Student> findAllBySchoolId(@Param("schoolId") Long schoolId);
+
+    @Query("SELECT s FROM Student s WHERE s.school.id = :schoolId AND s.status = 'ACTIVE'")
+    List<Student> findAllActiveStudentsBySchoolId(@Param("schoolId") Long schoolId);
+
+    @Query("SELECT s FROM Student s WHERE s.school.id = :schoolId AND s.session.active = true")
+    List<Student> findStudentsBySchoolIdAndActiveSession(@Param("schoolId") Long schoolId);
+
+    @Query("SELECT s FROM Student s " +
+            "WHERE s.school.id = :schoolId " +
+            "AND LOWER(s.panNumber) IN :panNumbers")
+    List<Student> findBySchoolIdAndPanNumberInIgnoreCase(
+            @Param("schoolId") Long schoolId,
+            @Param("panNumbers") List<String> panNumbers);
+
+    @Query("SELECT s FROM Student s WHERE s.currentClass.id = :classId")
+    List<Student> findByCurrentClass_Id(@Param("classId") Long classId);
 
 }

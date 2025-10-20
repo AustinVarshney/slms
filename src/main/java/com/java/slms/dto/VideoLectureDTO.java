@@ -20,11 +20,10 @@ public class VideoLectureDTO {
     private String section;
     private Long teacherId;
     private String teacherName;
-    private String duration;
-    private String topic;
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime uploadedAt;
+    private LocalDateTime createdAt;
     
-    private Boolean isActive;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime updatedAt;
 }

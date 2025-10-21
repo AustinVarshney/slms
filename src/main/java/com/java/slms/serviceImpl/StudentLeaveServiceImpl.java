@@ -89,6 +89,7 @@ public class StudentLeaveServiceImpl implements StudentLeaveService
         leave.setDaysRequested(daysRequested);
 
         leave.setReason(dto.getReason());
+        leave.setProofImage(dto.getProofImage()); // Save optional proof image URL from Cloudinary
         leave.setStatus(LeaveStatus.PENDING);
         leave.setProcessedAt(null);
         leave.setClassTeacherResponse(null);

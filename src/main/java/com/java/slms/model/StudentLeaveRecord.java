@@ -28,6 +28,10 @@ public class StudentLeaveRecord extends BaseEntity
     private LocalDateTime processedAt;
     private String reason;
     private String classTeacherResponse;
+    
+    @Lob
+    @Column(columnDefinition = "TEXT")
+    private String proofImage; // Cloudinary URL for proof image
 
     @Enumerated(EnumType.STRING)
     private LeaveStatus status;

@@ -12,4 +12,5 @@ public class StudentLeaveRequestDTO
     private LocalDate startDate;
     private LocalDate endDate;
     private String reason;
+    private String proofImage; // Optional: Cloudinary URL for proof image
 }

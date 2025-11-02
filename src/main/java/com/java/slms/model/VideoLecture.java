@@ -45,6 +45,10 @@ public class VideoLecture
     @JoinColumn(name = "school_id")
     private School school;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "session_id")
+    private Session session;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private Date createdAt;

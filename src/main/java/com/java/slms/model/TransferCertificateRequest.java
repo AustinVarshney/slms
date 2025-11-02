@@ -41,26 +41,10 @@ public class TransferCertificateRequest extends BaseEntity
     @Enumerated(EnumType.STRING)
     private RequestStatus status;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "class_teacher_id", referencedColumnName = "id")
-    private Teacher approvedByClassTeacher;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "class_teacher_approval_status")
-    private RequestStatus classTeacherApprovalStatus;
-
-    @Column(name = "class_teacher_reply_to_admin", columnDefinition = "TEXT")
-    private String teacherReplyToAdmin;
-
-    private LocalDate teacherActionDate;
-
     private String reason;
 
     @Column(name = "admin_reply_to_student", columnDefinition = "TEXT")
     private String adminReplyToStudent;
-
-    @Column(name = "admin_message_to_teacher", columnDefinition = "TEXT")
-    private String adminMessageToTeacher;
 
     private LocalDate adminActionDate;
 

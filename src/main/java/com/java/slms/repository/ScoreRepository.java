@@ -49,4 +49,9 @@ public interface ScoreRepository extends JpaRepository<Score, Long>
     @Query("SELECT s FROM Score s WHERE s.student = :student AND s.subject = :subject AND s.exam IS NULL")
     Optional<Score> findByStudentAndSubjectAndExamIsNull(@Param("student") com.java.slms.model.Student student, @Param("subject") com.java.slms.model.Subject subject);
 
+    @Query("SELECT s FROM Score s WHERE s.student.panNumber = :panNumber AND s.school.id = :schoolId")
+    List<Score> findByStudentPanNumberAndSchoolId(
+            @Param("panNumber") String panNumber,
+            @Param("schoolId") Long schoolId);
+
 }

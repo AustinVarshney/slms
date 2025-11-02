@@ -28,4 +28,13 @@ public interface StudentEnrollmentRepository extends JpaRepository<StudentEnroll
             @Param("panNumber") String panNumber,
             @Param("schoolId") Long schoolId);
 
+    @Query("SELECT CASE WHEN COUNT(se) > 0 THEN true ELSE false END FROM StudentEnrollments se " +
+            "WHERE se.student.panNumber = :panNumber " +
+            "AND se.session.id = :sessionId " +
+            "AND se.classEntity.id = :classId")
+    boolean existsByStudent_PanNumberAndSession_IdAndClassEntity_Id(
+            @Param("panNumber") String panNumber,
+            @Param("sessionId") Long sessionId,
+            @Param("classId") Long classId);
+
 }

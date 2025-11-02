@@ -36,6 +36,12 @@ public class Notification
 
     @Column(name = "sender_name")
     private String senderName;
+    
+    @Column(name = "sender_id")
+    private String senderId; // Email of the sender (admin)
+    
+    @Column(name = "broadcast_id")
+    private String broadcastId; // Group ID for broadcast messages
 
     @Column(name = "is_read", nullable = false)
     private Boolean isRead = false;
@@ -54,6 +60,10 @@ public class Notification
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "school_id")
     private School school;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "session_id")
+    private Session session;
 
     public enum RecipientType {
         STUDENT,

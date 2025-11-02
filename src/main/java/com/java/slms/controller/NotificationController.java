@@ -146,4 +146,59 @@ public class NotificationController
                         .build()
         );
     }
+
+    @Operation(summary = "Get all sent messages by current admin")
+    @GetMapping("/sent")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<RestResponse<List<NotificationDto>>> getSentMessages()
+    {
+        String senderEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        
+        List<NotificationDto> sentMessages = notificationService.getSentMessagesBySender(senderEmail);
+        
+        return ResponseEntity.ok(
+                RestResponse.<List<NotificationDto>>builder()
+                        .data(sentMessages)
+                        .message("Sent messages fetched successfully")
+                        .status(HttpStatus.OK.value())
+                        .build()
+        );
+    }
+
+    @Operation(summary = "Update a broadcast message (Admin only)")
+    @PutMapping("/broadcast/{broadcastId}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<RestResponse<NotificationDto>> updateBroadcast(
+            @PathVariable String broadcastId,
+            @RequestBody BroadcastMessageDto updateDto,
+            @RequestAttribute("schoolId") Long schoolId)
+    {
+        String senderEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        
+        NotificationDto updated = notificationService.updateBroadcastMessage(broadcastId, updateDto, senderEmail, schoolId);
+        
+        return ResponseEntity.ok(
+                RestResponse.<NotificationDto>builder()
+                        .data(updated)
+                        .message("Broadcast message updated and resent successfully")
+                        .status(HttpStatus.OK.value())
+                        .build()
+        );
+    }
+
+    @Operation(summary = "Get all notifications in a broadcast")
+    @GetMapping("/broadcast/{broadcastId}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<RestResponse<List<NotificationDto>>> getBroadcastMessages(@PathVariable String broadcastId)
+    {
+        List<NotificationDto> notifications = notificationService.getBroadcastMessagesByBroadcastId(broadcastId);
+        
+        return ResponseEntity.ok(
+                RestResponse.<List<NotificationDto>>builder()
+                        .data(notifications)
+                        .message("Broadcast messages fetched successfully")
+                        .status(HttpStatus.OK.value())
+                        .build()
+        );
+    }
 }

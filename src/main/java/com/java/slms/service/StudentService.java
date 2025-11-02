@@ -45,4 +45,13 @@ public interface StudentService
     void promoteStudentsToClass(List<String> panNumbers, Long classId, Long schoolId);
 
     List<PreviousSchoolingRecordDto> getPreviousSchoolingRecords(String panNumber, Long schoolId);
+
+    @Transactional
+    void reassignRollNumbers(Long classId, Long schoolId);
+
+    @Transactional
+    void assignRollNumbersAlphabetically(Long classId, Long schoolId);
+
+    @Transactional
+    void swapRollNumbers(String panNumber1, String panNumber2, Long schoolId);
 }

@@ -3,9 +3,11 @@ package com.java.slms.serviceImpl;
 import com.java.slms.dto.VideoLectureDTO;
 import com.java.slms.exception.ResourceNotFoundException;
 import com.java.slms.model.School;
+import com.java.slms.model.Session;
 import com.java.slms.model.Teacher;
 import com.java.slms.model.VideoLecture;
 import com.java.slms.repository.SchoolRepository;
+import com.java.slms.repository.SessionRepository;
 import com.java.slms.repository.TeacherRepository;
 import com.java.slms.repository.VideoLectureRepository;
 import com.java.slms.service.VideoLectureService;
@@ -25,11 +27,16 @@ public class VideoLectureServiceImpl implements VideoLectureService {
     private final VideoLectureRepository videoLectureRepository;
     private final TeacherRepository teacherRepository;
     private final SchoolRepository schoolRepository;
+    private final SessionRepository sessionRepository;
     
     @Override
     public VideoLectureDTO createVideoLecture(VideoLectureDTO videoLectureDTO, Long schoolId) {
         School school = schoolRepository.findById(schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("School not found with id: " + schoolId));
+        
+        // Get active session
+        Session activeSession = sessionRepository.findBySchoolIdAndActiveTrue(schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("No active session found for school"));
         
         Teacher teacher = teacherRepository.findById(videoLectureDTO.getTeacherId())
             .orElseThrow(() -> new ResourceNotFoundException("Teacher not found with id: " + videoLectureDTO.getTeacherId()));
@@ -43,6 +50,7 @@ public class VideoLectureServiceImpl implements VideoLectureService {
                 .section(videoLectureDTO.getSection())
                 .teacher(teacher)
                 .school(school)
+                .session(activeSession)
                 .build();
         
         VideoLecture saved = videoLectureRepository.save(videoLecture);
@@ -82,7 +90,11 @@ public class VideoLectureServiceImpl implements VideoLectureService {
     
     @Override
     public List<VideoLectureDTO> getVideoLecturesByTeacher(Long teacherId, Long schoolId) {
-        return videoLectureRepository.findByTeacherIdAndSchoolId(teacherId, schoolId)
+        // Get active session
+        Session activeSession = sessionRepository.findBySchoolIdAndActiveTrue(schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("No active session found for school"));
+        
+        return videoLectureRepository.findByTeacherIdAndSchoolIdAndSessionId(teacherId, schoolId, activeSession.getId())
             .stream()
             .map(this::convertToDTO)
             .collect(Collectors.toList());
@@ -90,7 +102,11 @@ public class VideoLectureServiceImpl implements VideoLectureService {
     
     @Override
     public List<VideoLectureDTO> getVideoLecturesByClass(String className, String section, Long schoolId) {
-        return videoLectureRepository.findByClassNameAndSectionAndSchoolId(className, section, schoolId)
+        // Get active session
+        Session activeSession = sessionRepository.findBySchoolIdAndActiveTrue(schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("No active session found for school"));
+        
+        return videoLectureRepository.findByClassNameAndSectionAndSchoolIdAndSessionId(className, section, schoolId, activeSession.getId())
             .stream()
             .map(this::convertToDTO)
             .collect(Collectors.toList());
@@ -98,7 +114,11 @@ public class VideoLectureServiceImpl implements VideoLectureService {
     
     @Override
     public List<VideoLectureDTO> getVideoLecturesByClassAndSubject(String className, String section, String subject, Long schoolId) {
-        return videoLectureRepository.findByClassNameAndSectionAndSubjectAndSchoolId(className, section, subject, schoolId)
+        // Get active session
+        Session activeSession = sessionRepository.findBySchoolIdAndActiveTrue(schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("No active session found for school"));
+        
+        return videoLectureRepository.findByClassNameAndSectionAndSubjectAndSchoolIdAndSessionId(className, section, subject, schoolId, activeSession.getId())
             .stream()
             .map(this::convertToDTO)
             .collect(Collectors.toList());
@@ -106,7 +126,11 @@ public class VideoLectureServiceImpl implements VideoLectureService {
     
     @Override
     public List<VideoLectureDTO> getAllActiveVideoLectures(Long schoolId) {
-        return videoLectureRepository.findBySchoolIdOrderByCreatedAtDesc(schoolId)
+        // Get active session
+        Session activeSession = sessionRepository.findBySchoolIdAndActiveTrue(schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("No active session found for school"));
+        
+        return videoLectureRepository.findBySchoolIdAndSessionIdOrderByCreatedAtDesc(schoolId, activeSession.getId())
             .stream()
             .map(this::convertToDTO)
             .collect(Collectors.toList());

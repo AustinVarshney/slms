@@ -12,6 +12,7 @@ import com.java.slms.model.FeeStructure;
 import com.java.slms.model.Session;
 import com.java.slms.model.Student;
 import com.java.slms.repository.FeeRepository;
+import com.java.slms.repository.FeeStructureRepository;
 import com.java.slms.repository.SessionRepository;
 import com.java.slms.repository.StudentRepository;
 import com.java.slms.service.FeeService;
@@ -23,6 +24,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +41,7 @@ public class FeeServiceImpl implements FeeService
 
     private final StudentRepository studentRepository;
     private final FeeRepository feeRepository;
+    private final FeeStructureRepository feeStructureRepository;
     private final SessionRepository sessionRepository;
 
     @Override
@@ -48,11 +52,12 @@ public class FeeServiceImpl implements FeeService
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found with PAN: "
                         + feeRequestDTO.getStudentPanNumber() + " in school ID: " + schoolId));
 
-        FeeStructure feeStructure = student.getCurrentClass().getFeeStructures();
-        Session session = sessionRepository.findBySessionIdAndSchoolId(feeRequestDTO.getSessionId(), schoolId).orElseThrow(() -> new ResourceNotFoundException("Session not found with ID: " + feeRequestDTO.getSessionId() + " for schoolId: " + schoolId));
+        Session session = sessionRepository.findBySessionIdAndSchoolId(feeRequestDTO.getSessionId(), schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("Session not found with ID: " + 
+                        feeRequestDTO.getSessionId() + " for schoolId: " + schoolId));
 
         List<Fee> fees = feeRepository.findFeesByPanNumberAndSchoolIdAndMonth(
-                feeRequestDTO.getStudentPanNumber(), schoolId, feeRequestDTO.getMonth()
+                feeRequestDTO.getStudentPanNumber(), schoolId, feeRequestDTO.getMonth(), session.getId()
         );
 
         if (fees.isEmpty())
@@ -71,18 +76,54 @@ public class FeeServiceImpl implements FeeService
             throw new AlreadyExistException("Fee for this student and month is already paid.");
         }
 
-        if (Double.compare(feeStructure.getFeesAmount(), feeRequestDTO.getAmount()) != 0)
+        // Validate payment amount matches the fee amount
+        if (Double.compare(fee.getAmount(), feeRequestDTO.getAmount()) != 0)
         {
-            throw new WrongArgumentException("Payment amount does not match the required fee amount.");
+            throw new WrongArgumentException("Payment amount " + feeRequestDTO.getAmount() + 
+                    " does not match the required fee amount " + fee.getAmount());
         }
 
-        fee.setFeeStructure(feeStructure);
+        // Generate unique receipt number if not provided
+        String receiptNumber = feeRequestDTO.getReceiptNumber();
+        if (receiptNumber == null || receiptNumber.trim().isEmpty())
+        {
+            receiptNumber = generateUniqueReceiptNumber(student, session);
+        }
+        
+        // Validate receipt number uniqueness
+        if (isReceiptNumberExists(receiptNumber))
+        {
+            throw new WrongArgumentException("Receipt number " + receiptNumber + " already exists. Please use a unique receipt number.");
+        }
+
+        // Update fee to PAID status
         fee.setStatus(FeeStatus.PAID);
-        fee.setStudent(student);
         fee.setPaymentDate(LocalDate.now());
-        fee.setReceiptNumber(feeRequestDTO.getReceiptNumber());
+        fee.setReceiptNumber(receiptNumber);
 
         feeRepository.save(fee);
+    }
+    
+    /**
+     * Generate unique receipt number format: REC-{SessionYear}-{SchoolId}-{PAN}-{Timestamp}
+     * Example: REC-2025-1-ABC123-20251031143022
+     */
+    private String generateUniqueReceiptNumber(Student student, Session session)
+    {
+        String sessionYear = String.valueOf(session.getStartDate().getYear());
+        String schoolId = String.valueOf(student.getSchool().getId());
+        String pan = student.getPanNumber();
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        
+        return String.format("REC-%s-%s-%s-%s", sessionYear, schoolId, pan, timestamp);
+    }
+    
+    /**
+     * Check if receipt number already exists
+     */
+    private boolean isReceiptNumberExists(String receiptNumber)
+    {
+        return feeRepository.existsByReceiptNumber(receiptNumber);
     }
 
     @Override
@@ -106,7 +147,38 @@ public class FeeServiceImpl implements FeeService
 
     private FeeCatalogDto buildCatalogForStudent(Student student, Long schoolId)
     {
-        List<Fee> fees = feeRepository.findByStudentPanNumberAndSchoolIdOrderByYearAscMonthAsc(student.getPanNumber(), schoolId);
+        // Use student's own session, not the active session
+        // This ensures we show fees for the session the student is enrolled in
+        Session studentSession = student.getSession();
+        if (studentSession == null) {
+            throw new ResourceNotFoundException("Student " + student.getPanNumber() + 
+                    " is not enrolled in any session");
+        }
+        
+        List<Fee> fees = feeRepository.findByStudentPanNumberAndSchoolIdOrderByYearAscMonthAsc(
+                student.getPanNumber(), schoolId, studentSession.getId());
+
+        log.info("Found {} fees for student {} in session {}", 
+                fees.size(), student.getPanNumber(), studentSession.getName());
+
+        LocalDate today = LocalDate.now();
+        
+        // Check and update overdue fees on-the-fly
+        boolean hasUpdates = false;
+        for (Fee fee : fees)
+        {
+            if (fee.getStatus() == FeeStatus.PENDING && fee.getDueDate() != null && fee.getDueDate().isBefore(today))
+            {
+                fee.setStatus(FeeStatus.OVERDUE);
+                hasUpdates = true;
+            }
+        }
+        
+        // Save updated fees if any were marked as overdue
+        if (hasUpdates)
+        {
+            feeRepository.saveAll(fees);
+        }
 
         Map<FeeMonth, Fee> feeMap = fees.stream()
                 .collect(Collectors.toMap(Fee::getMonth, Function.identity(), (existing, replacement) -> existing));
@@ -120,9 +192,7 @@ public class FeeServiceImpl implements FeeService
         double totalPending = 0;
         double totalOverdue = 0;
 
-        FeeMonth sessionStartMonth = Optional.ofNullable(student.getSession())
-                .map(Session::getStartMonth)
-                .orElse(FeeMonth.JANUARY);
+        FeeMonth sessionStartMonth = studentSession.getStartMonth();
 
         FeeMonth[] allMonths = FeeMonth.values();
         int startIndex = sessionStartMonth.ordinal();
@@ -193,36 +263,68 @@ public class FeeServiceImpl implements FeeService
             throw new ResourceNotFoundException("Student with PAN " + panNumber + " is not enrolled in any class");
         }
 
-        FeeStructure feeStructure = currentClass.getFeeStructures();
-        if (feeStructure == null)
+        Session session = student.getSession();
+        if (session == null)
         {
-            throw new ResourceNotFoundException("No fee structure found for class: " + currentClass.getClassName());
+            throw new ResourceNotFoundException("Student with PAN " + panNumber + " is not enrolled in any session");
         }
 
-        Session activeSession = sessionRepository.findBySchoolIdAndActiveTrue(student.getSchool().getId())
-                .orElseThrow(() -> new ResourceNotFoundException("No active session found for school ID: " + student.getSchool().getId()));
-
-        // Generate fees for all months
-        for (FeeMonth month : FeeMonth.values())
+        // Check if fees already exist for this student in this session
+        List<Fee> existingFees = feeRepository.findByStudentPanNumberAndSchoolIdOrderByYearAscMonthAsc(
+                panNumber, student.getSchool().getId(), session.getId());
+        
+        if (!existingFees.isEmpty())
         {
-            // Check if fee already exists for this student, month, and session
-            boolean exists = feeRepository.existsByStudentPanNumberAndMonthAndSession(panNumber, month, activeSession);
-            if (!exists)
-            {
-                Fee fee = new Fee();
-                fee.setStudent(student);
-                fee.setMonth(month);
-                fee.setFeeStructure(feeStructure);
-                fee.setAmount(feeStructure.getFeesAmount());
-                fee.setStatus(FeeStatus.PENDING);
-                fee.setDueDate(calculateDueDate(month, activeSession));
-                fee.setYear(activeSession.getStartDate().getYear());
-                fee.setSchool(student.getSchool());
-
-                feeRepository.save(fee);
-                log.info("Generated fee for student {} for month {}", panNumber, month);
-            }
+            log.warn("Fees already exist for student {} in session {}. Found {} existing fees.", 
+                    panNumber, session.getName(), existingFees.size());
+            throw new AlreadyExistException("Fee records already exist for student " + panNumber + 
+                    " in session " + session.getName() + ". Total existing fees: " + existingFees.size());
         }
+
+        // Use repository to find fee structure instead of relying on OneToOne relationship
+        FeeStructure feeStructure = feeStructureRepository
+                .findByClassEntity_IdAndSession_IdAndSchool_Id(
+                        currentClass.getId(), 
+                        session.getId(), 
+                        student.getSchool().getId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No fee structure found for class: " + currentClass.getClassName() + 
+                        " in session: " + session.getName() + " for school ID: " + student.getSchool().getId()));
+
+        log.info("Generating 12-month fees for student {} in class {} for session {}", 
+                panNumber, currentClass.getClassName(), session.getName());
+
+        // Generate fees for 12 consecutive months starting from session start date
+        LocalDate currentMonth = session.getStartDate().withDayOfMonth(1);
+        List<Fee> feesToCreate = new ArrayList<>();
+
+        for (int i = 0; i < 12; i++)
+        {
+            FeeMonth feeMonth = FeeMonth.valueOf(currentMonth.getMonth().name());
+            int year = currentMonth.getYear();
+
+            Fee fee = new Fee();
+            fee.setStudent(student);
+            fee.setMonth(feeMonth);
+            fee.setYear(year);
+            fee.setFeeStructure(feeStructure);
+            fee.setClassEntity(currentClass);
+            fee.setAmount(feeStructure.getFeesAmount());
+            fee.setStatus(FeeStatus.PENDING);
+            fee.setDueDate(LocalDate.of(year, currentMonth.getMonth(), 10)); // Due on 10th of each month
+            fee.setSchool(student.getSchool());
+            fee.setSession(session); // Link fee to session
+
+            feesToCreate.add(fee);
+            
+            // Move to next month
+            currentMonth = currentMonth.plusMonths(1);
+        }
+
+        // Save all fees at once
+        feeRepository.saveAll(feesToCreate);
+        log.info("Successfully generated {} fee records for student {} in session {}", 
+                feesToCreate.size(), panNumber, session.getName());
     }
 
     private LocalDate calculateDueDate(FeeMonth month, Session session)

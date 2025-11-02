@@ -22,4 +22,10 @@ public interface NotificationService
     void markAllAsRead(String recipientId);
     
     void deleteNotification(Long notificationId);
+    
+    List<NotificationDto> getSentMessagesBySender(String senderId);
+    
+    NotificationDto updateBroadcastMessage(String broadcastId, BroadcastMessageDto updateDto, String senderEmail, Long schoolId);
+    
+    List<NotificationDto> getBroadcastMessagesByBroadcastId(String broadcastId);
 }

@@ -286,4 +286,30 @@ public class TransferRequestController
         );
     }
 
+    @Operation(summary = "Get all processed TC requests from last 1 month",
+            description = "Fetches all TC requests that were approved or rejected by admin in the last month",
+            parameters = {
+                    @Parameter(name = "schoolId", description = "School ID from request attribute", required = true)
+            },
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Processed requests fetched successfully"),
+                    @ApiResponse(responseCode = "403", description = "Unauthorized access", content = @Content)
+            })
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @GetMapping("/processed/last-month")
+    public ResponseEntity<RestResponse<List<TransferCertificateRequestDto>>> getProcessedRequestsFromLastMonth(
+            @RequestAttribute("schoolId") Long schoolId)
+    {
+        List<TransferCertificateRequestDto> processedRequests = 
+                transferCertificateService.getProcessedRequestsFromLastMonth(schoolId);
+
+        return ResponseEntity.ok(
+                RestResponse.<List<TransferCertificateRequestDto>>builder()
+                        .status(HttpStatus.OK.value())
+                        .message("Processed TC requests from last month fetched successfully. Total: " + processedRequests.size())
+                        .data(processedRequests)
+                        .build()
+        );
+    }
+
 }

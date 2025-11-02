@@ -12,6 +12,8 @@ public interface ClassEntityService
 
     List<ClassInfoResponse> getAllClassInActiveSession(Long schoolId);
 
+    List<ClassInfoResponse> getAllClassesBySession(Long schoolId, Long sessionId);
+
     ClassInfoResponse getClassByClassIdAndSessionId(Long schoolId, Long classId);
 
     void deleteClassByIdAndSessionId(Long schoolId, Long id, Long sessionId);

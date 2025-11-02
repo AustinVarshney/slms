@@ -45,6 +45,15 @@ public class StudentResponseDto
     private String sessionName;
     private Long sessionId;
     private Long schoolId;
+    
+    // School information
+    private String schoolName;
+    private String schoolLogo;
+    private String schoolTagline;
+    
+    // Class teacher information
+    private Long classTeacherId;
+    private String classTeacherName;
 
     private Date createdAt;
     private Date updatedAt;

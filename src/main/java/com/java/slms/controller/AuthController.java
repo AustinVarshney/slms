@@ -92,6 +92,8 @@ public class AuthController
         schoolRequestDto.setSchoolWebsite(req.getSchoolWebsite());
         schoolRequestDto.setSchoolContactNumber(req.getSchoolContactNumber());
         schoolRequestDto.setSchoolAddress(req.getSchoolAddress());  // Assuming there is a schoolAddress in the request
+        schoolRequestDto.setSchoolLogo(req.getSchoolLogo());  // Set school logo from request
+        schoolRequestDto.setSchoolTagline(req.getSchoolTagline());  // Set school tagline from request
 
         // Create school using school service
         SchoolResponseDto schoolResponseDto = schoolService.createSchool(schoolRequestDto);
@@ -217,24 +219,25 @@ public class AuthController
         // Check if user with this PAN already exists
         var existingUserOpt = userRepository.findByPanNumberIgnoreCase(req.getPanNumber());
         
+        User user;
         if (existingUserOpt.isPresent())
         {
-            return ResponseEntity
-                    .status(HttpStatus.BAD_REQUEST)
-                    .body(RestResponse.<StudentResponseDto>builder()
-                            .message("PAN already registered")
-                            .status(HttpStatus.BAD_REQUEST.value())
-                            .build());
+            // User exists - reuse the existing user account for new session/school
+            user = existingUserOpt.get();
+            req.setUserId(user.getId());
         }
-        User user = User.builder()
-                .panNumber(req.getPanNumber())
-                .password(passwordEncoder.encode(req.getPassword()))
-                .roles(Set.of(RoleEnum.ROLE_STUDENT))
-                .enabled(true)
-                .build();
-        userRepository.save(user);
-
-        req.setUserId(user.getId());
+        else
+        {
+            // Create new user account
+            user = User.builder()
+                    .panNumber(req.getPanNumber())
+                    .password(passwordEncoder.encode(req.getPassword()))
+                    .roles(Set.of(RoleEnum.ROLE_STUDENT))
+                    .enabled(true)
+                    .build();
+            userRepository.save(user);
+            req.setUserId(user.getId());
+        }
 
         return ResponseEntity.ok(
                 RestResponse.<StudentResponseDto>builder()
@@ -265,20 +268,27 @@ public class AuthController
 
             for (StudentRequestDto studentDto : students)
             {
-                if (userRepository.findByPanNumberIgnoreCase(studentDto.getPanNumber()).isPresent())
+                var existingUser = userRepository.findByPanNumberIgnoreCase(studentDto.getPanNumber());
+                
+                User user;
+                if (existingUser.isPresent())
                 {
-                    continue; // Or log + add to error list
+                    // User exists - reuse for new session/school
+                    user = existingUser.get();
+                    studentDto.setUserId(user.getId());
                 }
-
-                User user = User.builder()
-                        .panNumber(studentDto.getPanNumber())
-                        .password(passwordEncoder.encode(studentDto.getPassword() == null ? "default123" : studentDto.getPassword()))
-                        .roles(Set.of(RoleEnum.ROLE_STUDENT))
-                        .enabled(true)
-                        .build();
-                userRepository.save(user);
-
-                studentDto.setUserId(user.getId());
+                else
+                {
+                    // Create new user
+                    user = User.builder()
+                            .panNumber(studentDto.getPanNumber())
+                            .password(passwordEncoder.encode(studentDto.getPassword() == null ? "default123" : studentDto.getPassword()))
+                            .roles(Set.of(RoleEnum.ROLE_STUDENT))
+                            .enabled(true)
+                            .build();
+                    userRepository.save(user);
+                    studentDto.setUserId(user.getId());
+                }
 
                 StudentResponseDto response = studentService.createStudent(studentDto, schoolId);
                 responses.add(response);

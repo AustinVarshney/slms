@@ -17,4 +17,6 @@ public class SchoolResponseDto
     private String schoolWebsite;
     private String schoolAddress;
     private String schoolContactNumber;
+    private String schoolLogo; // Cloudinary URL
+    private String schoolTagline;
 }

@@ -18,4 +18,6 @@ public class AdminRegisterRequestDto
     private String schoolWebsite;
     private String schoolContactNumber;
     private String schoolAddress;
+    private String schoolLogo;
+    private String schoolTagline;
 }

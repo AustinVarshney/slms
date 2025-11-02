@@ -21,6 +21,22 @@ public interface StaffLeaveAllowanceRepository extends JpaRepository<StaffLeaveA
             @Param("session") Session session,
             @Param("schoolId") Long schoolId);
 
+    @Query("SELECT CASE WHEN COUNT(s) > 0 THEN true ELSE false END " +
+            "FROM StaffLeaveAllowance s " +
+            "WHERE s.staff = :staff " +
+            "AND s.session = :session " +
+            "AND s.school.id = :schoolId")
+    boolean existsByStaffAndSessionAndSchoolId(
+            @Param("staff") Staff staff,
+            @Param("session") Session session,
+            @Param("schoolId") Long schoolId);
+
+    @Query("SELECT s FROM StaffLeaveAllowance s " +
+            "WHERE s.session = :session AND s.school.id = :schoolId")
+    List<StaffLeaveAllowance> findBySessionAndSchoolId(
+            @Param("session") Session session,
+            @Param("schoolId") Long schoolId);
+
     @Query("SELECT s FROM StaffLeaveAllowance s " +
             "WHERE s.session.id = :sessionId AND s.school.id = :schoolId")
     List<StaffLeaveAllowance> findAllBySessionIdAndSchoolId(

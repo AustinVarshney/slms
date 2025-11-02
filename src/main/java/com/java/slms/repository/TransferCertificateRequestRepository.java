@@ -1,7 +1,6 @@
 package com.java.slms.repository;
 
 import com.java.slms.model.Student;
-import com.java.slms.model.Teacher;
 import com.java.slms.model.TransferCertificateRequest;
 import com.java.slms.util.RequestStatus;
 import org.springframework.data.domain.Sort;
@@ -50,15 +49,6 @@ public interface TransferCertificateRequestRepository extends JpaRepository<Tran
     List<TransferCertificateRequest> findAll(Sort sort);
 
     @Query("SELECT t FROM TransferCertificateRequest t " +
-            "WHERE t.approvedByClassTeacher = :teacher " +
-            "AND t.status = :status " +
-            "AND t.student.school.id = :schoolId")
-    List<TransferCertificateRequest> findByApprovedByClassTeacherAndStatusAndSchoolId(
-            @Param("teacher") Teacher teacher,
-            @Param("status") RequestStatus status,
-            @Param("schoolId") Long schoolId);
-
-    @Query("SELECT t FROM TransferCertificateRequest t " +
             "WHERE t.status = :status " +
             "AND t.school.id = :schoolId " +
             "ORDER BY t.requestDate DESC")
@@ -71,5 +61,13 @@ public interface TransferCertificateRequestRepository extends JpaRepository<Tran
             "ORDER BY t.requestDate DESC")
     List<TransferCertificateRequest> findAllBySchoolId(@Param("schoolId") Long schoolId);
 
+    @Query("SELECT t FROM TransferCertificateRequest t " +
+            "WHERE t.school.id = :schoolId " +
+            "AND t.status IN ('APPROVED', 'REJECTED') " +
+            "AND t.adminActionDate >= :fromDate " +
+            "ORDER BY t.adminActionDate DESC")
+    List<TransferCertificateRequest> findProcessedRequestsFromDate(
+            @Param("schoolId") Long schoolId,
+            @Param("fromDate") java.time.LocalDate fromDate);
 
 }

@@ -93,7 +93,7 @@ public class EventServiceImpl implements EventService
         Session activeSession = sessionRepository.findBySchoolIdAndActiveTrue(schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("No active session found for school ID: " + schoolId));
 
-        return eventRepository.findByIdAndSchoolId(activeSession.getId(), schoolId)
+        return eventRepository.findBySchoolIdAndSessionActive(schoolId)
                 .stream()
                 .map(event -> mapToDtoWithSession(event, activeSession))
                 .collect(Collectors.toList());
@@ -105,7 +105,7 @@ public class EventServiceImpl implements EventService
         Session session = sessionRepository.findBySessionIdAndSchoolId(sessionId, schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Session not found with ID: " + sessionId));
 
-        return eventRepository.findBySession_Id(sessionId)
+        return eventRepository.findBySessionIdAndSchoolId(sessionId, schoolId)
                 .stream()
                 .map(event -> mapToDtoWithSession(event, session))
                 .collect(Collectors.toList());

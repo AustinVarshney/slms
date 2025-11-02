@@ -13,6 +13,30 @@ import java.util.Optional;
 
 public interface TeacherQueryRepository extends JpaRepository<TeacherQuery, Long>
 {
+    // Query methods with session filtering
+    @Query("SELECT q FROM TeacherQuery q WHERE q.teacher = :teacher AND q.status = :status AND q.school.id = :schoolId AND q.session.id = :sessionId")
+    List<TeacherQuery> findByTeacherAndStatusAndSchoolIdAndSessionId(@Param("teacher") Teacher teacher,
+                                                         @Param("status") QueryStatus status,
+                                                         @Param("schoolId") Long schoolId,
+                                                         @Param("sessionId") Long sessionId);
+
+    @Query("SELECT q FROM TeacherQuery q WHERE q.teacher = :teacher AND q.school.id = :schoolId AND q.session.id = :sessionId")
+    List<TeacherQuery> findByTeacherAndSchoolIdAndSessionId(@Param("teacher") Teacher teacher,
+                                                @Param("schoolId") Long schoolId,
+                                                @Param("sessionId") Long sessionId);
+
+    @Query("SELECT tq FROM TeacherQuery tq WHERE tq.admin = :admin AND tq.status = :status AND tq.teacher.school.id = :schoolId AND tq.session.id = :sessionId")
+    List<TeacherQuery> findByAdminAndStatusAndSchoolIdAndSessionId(@Param("admin") Admin admin, 
+                                                                   @Param("status") QueryStatus status, 
+                                                                   @Param("schoolId") Long schoolId,
+                                                                   @Param("sessionId") Long sessionId);
+
+    @Query("SELECT tq FROM TeacherQuery tq WHERE tq.admin = :admin AND tq.teacher.school.id = :schoolId AND tq.session.id = :sessionId")
+    List<TeacherQuery> findByAdminAndSchoolIdAndSessionId(@Param("admin") Admin admin, 
+                                                          @Param("schoolId") Long schoolId,
+                                                          @Param("sessionId") Long sessionId);
+
+    // Backward compatibility - without session filtering
     List<TeacherQuery> findByTeacher(Teacher teacher);
 
     List<TeacherQuery> findByTeacherAndStatus(Teacher teacher, QueryStatus status);

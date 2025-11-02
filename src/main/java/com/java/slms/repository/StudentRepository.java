@@ -95,6 +95,20 @@ public interface StudentRepository extends JpaRepository<Student, String>
     @Query("SELECT s FROM Student s WHERE s.school.id = :schoolId AND s.session.active = true")
     List<Student> findStudentsBySchoolIdAndActiveSession(@Param("schoolId") Long schoolId);
 
+    @Query("SELECT s FROM Student s WHERE s.school.id = :schoolId AND s.session.id = :sessionId")
+    List<Student> findStudentsBySchoolIdAndSessionId(
+            @Param("schoolId") Long schoolId, 
+            @Param("sessionId") Long sessionId);
+
+    @Query("SELECT s FROM Student s " +
+            "WHERE s.session.id = :sessionId " +
+            "AND s.school.id = :schoolId " +
+            "AND s.status = :status")
+    List<Student> findBySession_IdAndSchool_IdAndStatus(
+            @Param("sessionId") Long sessionId,
+            @Param("schoolId") Long schoolId,
+            @Param("status") com.java.slms.util.UserStatus status);
+
     @Query("SELECT s FROM Student s " +
             "WHERE s.school.id = :schoolId " +
             "AND LOWER(s.panNumber) IN :panNumbers")
@@ -104,5 +118,14 @@ public interface StudentRepository extends JpaRepository<Student, String>
 
     @Query("SELECT s FROM Student s WHERE s.currentClass.id = :classId")
     List<Student> findByCurrentClass_Id(@Param("classId") Long classId);
+
+    @Query("SELECT s FROM Student s " +
+            "WHERE LOWER(s.panNumber) = LOWER(:panNumber) " +
+            "AND s.school.id = :schoolId " +
+            "AND s.session.id = :sessionId")
+    Optional<Student> findByPanNumberIgnoreCaseAndSchoolIdAndSessionId(
+            @Param("panNumber") String panNumber,
+            @Param("schoolId") Long schoolId,
+            @Param("sessionId") Long sessionId);
 
 }

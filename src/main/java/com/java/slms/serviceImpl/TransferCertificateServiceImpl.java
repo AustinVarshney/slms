@@ -109,52 +109,26 @@ public class TransferCertificateServiceImpl implements TransferCertificateReques
                 .collect(Collectors.toList());
     }
 
-    @Override
     @Transactional(readOnly = true)
+    @Override
     public List<TransferCertificateRequestDto> getAllRequestForwardedByAdminToClassTeacher(Teacher teacher, Long schoolId)
     {
-        List<TransferCertificateRequest> requests = tcRequestRepository
-                .findByApprovedByClassTeacherAndStatusAndSchoolId(teacher, RequestStatus.PROCESSING, schoolId);
-
-        return requests.stream()
-                .map(this::mapToDto)
-                .collect(Collectors.toList());
+        // Teacher forwarding workflow has been removed - return empty list
+        return List.of();
     }
 
     @Override
     public void forwardTCRequestToClassTeacher(Long tcRequestId, Admin admin, AdminToTeacherDto adminToTeacherDto, Long schoolId)
     {
-        TransferCertificateRequest request = fetchRequestById(tcRequestId, schoolId);
-
-        if (request.getStatus().equals(RequestStatus.APPROVED))
-        {
-            throw new WrongArgumentException("Request already approved with id " + request.getId());
-        }
-
-        request.setAdminMessageToTeacher(adminToTeacherDto.getAdminMessageToTeacher());
-        request.setApprovedByClassTeacher(request.getLastClass().getClassTeacher());
-        request.setStatus(RequestStatus.PROCESSING);
-        request.setClassTeacherApprovalStatus(RequestStatus.PENDING);
-        request.setApprovedByAdmin(admin);
-
-        tcRequestRepository.save(request);
+        // Teacher forwarding workflow has been removed - this method is deprecated
+        throw new WrongArgumentException("Teacher forwarding workflow has been removed. Admin should directly approve/reject TC requests.");
     }
 
     @Override
     public void replyTCRequestToAdmin(Long tcRequestId, Teacher teacher, TeacherToAdminDto teacherToAdminDto, Long schoolId)
     {
-        TransferCertificateRequest request = fetchRequestById(tcRequestId, schoolId);
-
-        if (!teacher.getId().equals(request.getApprovedByClassTeacher().getId()))
-        {
-            throw new WrongArgumentException("You are not authorized to respond to this TC request.");
-        }
-
-        request.setClassTeacherApprovalStatus(teacherToAdminDto.getStatus());
-        request.setTeacherReplyToAdmin(teacherToAdminDto.getTeacherReplyToAdmin());
-        request.setTeacherActionDate(LocalDate.now());
-
-        tcRequestRepository.save(request);
+        // Teacher reply workflow has been removed - this method is deprecated
+        throw new WrongArgumentException("Teacher reply workflow has been removed. Admin handles all TC requests directly.");
     }
 
     // Private helper methods
@@ -198,21 +172,15 @@ public class TransferCertificateServiceImpl implements TransferCertificateReques
                 .orElseThrow(() -> new ResourceNotFoundException("Request not found with id: " + requestId));
     }
 
-    private void validateRequestPending(TransferCertificateRequest request)
+    @Override
+    public List<TransferCertificateRequestDto> getProcessedRequestsFromLastMonth(Long schoolId)
     {
-        RequestStatus status = request.getStatus();
-        RequestStatus teacherStatus = request.getClassTeacherApprovalStatus();
-
-        if (status == RequestStatus.APPROVED || status == RequestStatus.REJECTED)
-        {
-            throw new WrongArgumentException("Request has already been processed by admin.");
-        }
-
-        if (teacherStatus == null || teacherStatus == RequestStatus.PENDING)
-        {
-            throw new WrongArgumentException("Class teacher has not yet responded to the request.");
-        }
-
+        LocalDate oneMonthAgo = LocalDate.now().minusMonths(1);
+        List<TransferCertificateRequest> requests = tcRequestRepository.findProcessedRequestsFromDate(schoolId, oneMonthAgo);
+        
+        return requests.stream()
+                .map(this::mapToDto)
+                .collect(Collectors.toList());
     }
 
 }

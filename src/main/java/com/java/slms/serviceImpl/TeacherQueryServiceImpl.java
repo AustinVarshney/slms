@@ -7,10 +7,12 @@ import com.java.slms.exception.ResourceNotFoundException;
 import com.java.slms.exception.WrongArgumentException;
 import com.java.slms.model.Admin;
 import com.java.slms.model.School;
+import com.java.slms.model.Session;
 import com.java.slms.model.Teacher;
 import com.java.slms.model.TeacherQuery;
 import com.java.slms.repository.AdminRepository;
 import com.java.slms.repository.SchoolRepository;
+import com.java.slms.repository.SessionRepository;
 import com.java.slms.repository.TeacherQueryRepository;
 import com.java.slms.repository.TeacherRepository;
 import com.java.slms.service.TeacherQueryService;
@@ -36,6 +38,7 @@ public class TeacherQueryServiceImpl implements TeacherQueryService
     private final AdminRepository adminRepository;
     private final ModelMapper modelMapper;
     private final SchoolRepository schoolRepository;
+    private final SessionRepository sessionRepository;
 
     @Override
     public TeacherQueryResponse askQueryToAdmin(String teacherEmail, TeacherQueryRequest request, Long schoolId)
@@ -48,12 +51,17 @@ public class TeacherQueryServiceImpl implements TeacherQueryService
 
         School school = schoolRepository.findById(schoolId).orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + schoolId));
 
+        // Get active session
+        Session activeSession = sessionRepository.findBySchoolIdAndActiveTrue(schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("No active session found for school"));
+
         TeacherQuery teacherQuery = modelMapper.map(request, TeacherQuery.class);
         teacherQuery.setTeacher(teacher);
         teacherQuery.setAdmin(admin);
         teacherQuery.setStatus(QueryStatus.OPEN);
         teacherQuery.setId(null);
         teacherQuery.setSchool(school);
+        teacherQuery.setSession(activeSession);
 
         TeacherQuery savedQuery = teacherQueryRepository.save(teacherQuery);
 
@@ -68,6 +76,10 @@ public class TeacherQueryServiceImpl implements TeacherQueryService
     @Override
     public List<TeacherQueryResponse> getAllQueriesByTeacher(String teacherEmail, QueryStatus status, Long schoolId)
     {
+        // Get active session
+        Session activeSession = sessionRepository.findBySchoolIdAndActiveTrue(schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("No active session found for school"));
+
         Teacher teacher = teacherRepository.findByEmailIgnoreCaseAndSchoolIdAndStatusActive(teacherEmail, schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Active Teacher not found with email: " + teacherEmail));
 
@@ -75,11 +87,11 @@ public class TeacherQueryServiceImpl implements TeacherQueryService
 
         if (status != null)
         {
-            queries = teacherQueryRepository.findByTeacherAndStatusAndSchoolId(teacher, status, schoolId);
+            queries = teacherQueryRepository.findByTeacherAndStatusAndSchoolIdAndSessionId(teacher, status, schoolId, activeSession.getId());
         }
         else
         {
-            queries = teacherQueryRepository.findByTeacherAndSchoolId(teacher, schoolId);
+            queries = teacherQueryRepository.findByTeacherAndSchoolIdAndSessionId(teacher, schoolId, activeSession.getId());
         }
 
         return queries.stream().map(query ->
@@ -127,15 +139,19 @@ public class TeacherQueryServiceImpl implements TeacherQueryService
     @Override
     public List<TeacherQueryResponse> getAllQueriesAssignedToAdmin(Admin admin, QueryStatus status, Long schoolId)
     {
+        // Get active session
+        Session activeSession = sessionRepository.findBySchoolIdAndActiveTrue(schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("No active session found for school"));
+
         List<TeacherQuery> queries;
 
         if (status != null)
         {
-            queries = teacherQueryRepository.findByAdminAndStatusAndSchoolId(admin, status, schoolId);
+            queries = teacherQueryRepository.findByAdminAndStatusAndSchoolIdAndSessionId(admin, status, schoolId, activeSession.getId());
         }
         else
         {
-            queries = teacherQueryRepository.findByAdminAndSchoolId(admin, schoolId);
+            queries = teacherQueryRepository.findByAdminAndSchoolIdAndSessionId(admin, schoolId, activeSession.getId());
         }
 
         return queries.stream().map(query ->

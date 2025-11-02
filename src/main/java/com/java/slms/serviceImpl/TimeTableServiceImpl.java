@@ -14,6 +14,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -79,9 +80,12 @@ public class TimeTableServiceImpl implements TimeTableService
 
         List<TimeTable> timetables = timetableRepository.findByTeacherIdAndActiveSessionAndSchoolId(teacherId, schoolId);
 
+        // Return empty list instead of throwing exception when no timetable exists
+        // This is normal for new sessions where timetables haven't been created yet
         if (timetables.isEmpty())
         {
-            throw new ResourceNotFoundException("No timetable found for teacher ID: " + teacherId + " in school ID: " + schoolId);
+            log.info("No timetable found for teacher ID: {} in active session for school ID: {}. Returning empty list.", teacherId, schoolId);
+            return new ArrayList<>();
         }
 
         return timetables.stream()
@@ -130,17 +134,21 @@ public class TimeTableServiceImpl implements TimeTableService
         if (day != null)
         {
             timetables = timetableRepository.findByClassIdAndDayAndSchoolId(classId, day, schoolId);
+            // Return empty list instead of throwing exception - normal for new sessions
             if (timetables.isEmpty())
             {
-                throw new ResourceNotFoundException("No timetable found for class ID " + classId + " on " + day + " in school " + schoolId);
+                log.info("No timetable found for class ID {} on {} in school {}. Returning empty list.", classId, day, schoolId);
+                return new ArrayList<>();
             }
         }
         else
         {
             timetables = timetableRepository.findByClassEntity_IdAndSession_ActiveAndSchool_Id(classId, true, schoolId);
+            // Return empty list instead of throwing exception - normal for new sessions
             if (timetables.isEmpty())
             {
-                throw new ResourceNotFoundException("No timetable found for class ID " + classId + " in school " + schoolId);
+                log.info("No timetable found for class ID {} in active session for school {}. Returning empty list.", classId, schoolId);
+                return new ArrayList<>();
             }
         }
 
@@ -217,7 +225,8 @@ public class TimeTableServiceImpl implements TimeTableService
 
     private void preventTeacherDoubleBooking(TimetableRequestDTO dto, Long teacherId, Long schoolId)
     {
-        List<TimeTable> existingSlots = timetableRepository.findByTeacherIdAndDayAndSchoolId(teacherId, dto.getDay(), schoolId);
+        // Only check for conflicts in the active session, not across all sessions
+        List<TimeTable> existingSlots = timetableRepository.findByTeacherIdAndDayAndSchoolIdAndActiveSession(teacherId, dto.getDay(), schoolId);
         for (TimeTable slot : existingSlots)
         {
             if (isTimeOverlap(slot.getStartTime(), slot.getEndTime(), dto.getStartTime(), dto.getEndTime()))

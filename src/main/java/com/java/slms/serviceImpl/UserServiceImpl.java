@@ -146,4 +146,21 @@ public class UserServiceImpl implements UserService
             }
         }
     }
+    
+    private void updateStudentDetailsIfActive(User user, UpdateUserDetails updateUserDetails, Long userId)
+    {
+        // Check if user has a student entity
+        if (user.getPanNumber() != null)
+        {
+            com.java.slms.model.Student student = studentRepository.findByPanNumberIgnoreCase(user.getPanNumber()).orElse(null);
+            if (student != null)
+            {
+                if (student.getStatus() == UserStatus.INACTIVE || student.getStatus() == UserStatus.GRADUATED)
+                {
+                    log.info("User ID {} Student is inactive/graduated; skipping student update", userId);
+                    throw new WrongArgumentException("Cannot update: student account is inactive or graduated");
+                }
+            }
+        }
+    }
 }

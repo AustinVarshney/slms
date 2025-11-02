@@ -24,4 +24,10 @@ public class School extends BaseEntity
     private String schoolAddress;
 
     private String schoolContactNumber;
+    
+    @Column(name = "school_logo")
+    private String schoolLogo; // Cloudinary URL for school logo
+    
+    @Column(name = "school_tagline")
+    private String schoolTagline;
 }

@@ -73,6 +73,30 @@ public class ClassEntityController
     }
 
     @Operation(
+            summary = "Get all classes for a specific session",
+            description = "Retrieves all classes along with fee and student details for a specific session (active or inactive).",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Classes fetched successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content)
+            }
+    )
+    @GetMapping("/session/{sessionId}")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_NON_TEACHING_STAFF', 'ROLE_TEACHER')")
+    public ResponseEntity<RestResponse<List<ClassInfoResponse>>> getClassesBySession(
+            @RequestAttribute("schoolId") Long schoolId,
+            @PathVariable Long sessionId)
+    {
+        List<ClassInfoResponse> classes = classEntityService.getAllClassesBySession(schoolId, sessionId);
+        RestResponse<List<ClassInfoResponse>> response = RestResponse.<List<ClassInfoResponse>>builder()
+                .data(classes)
+                .message("Total Classes in session - " + classes.size())
+                .status(HttpStatus.OK.value())
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
             summary = "Get class details by class and session ID",
             description = "Fetches a class with fee and student information by classId and sessionId.",
             parameters = {

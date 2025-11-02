@@ -149,6 +149,31 @@ public class TeacherController
     }
 
     @Operation(
+            summary = "Update teacher information",
+            description = "Updates teacher details by ID for the given school.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Teacher updated successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid ID or teacher not found", content = @Content)
+            }
+    )
+    @PutMapping("/update/{id}")
+    public ResponseEntity<RestResponse<TeacherDto>> updateTeacher(
+            @RequestAttribute("schoolId") Long schoolId,
+            @PathVariable Long id,
+            @RequestBody TeacherDto teacherDto)
+    {
+        log.info("Updating teacher with ID: {} for school ID: {}", id, schoolId);
+        TeacherDto updatedTeacher = teacherService.updateTeacher(id, teacherDto, schoolId);
+        return ResponseEntity.ok(
+                RestResponse.<TeacherDto>builder()
+                        .data(updatedTeacher)
+                        .message("Teacher updated successfully")
+                        .status(HttpStatus.OK.value())
+                        .build()
+        );
+    }
+
+    @Operation(
             summary = "Deactivate teacher",
             description = "Marks a teacher as inactive by ID for the given school.",
             responses = {
@@ -156,7 +181,7 @@ public class TeacherController
                     @ApiResponse(responseCode = "400", description = "Invalid ID or teacher already inactive", content = @Content)
             }
     )
-    @PutMapping("/{id}")
+    @PutMapping("/deactivate/{id}")
     public ResponseEntity<RestResponse<Void>> inActiveTeacher(
             @RequestAttribute("schoolId") Long schoolId,
             @PathVariable Long id)

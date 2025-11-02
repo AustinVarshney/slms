@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 @Setter
 public class TeacherQueryResponse
 {
+    private Long id;
     private Long adminId;
     private String adminName;
     private String subject;

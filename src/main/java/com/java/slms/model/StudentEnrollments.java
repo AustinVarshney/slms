@@ -10,6 +10,12 @@ import lombok.*;
 @NoArgsConstructor
 @Entity
 @Builder
+@Table(
+        name = "student_enrollments",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"student_id", "session_id", "class_id"})
+        }
+)
 public class StudentEnrollments extends BaseEntity
 {
     @Id

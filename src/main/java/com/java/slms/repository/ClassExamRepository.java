@@ -20,14 +20,41 @@ public interface ClassExamRepository extends JpaRepository<ClassExam, Long>
                                                 @Param("schoolId") Long schoolId);
 
     @Query("SELECT ce FROM ClassExam ce " +
+            "WHERE ce.classEntity = :classEntity " +
+            "AND ce.examType = :examType " +
+            "AND ce.school.id = :schoolId " +
+            "AND ce.classEntity.session.active = true")
+    Optional<ClassExam> findByClassEntityAndExamTypeAndSchoolId(@Param("classEntity") ClassEntity classEntity,
+                                                                 @Param("examType") ExamType examType,
+                                                                 @Param("schoolId") Long schoolId);
+
+    @Query("SELECT ce FROM ClassExam ce " +
             "WHERE ce.classEntity.id = :classId AND ce.school.id = :schoolId")
     List<ClassExam> findByClassIdAndSchoolId(@Param("classId") Long classId,
                                              @Param("schoolId") Long schoolId);
 
     @Query("SELECT ce FROM ClassExam ce " +
-            "WHERE ce.examType = :examType AND ce.school.id = :schoolId")
+            "WHERE ce.classEntity.id = :classId " +
+            "AND ce.school.id = :schoolId " +
+            "AND ce.classEntity.session.active = true")
+    List<ClassExam> findByClassIdAndSchoolIdWithActiveSession(@Param("classId") Long classId,
+                                                               @Param("schoolId") Long schoolId);
+
+    @Query("SELECT ce FROM ClassExam ce " +
+            "WHERE ce.examType = :examType " +
+            "AND ce.school.id = :schoolId " +
+            "AND ce.classEntity.session.active = true")
     List<ClassExam> findByExamTypeAndSchoolId(@Param("examType") ExamType examType,
                                               @Param("schoolId") Long schoolId);
+
+    @Query("SELECT ce FROM ClassExam ce " +
+            "WHERE ce.examType.id = :examTypeId " +
+            "AND ce.classEntity.session.id = :sessionId " +
+            "AND ce.school.id = :schoolId")
+    List<ClassExam> findByExamType_IdAndClassEntity_Session_IdAndSchool_Id(
+            @Param("examTypeId") Long examTypeId,
+            @Param("sessionId") Long sessionId,
+            @Param("schoolId") Long schoolId);
 
     @Query("SELECT ce FROM ClassExam ce " +
             "WHERE ce.classEntity.id = :classId " +

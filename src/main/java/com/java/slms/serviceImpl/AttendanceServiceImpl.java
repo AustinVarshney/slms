@@ -68,6 +68,8 @@ public class AttendanceServiceImpl implements AttendanceService
             throw new WrongArgumentException("Class ID " + classId + " does not belong to the active session");
         }
 
+        ClassEntity classEntity = classBelongsToSession.get();
+
         // Fetch all relevant students once to avoid multiple DB calls
         Set<String> panNumbers = inputAttendances.stream()
                 .map(StudentAttendance::getPanNumber)
@@ -123,6 +125,7 @@ public class AttendanceServiceImpl implements AttendanceService
             attendance.setPresent(sa.isPresent());
             attendance.setSession(activeSession);
             attendance.setSchool(school);
+            attendance.setClassEntity(classEntity);
 
             attendanceRepository.save(attendance);
             log.info("Marked attendance for student PAN '{}' as present={}", panNumber, sa.isPresent());

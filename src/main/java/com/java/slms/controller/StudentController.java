@@ -288,5 +288,82 @@ public class StudentController
         );
     }
 
+    @Operation(
+            summary = "Assign roll numbers alphabetically",
+            description = "Assigns roll numbers to students in a class alphabetically by name.",
+            parameters = {
+                    @Parameter(name = "classId", description = "ID of the class", required = true)
+            },
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Roll numbers assigned successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content)
+            }
+    )
+    @PutMapping("/class/{classId}/assign-roll-numbers-alphabetically")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<RestResponse<Void>> assignRollNumbersAlphabetically(
+            @PathVariable Long classId,
+            @RequestAttribute("schoolId") Long schoolId)
+    {
+        studentService.assignRollNumbersAlphabetically(classId, schoolId);
+
+        return ResponseEntity.ok(
+                RestResponse.<Void>builder()
+                        .message("Roll numbers assigned alphabetically for class ID: " + classId)
+                        .status(HttpStatus.OK.value())
+                        .build()
+        );
+    }
+
+    @Operation(
+            summary = "Reassign roll numbers",
+            description = "Reassigns roll numbers sequentially for students in a class (useful after a student leaves).",
+            parameters = {
+                    @Parameter(name = "classId", description = "ID of the class", required = true)
+            },
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Roll numbers reassigned successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content)
+            }
+    )
+    @PutMapping("/class/{classId}/reassign-roll-numbers")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<RestResponse<Void>> reassignRollNumbers(
+            @PathVariable Long classId,
+            @RequestAttribute("schoolId") Long schoolId)
+    {
+        studentService.reassignRollNumbers(classId, schoolId);
+
+        return ResponseEntity.ok(
+                RestResponse.<Void>builder()
+                        .message("Roll numbers reassigned for class ID: " + classId)
+                        .status(HttpStatus.OK.value())
+                        .build()
+        );
+    }
+
+    @Operation(
+            summary = "Swap roll numbers of two students",
+            description = "Swaps the roll numbers of two students in the same class.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Roll numbers swapped successfully"),
+                    @ApiResponse(responseCode = "404", description = "Student not found"),
+                    @ApiResponse(responseCode = "400", description = "Invalid request")
+            }
+    )
+    @PutMapping("/swap-roll-numbers")
+    public ResponseEntity<RestResponse<Void>> swapRollNumbers(
+            @Parameter(description = "PAN of first student") @RequestParam String panNumber1,
+            @Parameter(description = "PAN of second student") @RequestParam String panNumber2,
+            @RequestAttribute("schoolId") Long schoolId) {
+        studentService.swapRollNumbers(panNumber1, panNumber2, schoolId);
+
+        return ResponseEntity.ok(
+                RestResponse.<Void>builder()
+                        .message("Roll numbers swapped successfully")
+                        .status(HttpStatus.OK.value())
+                        .build()
+        );
+    }
 
 }

@@ -10,6 +10,7 @@ import com.java.slms.repository.*;
 import com.java.slms.service.ClassEntityService;
 import com.java.slms.service.FeeService;
 import com.java.slms.service.StudentService;
+import com.java.slms.util.ClassNameParser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -45,20 +46,23 @@ public class ClassEntityServiceImpl implements ClassEntityService
 
         Session session = sessionRepository.findBySchoolIdAndActiveTrue(schoolId).orElseThrow(() -> new WrongArgumentException("Session not found or does not belong to the provided school, or is not active."));
 
-        // Combine class name + session name
-        String finalClassName = classRequestDto.getClassName().trim() + " - " + session.getName().trim();
+        // Parse class name to handle various formats like "L.K.G.-A", "LKG-A", "11-1A"
+        ClassNameParser.ParsedClassName parsed = ClassNameParser.parse(classRequestDto.getClassName().trim());
+        String className = parsed.getFullName(); // Store as standardized format: "L.K.G.-A", "LKG-A", etc.
 
-        // Check for duplicate class with combined name
-        Optional<ClassEntity> existingClass = classEntityRepository.findByClassNameIgnoreCaseAndSessionIdAndSchoolId(finalClassName, session.getId(), schoolId);
+        log.info("Parsed class name: '{}' -> '{}'", classRequestDto.getClassName(), className);
+
+        // Check for duplicate class with simple name in this session
+        Optional<ClassEntity> existingClass = classEntityRepository.findByClassNameIgnoreCaseAndSessionIdAndSchoolId(className, session.getId(), schoolId);
 
         if (existingClass.isPresent())
         {
-            log.warn("Class already exists with name '{}' for session ID {}", finalClassName, session.getId());
+            log.warn("Class already exists with name '{}' for session ID {}", className, session.getId());
             throw new AlreadyExistException("Class already exists with this name for the selected active session.");
         }
 
-        // Set final class name into DTO
-        classRequestDto.setClassName(finalClassName);
+        // Set class name into DTO
+        classRequestDto.setClassName(className);
 
         // Handle teacher assignment
         Teacher teacher = null;
@@ -143,6 +147,46 @@ public class ClassEntityServiceImpl implements ClassEntityService
     }
 
     @Override
+    public List<ClassInfoResponse> getAllClassesBySession(Long schoolId, Long sessionId)
+    {
+        log.info("Fetching all classes for session: {} in school: {}", sessionId, schoolId);
+
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Session not found with ID: " + sessionId));
+
+        List<ClassEntity> classEntities = classEntityRepository.findBySession_IdAndSchool_Id(sessionId, schoolId);
+
+        return classEntities.stream().map(classEntity ->
+        {
+            Long classId = classEntity.getId();
+
+            FeeStructure feeStructure = feeStructureRepository
+                    .findByClassEntity_IdAndSession_IdAndSchool_Id(classId, sessionId, schoolId)
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Fee structure not found for class ID " + classId + " and session ID " + sessionId));
+
+            ClassInfoResponse dto = modelMapper.map(classEntity, ClassInfoResponse.class);
+            dto.setSessionId(sessionId);
+            dto.setSessionName(session.getName());
+
+            if (classEntity.getClassTeacher() != null)
+            {
+                dto.setClassTeacherId(classEntity.getClassTeacher().getId());
+                dto.setClassTeacherName(classEntity.getClassTeacher().getName());
+            }
+
+            dto.setFeesAmount(feeStructure.getFeesAmount());
+            dto.setTotalStudents(classEntity.getStudents() != null ? classEntity.getStudents().size() : 0);
+
+            List<StudentResponseDto> students = studentService.getStudentsByClassId(classId, schoolId);
+            dto.setStudents(students);
+            dto.setFeeCollectionRate(calculateFeeCollectionRate(students, schoolId));
+
+            return dto;
+        }).toList();
+    }
+
+    @Override
     public ClassInfoResponse getClassByClassIdAndSessionId(Long schoolId, Long classId)
     {
         ClassEntity classEntity = classEntityRepository.findByIdAndSchoolId(classId, schoolId).orElseThrow(() -> new ResourceNotFoundException("Class not found with ClassId: " + classId));
@@ -187,15 +231,19 @@ public class ClassEntityServiceImpl implements ClassEntityService
 
         Session session = sessionRepository.findBySchoolIdAndActiveTrue(schoolId).orElseThrow(() -> new WrongArgumentException("Session not found or does not belong to the provided school, or is not active."));
 
-        // Construct combined class name
-        String finalClassName = classRequestDto.getClassName().trim() + " - " + session.getName().trim();
-        classRequestDto.setClassName(finalClassName);
+        // Parse class name to handle various formats
+        ClassNameParser.ParsedClassName parsed = ClassNameParser.parse(classRequestDto.getClassName().trim());
+        String className = parsed.getFullName();
+        
+        log.info("Updating class name: '{}' -> '{}'", classRequestDto.getClassName(), className);
+        
+        classRequestDto.setClassName(className);
 
-        Optional<ClassEntity> duplicateClass = classEntityRepository.findByClassNameIgnoreCaseAndSessionIdAndSchoolId(finalClassName, session.getId(), schoolId);
+        Optional<ClassEntity> duplicateClass = classEntityRepository.findByClassNameIgnoreCaseAndSessionIdAndSchoolId(className, session.getId(), schoolId);
 
         if (duplicateClass.isPresent() && !duplicateClass.get().getId().equals(id))
         {
-            throw new AlreadyExistException("Class already exists with name: " + finalClassName + " for the selected session.");
+            throw new AlreadyExistException("Class already exists with name: " + className + " for the selected session.");
         }
 
         Teacher teacher = null;
@@ -209,7 +257,7 @@ public class ClassEntityServiceImpl implements ClassEntityService
             }
         }
 
-        existingClass.setClassName(finalClassName);
+        existingClass.setClassName(className);
         existingClass.setSession(session);
         existingClass.setClassTeacher(teacher);
 

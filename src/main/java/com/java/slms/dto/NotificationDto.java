@@ -20,6 +20,8 @@ public class NotificationDto
     private String recipientId;
     private Notification.RecipientType recipientType;
     private String senderName;
+    private String senderId;
+    private String broadcastId;
     private Boolean isRead;
     private Notification.NotificationPriority priority;
     private LocalDateTime createdAt;

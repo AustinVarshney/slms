@@ -180,6 +180,53 @@ public class TeacherServiceImpl implements TeacherService
         return convertToDto(teacher, schoolId);
     }
 
+    @Override
+    @Transactional
+    public TeacherDto updateTeacher(Long id, TeacherDto teacherDto, Long schoolId)
+    {
+        log.info("Updating teacher with ID: {} for school ID: {}", id, schoolId);
+        
+        Teacher teacher = teacherRepository.findByTeacherIdAndSchoolId(id, schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("Teacher not found with ID: " + id));
+
+        // Update only the allowed fields
+        if (teacherDto.getName() != null && !teacherDto.getName().trim().isEmpty()) {
+            teacher.setName(teacherDto.getName().trim());
+        }
+        
+        if (teacherDto.getEmail() != null && !teacherDto.getEmail().trim().isEmpty()) {
+            // Check if email is being changed and if new email already exists
+            if (!teacher.getEmail().equalsIgnoreCase(teacherDto.getEmail())) {
+                Optional<Teacher> existingTeacher = teacherRepository.findByEmailIgnoreCaseAndSchoolId(teacherDto.getEmail(), schoolId);
+                if (existingTeacher.isPresent() && !existingTeacher.get().getId().equals(id)) {
+                    throw new AlreadyExistException("A teacher already exists with the email: " + teacherDto.getEmail());
+                }
+            }
+            teacher.setEmail(teacherDto.getEmail().trim());
+        }
+        
+        if (teacherDto.getQualification() != null) {
+            teacher.setQualification(teacherDto.getQualification().trim());
+        }
+        
+        if (teacherDto.getSalaryGrade() != null) {
+            teacher.setSalaryGrade(teacherDto.getSalaryGrade().trim());
+        }
+        
+        if (teacherDto.getContactNumber() != null && !teacherDto.getContactNumber().trim().isEmpty()) {
+            teacher.setContactNumber(teacherDto.getContactNumber().trim());
+        }
+        
+        if (teacherDto.getDesignation() != null) {
+            teacher.setDesignation(teacherDto.getDesignation().trim());
+        }
+
+        Teacher updatedTeacher = teacherRepository.save(teacher);
+        log.info("Teacher with ID {} updated successfully", id);
+        
+        return convertToDto(updatedTeacher, schoolId);
+    }
+
 
     private TeacherDto convertToDto(Teacher teacher, Long schoolId)
     {
@@ -198,7 +245,7 @@ public class TeacherServiceImpl implements TeacherService
                 .collect(Collectors.toList());
         dto.setSubjectName(subjectNames);
 
-        // 2. Populate classIds and classNames from related subjects
+        // 2. Populate classIds and classNames from related subjects (using Set for uniqueness)
         Set<ClassEntity> classes = subjects.stream()
                 .map(Subject::getClassEntity)
                 .filter(Objects::nonNull)
@@ -208,13 +255,16 @@ public class TeacherServiceImpl implements TeacherService
         List<ClassEntity> classTeacherClasses = classEntityRepository.findAllByClassTeacher_Id(teacher.getId());
         classes.addAll(classTeacherClasses);
 
+        // Convert to Lists while maintaining uniqueness (by ID)
         List<Long> classIds = classes.stream()
                 .map(ClassEntity::getId)
+                .distinct() // Ensure unique IDs
                 .collect(Collectors.toList());
         dto.setClassId(classIds);
 
         List<String> classNames = classes.stream()
                 .map(ClassEntity::getClassName)
+                .distinct() // Ensure unique class names
                 .collect(Collectors.toList());
         dto.setClassName(classNames);
 

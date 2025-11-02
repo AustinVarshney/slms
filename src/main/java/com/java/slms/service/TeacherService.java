@@ -32,4 +32,7 @@ public interface TeacherService
     // Get teacher by email for a specific school
     TeacherDto getTeacherByEmail(String email, Long schoolId);
 
+    // Update teacher information
+    TeacherDto updateTeacher(Long id, TeacherDto teacherDto, Long schoolId);
+
 }

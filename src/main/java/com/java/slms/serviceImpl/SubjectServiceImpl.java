@@ -53,10 +53,11 @@ public class SubjectServiceImpl implements SubjectService
         Teacher teacher = teacherRepository.findByTeacherIdAndSchoolIdAndStatusActive(subjectDto.getTeacherId(), schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Teacher not found with ID: " + subjectDto.getTeacherId()));
 
-        String displayName = subjectDto.getSubjectName() + " - " + classEntity.getClassName();
+        // Store simple subject name without class concatenation
+        String subjectName = subjectDto.getSubjectName();
 
         Subject subject = new Subject();
-        subject.setSubjectName(displayName);
+        subject.setSubjectName(subjectName);
         subject.setClassEntity(classEntity);
         subject.setTeacher(teacher);
         subject.setSchool(school);
@@ -68,15 +69,30 @@ public class SubjectServiceImpl implements SubjectService
     @Override
     public List<SubjectDto> getAllSubjects(Long schoolId)
     {
+        // Only get subjects from classes in the active session
+        // This prevents showing subjects from old sessions that reference old classes
         List<Subject> subjects = subjectRepository.findAllBySchoolId(schoolId);
-        return subjects.stream().map(s ->
-        {
-            SubjectDto dto = modelMapper.map(s, SubjectDto.class);
-            dto.setClassName(s.getClassEntity().getClassName());
-            dto.setSessionId(s.getClassEntity().getSession().getId());
-            dto.setSchoolId(schoolId);
-            return dto;
-        }).toList();
+        
+        return subjects.stream()
+                .filter(s -> s.getClassEntity() != null && 
+                            s.getClassEntity().getSession() != null && 
+                            s.getClassEntity().getSession().isActive())
+                .map(s ->
+                {
+                    SubjectDto dto = modelMapper.map(s, SubjectDto.class);
+                    dto.setClassId(s.getClassEntity().getId()); // Ensure classId is set
+                    dto.setClassName(s.getClassEntity().getClassName());
+                    dto.setSessionId(s.getClassEntity().getSession().getId());
+                    dto.setSchoolId(schoolId);
+                    
+                    // Set teacher info if teacher is assigned
+                    if (s.getTeacher() != null) {
+                        dto.setTeacherId(s.getTeacher().getId());
+                        dto.setTeacherName(s.getTeacher().getName());
+                    }
+                    
+                    return dto;
+                }).toList();
     }
 
     @Override
@@ -144,9 +160,11 @@ public class SubjectServiceImpl implements SubjectService
             throw new AlreadyExistException("Subject '" + subjectDto.getSubjectName() +
                     "' already exists in class with ID: " + subjectDto.getClassId());
         }
-        String displayName = subjectDto.getSubjectName() + " - " + classEntity.getClassName();
+        
+        // Store simple subject name without class concatenation
+        String subjectName = subjectDto.getSubjectName();
 
-        existing.setSubjectName(displayName);
+        existing.setSubjectName(subjectName);
         existing.setClassEntity(classEntity);
         
         // Teacher is optional - can be updated or removed
@@ -186,9 +204,10 @@ public class SubjectServiceImpl implements SubjectService
 
             Subject subject = new Subject();
 
-            String displayName = subject1.getSubjectName() + " - " + classEntity.getClassName();
+            // Store simple subject name without class concatenation
+            String subjectName = subject1.getSubjectName().trim();
 
-            subject.setSubjectName(displayName);
+            subject.setSubjectName(subjectName);
             subject.setClassEntity(classEntity);
             subject.setSchool(school);
 

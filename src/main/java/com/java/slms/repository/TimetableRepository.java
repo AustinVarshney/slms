@@ -40,6 +40,12 @@ public interface TimetableRepository extends JpaRepository<TimeTable, Long>
             @Param("day") DayOfWeek day,
             @Param("schoolId") Long schoolId);
 
+    @Query("SELECT t FROM TimeTable t WHERE t.teacher.id = :teacherId AND t.day = :day AND t.session.active = true AND t.school.id = :schoolId")
+    List<TimeTable> findByTeacherIdAndDayAndSchoolIdAndActiveSession(
+            @Param("teacherId") Long teacherId,
+            @Param("day") DayOfWeek day,
+            @Param("schoolId") Long schoolId);
+
     @Query("SELECT t FROM TimeTable t WHERE t.classEntity.id = :classId AND t.session.active = :active AND t.school.id = :schoolId")
     List<TimeTable> findByClassEntity_IdAndSession_ActiveAndSchool_Id(
             @Param("classId") Long classId,

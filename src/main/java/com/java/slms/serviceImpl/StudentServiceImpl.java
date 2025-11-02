@@ -47,10 +47,7 @@ public class StudentServiceImpl implements StudentService
         log.info("Attempting to create student with PAN: {}", studentRequestDto.getPanNumber());
 
         School school = schoolRepository.findById(schoolId).orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + schoolId));
-        if (studentRepository.findByPanNumberIgnoreCase(studentRequestDto.getPanNumber()).isPresent())
-        {
-            throw new AlreadyExistException("A student with PAN number '" + studentRequestDto.getPanNumber() + "' already exists.");
-        }
+        
         User user = fetchUserByPan(studentRequestDto.getPanNumber());
         ClassEntity classEntity = classEntityRepository
                 .findByIdAndSchoolIdAndSessionActive(studentRequestDto.getClassId(), schoolId)
@@ -58,6 +55,19 @@ public class StudentServiceImpl implements StudentService
                         " not found in School with ID " + schoolId + " or the session is not active."));
 
         Session session = classEntity.getSession();
+        
+        // Check if student already exists in THIS session and school (not globally)
+        Optional<Student> existingStudent = studentRepository.findByPanNumberIgnoreCaseAndSchoolIdAndSessionId(
+            studentRequestDto.getPanNumber(), 
+            schoolId, 
+            session.getId()
+        );
+        
+        if (existingStudent.isPresent())
+        {
+            throw new AlreadyExistException("A student with PAN number '" + studentRequestDto.getPanNumber() + 
+                    "' already exists in this school for the current session.");
+        }
 
         // Check duplicate class for same name and session
         Optional<ClassEntity> duplicateClass = classEntityRepository.findByClassNameIgnoreCaseAndSessionIdAndSchoolId(classEntity.getClassName(), session.getId(), schoolId);
@@ -73,10 +83,26 @@ public class StudentServiceImpl implements StudentService
         student.setUser(user);
         student.setSchool(school);
         student.setSession(session);
+        
+        // Explicitly set admission date if provided
+        if (studentRequestDto.getAdmissionDate() != null) {
+            student.setAdmissionDate(studentRequestDto.getAdmissionDate());
+        } else {
+            // Set to current date if not provided
+            student.setAdmissionDate(LocalDate.now());
+        }
 
         Student savedStudent = studentRepository.save(student);
 
-        FeeStructure feeStructure = feeStructureRepository.findByClassEntity_IdAndSession_IdAndSchool_Id(studentRequestDto.getClassId(), session.getId(), schoolId).orElseThrow(() -> new ResourceNotFoundException("Fee structure not found for class and session"));
+        log.info("Generating 12-month fee structure for student: {} in class: {} for session: {}", 
+                savedStudent.getPanNumber(), classEntity.getClassName(), session.getName());
+
+        FeeStructure feeStructure = feeStructureRepository
+                .findByClassEntity_IdAndSession_IdAndSchool_Id(
+                        studentRequestDto.getClassId(), session.getId(), schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Fee structure not found for class " + classEntity.getClassName() + 
+                        " and session " + session.getName() + " in school ID: " + schoolId));
 
         List<Fee> feeEntries = new ArrayList<>();
         LocalDate currentMonth = session.getStartDate().withDayOfMonth(1);
@@ -89,15 +115,18 @@ public class StudentServiceImpl implements StudentService
             fee.setStatus(FeeStatus.PENDING);
             fee.setAmount(feeStructure.getFeesAmount());
             fee.setFeeStructure(feeStructure);
-            fee.setDueDate(currentMonth.withDayOfMonth(15));
-            fee.setStudent(student);
+            fee.setClassEntity(classEntity);
+            fee.setDueDate(currentMonth.withDayOfMonth(10)); // Due on 10th of each month
+            fee.setStudent(savedStudent);
             fee.setSchool(school);
+            fee.setSession(session); // Link fee to session
 
             feeEntries.add(fee);
             currentMonth = currentMonth.plusMonths(1);
         }
 
         feeRepository.saveAll(feeEntries);
+        log.info("Successfully generated {} fee records for student: {}", feeEntries.size(), savedStudent.getPanNumber());
 
         StudentEnrollments studentEnrollments = new StudentEnrollments();
         studentEnrollments.setStudent(savedStudent);
@@ -254,13 +283,33 @@ public class StudentServiceImpl implements StudentService
         fetchedStudent.setPanNumber(pan);
 
         // Handle class update - prioritize classId over className
+        boolean classWillChange = false;
+        Long newClassId = null;
+        
         if (updateStudentInfo.getClassId() != null)
         {
             ClassEntity classEntity = classEntityRepository.findByIdAndSchoolIdAndSessionActive(updateStudentInfo.getClassId(), schoolId)
                     .orElseThrow(() -> new ResourceNotFoundException("Class with ID " + updateStudentInfo.getClassId() + 
                             " not found in School with ID " + schoolId + " or the session is not active."));
+            
+            newClassId = classEntity.getId();
+            classWillChange = !newClassId.equals(originalClassId);
+            
             fetchedStudent.setCurrentClass(classEntity);
             log.info("Updated student class to: {}", classEntity.getClassName());
+            
+            // Auto-assign new roll number if class changed
+            if (classWillChange)
+            {
+                Integer newRollNumber = getNextRollNumber(newClassId, schoolId);
+                fetchedStudent.setClassRollNumber(newRollNumber);
+                log.info("Class changed - assigned new roll number {} for class ID {}", newRollNumber, newClassId);
+                
+                // Reassign roll numbers in the old class after this student is moved
+                if (originalClassId != null) {
+                    log.info("Reassigning roll numbers in old class ID: {}", originalClassId);
+                }
+            }
         }
         else if (updateStudentInfo.getClassName() != null && !updateStudentInfo.getClassName().isEmpty())
         {
@@ -269,37 +318,105 @@ public class StudentServiceImpl implements StudentService
             Session activeSession = sessionRepository.findBySchoolIdAndActiveTrue(schoolId)
                     .orElseThrow(() -> new ResourceNotFoundException("No active session found for school ID: " + schoolId));
             
-            // Append session name to className (e.g., "2-A" becomes "2-A - 2025-2026")
-            String fullClassName = className.trim() + " - " + activeSession.getName().trim();
-            log.info("Searching for class with full name: {}", fullClassName);
+            // Use simple class name without session concatenation
+            String simpleClassName = className.trim();
+            log.info("Searching for class with name: {}", simpleClassName);
             
-            ClassEntity classEntity = classEntityRepository.findByClassNameIgnoreCaseAndSessionIdAndSchoolId(fullClassName, activeSession.getId(), schoolId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Class " + fullClassName + " not found in active session for school ID: " + schoolId));
+            ClassEntity classEntity = classEntityRepository.findByClassNameIgnoreCaseAndSessionIdAndSchoolId(simpleClassName, activeSession.getId(), schoolId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Class " + simpleClassName + " not found in active session for school ID: " + schoolId));
+            
+            newClassId = classEntity.getId();
+            classWillChange = !newClassId.equals(originalClassId);
+            
             fetchedStudent.setCurrentClass(classEntity);
             log.info("Updated student class to: {} (ID: {})", classEntity.getClassName(), classEntity.getId());
+            
+            // Auto-assign new roll number if class changed
+            if (classWillChange)
+            {
+                Integer newRollNumber = getNextRollNumber(newClassId, schoolId);
+                fetchedStudent.setClassRollNumber(newRollNumber);
+                log.info("Class changed - assigned new roll number {} for class {}", newRollNumber, simpleClassName);
+                
+                // Reassign roll numbers in the old class after this student is moved
+                if (originalClassId != null) {
+                    log.info("Reassigning roll numbers in old class ID: {}", originalClassId);
+                }
+            }
         }
 
         Student updatedStudent = studentRepository.save(fetchedStudent);
         
-        // Regenerate fees if class changed
-        Long newClassId = updatedStudent.getCurrentClass() != null ? updatedStudent.getCurrentClass().getId() : null;
-        boolean classChanged = (originalClassId != null && newClassId != null && !originalClassId.equals(newClassId));
+        // Update class_id in all related tables when class changes
+        if (classWillChange && newClassId != null && originalClassId != null) {
+            log.info("Updating class_id in all related tables for student: {} from class {} to class {}", 
+                    pan, originalClassId, newClassId);
+            
+            // Update Attendance records
+            List<Attendance> attendanceRecords = attendanceRepository.findByStudentPanNumberAndSchoolId(pan, schoolId);
+            if (!attendanceRecords.isEmpty()) {
+                for (Attendance attendance : attendanceRecords) {
+                    attendance.setClassEntity(updatedStudent.getCurrentClass());
+                }
+                attendanceRepository.saveAll(attendanceRecords);
+                log.info("Updated {} attendance records for student: {}", attendanceRecords.size(), pan);
+            }
+            
+            // Update Score records
+            List<Score> scoreRecords = scoreRepository.findByStudentPanNumberAndSchoolId(pan, schoolId);
+            if (!scoreRecords.isEmpty()) {
+                for (Score score : scoreRecords) {
+                    score.setClassEntity(updatedStudent.getCurrentClass());
+                }
+                scoreRepository.saveAll(scoreRecords);
+                log.info("Updated {} score records for student: {}", scoreRecords.size(), pan);
+            }
+            
+            // Get active session for filtering
+            Session activeSession = fetchedStudent.getSession();
+            
+            // Update Fee records (after regeneration)
+            List<Fee> feeRecords = feeRepository.findByStudentPanNumberAndSchoolIdOrderByYearAscMonthAsc(
+                    pan, schoolId, activeSession.getId());
+            if (!feeRecords.isEmpty()) {
+                for (Fee fee : feeRecords) {
+                    fee.setClassEntity(updatedStudent.getCurrentClass());
+                }
+                feeRepository.saveAll(feeRecords);
+                log.info("Updated {} fee records for student: {}", feeRecords.size(), pan);
+            }
+        }
         
-        if (classChanged)
+        // Reassign roll numbers in old class if class changed
+        if (classWillChange && originalClassId != null) {
+            reassignRollNumbers(originalClassId, schoolId);
+        }
+        
+        // Regenerate fees if class changed
+        if (classWillChange && newClassId != null)
         {
             ClassEntity currentClass = updatedStudent.getCurrentClass();
-            FeeStructure newFeeStructure = currentClass.getFeeStructures();
             Session activeSession = updatedStudent.getSession();
             
-            log.info("Class changed from {} to {}. Updating fee structure for student {}...", 
+            log.info("Class changed from {} to {}. Regenerating fee structure for student {}...", 
                     originalClassId, newClassId, pan);
             
-            if (newFeeStructure == null) {
-                log.warn("No fee structure found for new class: {}. Cannot regenerate fees.", currentClass.getClassName());
+            // Use repository to find fee structure
+            Optional<FeeStructure> newFeeStructureOpt = feeStructureRepository
+                    .findByClassEntity_IdAndSession_IdAndSchool_Id(
+                            currentClass.getId(), 
+                            activeSession.getId(), 
+                            schoolId);
+            
+            if (newFeeStructureOpt.isEmpty()) {
+                log.warn("No fee structure found for class: {} in session: {}. Cannot regenerate fees.", 
+                        currentClass.getClassName(), activeSession.getName());
             } else {
+                FeeStructure newFeeStructure = newFeeStructureOpt.get();
                 try {
-                    // Delete old unpaid/pending fees for this student
-                    List<Fee> existingFees = feeRepository.findByStudentPanNumberAndSchoolIdOrderByYearAscMonthAsc(pan, schoolId);
+                    // Delete old fees for this student in this session
+                    List<Fee> existingFees = feeRepository.findByStudentPanNumberAndSchoolIdOrderByYearAscMonthAsc(
+                            pan, schoolId, activeSession.getId());
                     
                     // Delete all existing fees to regenerate from scratch
                     if (!existingFees.isEmpty()) {
@@ -320,9 +437,11 @@ public class StudentServiceImpl implements StudentService
                         fee.setStatus(FeeStatus.PENDING);
                         fee.setAmount(newFeeStructure.getFeesAmount());
                         fee.setFeeStructure(newFeeStructure);
-                        fee.setDueDate(currentMonth.withDayOfMonth(15));
+                        fee.setClassEntity(currentClass);
+                        fee.setDueDate(currentMonth.withDayOfMonth(10)); // Due on 10th
                         fee.setStudent(updatedStudent);
                         fee.setSchool(updatedStudent.getSchool());
+                        fee.setSession(activeSession); // Link fee to session
 
                         newFeeEntries.add(fee);
                         currentMonth = currentMonth.plusMonths(1);
@@ -536,6 +655,21 @@ public class StudentServiceImpl implements StudentService
         dto.setSessionId(student.getSession().getId());
         dto.setSessionName(student.getSession().getName());
         
+        // Set school information
+        School school = student.getSchool();
+        if (school != null) {
+            dto.setSchoolName(school.getSchoolName());
+            dto.setSchoolLogo(school.getSchoolLogo());
+            dto.setSchoolTagline(school.getSchoolTagline());
+        }
+        
+        // Set class teacher information
+        ClassEntity currentClass = student.getCurrentClass();
+        if (currentClass != null && currentClass.getClassTeacher() != null) {
+            dto.setClassTeacherId(currentClass.getClassTeacher().getId());
+            dto.setClassTeacherName(currentClass.getClassTeacher().getName());
+        }
+        
         // Parse className (e.g., "1-A") into currentClass ("1") and section ("A")
         String className = student.getCurrentClass().getClassName();
         if (className != null && className.contains("-")) {
@@ -556,36 +690,50 @@ public class StudentServiceImpl implements StudentService
         FeeCatalogDto feeCatalog = feeService.getFeeCatalogByStudentPanNumber(pan, schoolId);
 
         LocalDate today = LocalDate.now();
-        Month currentMonth = today.getMonth();
-        int currentYear = today.getYear();
 
-        Month previousMonth = currentMonth.minus(1);
-        int previousYear = currentMonth == Month.JANUARY ? currentYear - 1 : currentYear;
+        // Check if any fee is overdue (unpaid and past due date)
+        boolean anyFeeOverdue = feeCatalog.getMonthlyFees().stream()
+                .anyMatch(fee -> {
+                    if ("pending".equalsIgnoreCase(fee.getStatus()) || "unpaid".equalsIgnoreCase(fee.getStatus()))
+                    {
+                        LocalDate dueDate = fee.getDueDate();
+                        return dueDate != null && dueDate.isBefore(today);
+                    }
+                    return "overdue".equalsIgnoreCase(fee.getStatus());
+                });
 
-        Optional<MonthlyFeeDto> currentMonthFeeOpt = feeCatalog.getMonthlyFees().stream().filter(fee -> fee.getYear() == currentYear && fee.getMonth().equalsIgnoreCase(currentMonth.name())).findFirst();
+        // If any fee is overdue, mark student status as OVERDUE
+        if (anyFeeOverdue)
+        {
+            dto.setFeeStatus(FeeStatus.OVERDUE);
+            dto.setFeeCatalogStatus(FeeCatalogStatus.OVERDUE);
+            
+            // Update student's status in database to reflect overdue status
+            Student student = studentRepository.findByPanNumberIgnoreCaseAndSchool_Id(pan, schoolId).orElse(null);
+            if (student != null && student.getStatus() == UserStatus.ACTIVE)
+            {
+                // Note: We'll keep the UserStatus as ACTIVE but show OVERDUE in fee status
+                // This allows student to still login but shows they have overdue fees
+                log.info("Student {} has overdue fees", pan);
+            }
+            return;
+        }
 
-        Optional<MonthlyFeeDto> previousMonthFeeOpt = feeCatalog.getMonthlyFees().stream().filter(fee -> fee.getYear() == previousYear && fee.getMonth().equalsIgnoreCase(previousMonth.name())).findFirst();
+        // Check if ALL fees for the year are paid (all 12 months)
+        long totalMonthsFees = feeCatalog.getMonthlyFees().size();
+        long paidMonthsFees = feeCatalog.getMonthlyFees().stream()
+                .filter(fee -> "paid".equalsIgnoreCase(fee.getStatus()))
+                .count();
 
-        if (currentMonthFeeOpt.isPresent() && "paid".equalsIgnoreCase(currentMonthFeeOpt.get().getStatus()))
+        // PAID status: Only when ALL fees for the complete year are paid
+        if (totalMonthsFees == 12 && paidMonthsFees == 12)
         {
             dto.setFeeStatus(FeeStatus.PAID);
             dto.setFeeCatalogStatus(FeeCatalogStatus.UP_TO_DATE);
             return;
         }
 
-        // Check if any fee is overdue
-        boolean anyFeeOverdue = feeCatalog.getMonthlyFees().stream()
-                .anyMatch(fee -> "overdue".equalsIgnoreCase(fee.getStatus()));
-
-        // If any fee is overdue, mark as OVERDUE
-        if (anyFeeOverdue)
-        {
-            dto.setFeeStatus(FeeStatus.OVERDUE);
-            dto.setFeeCatalogStatus(FeeCatalogStatus.OVERDUE);
-            return;
-        }
-
-        // Otherwise, mark as PENDING
+        // Otherwise, mark as PENDING (even if overdues are cleared, but not all months paid)
         dto.setFeeStatus(FeeStatus.PENDING);
         dto.setFeeCatalogStatus(FeeCatalogStatus.PENDING);
     }
@@ -758,5 +906,106 @@ public class StudentServiceImpl implements StudentService
         if (percentage >= 50) return "C";
         if (percentage >= 40) return "D";
         return "F";
+    }
+
+    @Override
+    @Transactional
+    public void reassignRollNumbers(Long classId, Long schoolId)
+    {
+        log.info("Reassigning roll numbers for class ID: {} in school ID: {}", classId, schoolId);
+        
+        // Get all active students in this class, ordered by current roll number
+        List<Student> students = studentRepository.findByCurrentClassIdAndSchoolIdAndStatusActive(classId, schoolId);
+        
+        if (students.isEmpty()) {
+            log.info("No students found in class ID: {}", classId);
+            return;
+        }
+        
+        // Sort by existing roll number to maintain order
+        students.sort((s1, s2) -> {
+            Integer roll1 = s1.getClassRollNumber() != null ? s1.getClassRollNumber() : 0;
+            Integer roll2 = s2.getClassRollNumber() != null ? s2.getClassRollNumber() : 0;
+            return roll1.compareTo(roll2);
+        });
+        
+        // Reassign roll numbers sequentially starting from 1
+        int rollNumber = 1;
+        for (Student student : students) {
+            student.setClassRollNumber(rollNumber++);
+        }
+        
+        studentRepository.saveAll(students);
+        log.info("Reassigned roll numbers for {} students in class ID: {}", students.size(), classId);
+    }
+
+    @Override
+    @Transactional
+    public void assignRollNumbersAlphabetically(Long classId, Long schoolId)
+    {
+        log.info("Assigning roll numbers alphabetically for class ID: {} in school ID: {}", classId, schoolId);
+        
+        // Get all active students in this class
+        List<Student> students = studentRepository.findByCurrentClassIdAndSchoolIdAndStatusActive(classId, schoolId);
+        
+        if (students.isEmpty()) {
+            log.info("No students found in class ID: {}", classId);
+            return;
+        }
+        
+        // Sort students alphabetically by name
+        students.sort((s1, s2) -> {
+            String name1 = s1.getName() != null ? s1.getName().toLowerCase() : "";
+            String name2 = s2.getName() != null ? s2.getName().toLowerCase() : "";
+            return name1.compareTo(name2);
+        });
+        
+        // Assign roll numbers sequentially starting from 1
+        int rollNumber = 1;
+        for (Student student : students) {
+            student.setClassRollNumber(rollNumber++);
+        }
+        
+        studentRepository.saveAll(students);
+        log.info("Assigned roll numbers alphabetically for {} students in class ID: {}", students.size(), classId);
+    }
+
+    @Override
+    @Transactional
+    public void swapRollNumbers(String panNumber1, String panNumber2, Long schoolId)
+    {
+        log.info("Swapping roll numbers between students: {} and {} in school ID: {}", panNumber1, panNumber2, schoolId);
+        
+        // Find both students
+        Student student1 = studentRepository.findByPanNumberIgnoreCaseAndSchool_IdAndStatusActive(panNumber1, schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found with PAN: " + panNumber1));
+        
+        Student student2 = studentRepository.findByPanNumberIgnoreCaseAndSchool_IdAndStatusActive(panNumber2, schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found with PAN: " + panNumber2));
+        
+        // Verify they are in the same class
+        if (!student1.getCurrentClass().getId().equals(student2.getCurrentClass().getId())) {
+            throw new WrongArgumentException("Students must be in the same class to swap roll numbers");
+        }
+        
+        // Swap roll numbers using temporary value to avoid unique constraint violation
+        Integer roll1 = student1.getClassRollNumber();
+        Integer roll2 = student2.getClassRollNumber();
+        
+        // Set student1 to negative temp value
+        student1.setClassRollNumber(-9999);
+        studentRepository.save(student1);
+        studentRepository.flush(); // Force DB update
+        
+        // Set student2 to student1's original roll number
+        student2.setClassRollNumber(roll1);
+        studentRepository.save(student2);
+        studentRepository.flush(); // Force DB update
+        
+        // Set student1 to student2's original roll number
+        student1.setClassRollNumber(roll2);
+        studentRepository.save(student1);
+        
+        log.info("Successfully swapped roll numbers: {} <-> {}", roll2, roll1);
     }
 }

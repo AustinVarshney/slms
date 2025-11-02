@@ -29,4 +29,6 @@ public interface TransferCertificateRequestService
     void forwardTCRequestToClassTeacher(Long tcRequestId, Admin admin, AdminToTeacherDto adminToTeacherDto, Long schoolId);
 
     void replyTCRequestToAdmin(Long tcRequestId, Teacher teacher, TeacherToAdminDto teacherToAdminDto, Long schoolId);
+    
+    List<TransferCertificateRequestDto> getProcessedRequestsFromLastMonth(Long schoolId);
 }

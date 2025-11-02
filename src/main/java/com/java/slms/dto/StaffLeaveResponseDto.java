@@ -11,6 +11,8 @@ import java.time.LocalDate;
 public class StaffLeaveResponseDto
 {
     private Long id;
+    private Long teacherId;
+    private String teacherName;
     private LocalDate startDate;
     private LocalDate endDate;
     private int daysRequested;

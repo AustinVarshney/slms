@@ -133,6 +133,33 @@ public class StaffLeaveRecordServiceImpl implements StaffLeaveRecordService
     private StaffLeaveResponseDto convertToDto(StaffLeaveRecord record)
     {
         StaffLeaveResponseDto dto = modelMapper.map(record, StaffLeaveResponseDto.class);
+        
+        // Set teacher information - fetch from Teacher or NonTeachingStaff table
+        if (record.getStaff() != null)
+        {
+            dto.setTeacherId(record.getStaff().getId());
+            
+            // Try to get name from Teacher table first
+            String staffName = "Staff Member"; // Default fallback
+            String staffEmail = record.getStaff().getEmail();
+            
+            if (staffEmail != null)
+            {
+                // Check if this is a teacher
+                var teacher = teacherRepository.findByEmailIgnoreCaseAndSchoolId(
+                    staffEmail, record.getSchool().getId());
+                
+                if (teacher.isPresent())
+                {
+                    staffName = teacher.get().getName();
+                }
+                // Otherwise, it might be non-teaching staff
+                // Add NonTeachingStaff repository check if needed
+            }
+            
+            dto.setTeacherName(staffName);
+        }
+        
         if (record.getSession() != null)
         {
             dto.setSessionId(record.getSession().getId());

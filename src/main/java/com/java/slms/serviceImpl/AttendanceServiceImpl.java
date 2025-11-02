@@ -115,8 +115,12 @@ public class AttendanceServiceImpl implements AttendanceService
 
             if (existingAttendanceOpt.isPresent())
             {
-                log.error("Attendance already marked for today for PAN: {}", panNumber);
-                continue;  // Or collect to return info about skipped entries
+                // Update existing attendance instead of skipping
+                Attendance existingAttendance = existingAttendanceOpt.get();
+                existingAttendance.setPresent(sa.isPresent());
+                attendanceRepository.save(existingAttendance);
+                log.info("Updated attendance for student PAN '{}' to present={}", panNumber, sa.isPresent());
+                continue;
             }
 
             Attendance attendance = new Attendance();
@@ -344,5 +348,43 @@ public class AttendanceServiceImpl implements AttendanceService
         return result;
     }
 
+
+    @Override
+    public AttendanceDto getAttendanceByClassAndDate(Long classId, LocalDate date, Long schoolId)
+    {
+        LocalDateTime dayStart = date.atStartOfDay();
+        LocalDateTime dayEnd = date.plusDays(1).atStartOfDay();
+
+        // Find the class entity
+        ClassEntity classEntity = classEntityRepository.findById(classId)
+                .orElseThrow(() -> new ResourceNotFoundException("Class not found with id: " + classId));
+
+        // Get all attendance records for this class on this date
+        List<Attendance> attendances = attendanceRepository.findByClassEntityAndDateBetweenAndSchoolId(
+                classEntity, dayStart, dayEnd, schoolId);
+
+        if (attendances.isEmpty())
+        {
+            // No attendance marked for this date
+            return null;
+        }
+
+        AttendanceDto dto = new AttendanceDto();
+        dto.setClassId(classId);
+        dto.setClassName(classEntity.getClassName());
+
+        List<StudentAttendance> studentAttendances = attendances.stream()
+                .map(att -> {
+                    StudentAttendance sa = new StudentAttendance();
+                    sa.setPanNumber(att.getStudent().getPanNumber());
+                    sa.setPresent(att.isPresent());
+                    return sa;
+                })
+                .collect(Collectors.toList());
+
+        dto.setStudentAttendances(studentAttendances);
+
+        return dto;
+    }
 
 }

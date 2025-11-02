@@ -199,4 +199,46 @@ public class AttendanceController
                         .build()
         );
     }
+    
+    @Operation(
+            summary = "Get attendance records by class and specific date",
+            description = "Fetch attendance records for a class on a specific date.",
+            parameters = {
+                    @Parameter(name = "classId", description = "Class ID", required = true),
+                    @Parameter(name = "date", description = "Date in YYYY-MM-DD format", required = true),
+                    @Parameter(name = "schoolId", description = "School ID", required = true, in = ParameterIn.DEFAULT)
+            },
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Attendance records fetched successfully"),
+                    @ApiResponse(responseCode = "404", description = "No attendance found for the given date", content = @Content)
+            }
+    )
+    @GetMapping("/class/{classId}/date/{date}")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TEACHER')")
+    public ResponseEntity<RestResponse<AttendanceDto>> getAttendanceByClassAndDate(
+            @PathVariable Long classId,
+            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestAttribute("schoolId") Long schoolId)
+    {
+        AttendanceDto attendance = attendanceService.getAttendanceByClassAndDate(classId, date, schoolId);
+        
+        if (attendance == null)
+        {
+            return ResponseEntity.ok(
+                    RestResponse.<AttendanceDto>builder()
+                            .data(null)
+                            .message("No attendance records found for the given date")
+                            .status(HttpStatus.OK.value())
+                            .build()
+            );
+        }
+
+        return ResponseEntity.ok(
+                RestResponse.<AttendanceDto>builder()
+                        .data(attendance)
+                        .message("Attendance records fetched successfully")
+                        .status(HttpStatus.OK.value())
+                        .build()
+        );
+    }
 }

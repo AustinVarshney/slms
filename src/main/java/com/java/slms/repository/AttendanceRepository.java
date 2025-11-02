@@ -1,6 +1,7 @@
 package com.java.slms.repository;
 
 import com.java.slms.model.Attendance;
+import com.java.slms.model.ClassEntity;
 import com.java.slms.model.Student;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -18,6 +19,16 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long>
             "AND a.school.id = :schoolId")
     Optional<Attendance> findByStudentAndDateBetweenAndSchoolId(
             @Param("student") Student student,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end,
+            @Param("schoolId") Long schoolId);
+
+    @Query("SELECT a FROM Attendance a " +
+            "WHERE a.classEntity = :classEntity " +
+            "AND a.date BETWEEN :start AND :end " +
+            "AND a.school.id = :schoolId")
+    List<Attendance> findByClassEntityAndDateBetweenAndSchoolId(
+            @Param("classEntity") ClassEntity classEntity,
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end,
             @Param("schoolId") Long schoolId);

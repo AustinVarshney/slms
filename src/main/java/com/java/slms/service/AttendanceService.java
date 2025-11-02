@@ -15,4 +15,6 @@ public interface AttendanceService
     List<AttendanceInfoDto> getAllAttendanceByPanAndSessionId(String pan, Long sessionId, FeeMonth month, Long schoolId);
 
     List<AttendanceByClassDto> getAttendanceByClassAndSession(Long classId, Long sessionId, FeeMonth month, Long schoolId);
+    
+    AttendanceDto getAttendanceByClassAndDate(Long classId, LocalDate date, Long schoolId);
 }

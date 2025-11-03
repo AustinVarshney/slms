@@ -67,6 +67,8 @@ public class TeacherQueryServiceImpl implements TeacherQueryService
 
         TeacherQueryResponse response = modelMapper.map(savedQuery, TeacherQueryResponse.class);
         response.setCreatedAt(savedQuery.getCreatedAt().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime());
+        response.setTeacherId(savedQuery.getTeacher().getId());
+        response.setTeacherName(savedQuery.getTeacher().getName());
         response.setAdminId(savedQuery.getAdmin().getId());
         response.setSchoolId(schoolId);
         response.setAdminName(savedQuery.getAdmin().getName());
@@ -98,6 +100,8 @@ public class TeacherQueryServiceImpl implements TeacherQueryService
         {
             TeacherQueryResponse response = modelMapper.map(query, TeacherQueryResponse.class);
             response.setCreatedAt(query.getCreatedAt().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime());
+            response.setTeacherId(query.getTeacher().getId());
+            response.setTeacherName(query.getTeacher().getName());
             response.setAdminId(query.getAdmin().getId());
             response.setSchoolId(schoolId);
             response.setAdminName(query.getAdmin().getName());
@@ -116,10 +120,11 @@ public class TeacherQueryServiceImpl implements TeacherQueryService
             throw new AccessDeniedException("You are not authorized to respond to this query.");
         }
 
-        if (query.getStatus() != QueryStatus.OPEN)
-        {
-            throw new WrongArgumentException("Query is not open for response.");
-        }
+        // Allow updating response even if already responded (removed the OPEN status check)
+        // if (query.getStatus() != QueryStatus.OPEN)
+        // {
+        //     throw new WrongArgumentException("Query is not open for response.");
+        // }
 
         query.setResponse(responseRequest.getResponse());
         query.setRespondedAt(LocalDateTime.now());
@@ -129,6 +134,8 @@ public class TeacherQueryServiceImpl implements TeacherQueryService
 
         TeacherQueryResponse response = modelMapper.map(updatedQuery, TeacherQueryResponse.class);
         response.setCreatedAt(updatedQuery.getCreatedAt().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime());
+        response.setTeacherId(updatedQuery.getTeacher().getId());
+        response.setTeacherName(updatedQuery.getTeacher().getName());
         response.setAdminId(updatedQuery.getAdmin().getId());
         response.setAdminName(updatedQuery.getAdmin().getName());
         response.setSchoolId(schoolId);
@@ -158,6 +165,8 @@ public class TeacherQueryServiceImpl implements TeacherQueryService
         {
             TeacherQueryResponse response = modelMapper.map(query, TeacherQueryResponse.class);
             response.setCreatedAt(query.getCreatedAt().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime());
+            response.setTeacherId(query.getTeacher().getId());
+            response.setTeacherName(query.getTeacher().getName());
             response.setAdminId(query.getAdmin().getId());
             response.setAdminName(query.getAdmin().getName());
             response.setSchoolId(schoolId);

@@ -116,10 +116,8 @@ public class StaffLeaveRecordServiceImpl implements StaffLeaveRecordService
         StaffLeaveRecord record = staffLeaveRecordRepository.findById(leaveId)
                 .orElseThrow(() -> new ResourceNotFoundException("Leave record not found"));
 
-        if (record.getStatus() != LeaveStatus.PENDING)
-        {
-            throw new WrongArgumentException("Only pending leaves can be updated");
-        }
+        // Allow updating leave status and response even if already processed
+        // Removed the constraint: if (record.getStatus() != LeaveStatus.PENDING)
 
         record.setStatus(dto.getStatus());
         record.setAdminResponse(dto.getAdminResponse());

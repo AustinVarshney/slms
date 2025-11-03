@@ -128,10 +128,8 @@ public class StudentLeaveServiceImpl implements StudentLeaveService
             throw new WrongArgumentException("You are not authorized to perform action on this leave request.");
         }
 
-        if (leave.getStatus() != LeaveStatus.PENDING)
-        {
-            throw new WrongArgumentException("Action already taken on this leave");
-        }
+        // Allow updating leave response even if already processed
+        // Removed constraint: if (leave.getStatus() != LeaveStatus.PENDING)
 
         leave.setStatus(request.getStatus());
         leave.setProcessedAt(LocalDateTime.now());
@@ -178,6 +176,8 @@ public class StudentLeaveServiceImpl implements StudentLeaveService
     {
         StudentLeaveResponse response = modelMapper.map(record, StudentLeaveResponse.class);
 
+        response.setStudentPan(record.getStudent().getPanNumber());
+        response.setStudentName(record.getStudent().getName());
         response.setClassTeacherName(record.getTeacher().getName());
         response.setSessionName(record.getSession().getName());
 

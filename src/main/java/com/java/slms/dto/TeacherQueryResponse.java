@@ -11,6 +11,8 @@ import java.time.LocalDateTime;
 public class TeacherQueryResponse
 {
     private Long id;
+    private Long teacherId;
+    private String teacherName;
     private Long adminId;
     private String adminName;
     private String subject;

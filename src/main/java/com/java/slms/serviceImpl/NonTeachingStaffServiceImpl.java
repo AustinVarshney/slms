@@ -44,15 +44,30 @@ public class NonTeachingStaffServiceImpl implements NonTeachingStaffService
             throw new AlreadyExistException("FeeStaff already exists with email: " + feeStaffDto.getEmail());
         });
 
-        NonTeachingStaff nonTeachingStaff = modelMapper.map(feeStaffDto, NonTeachingStaff.class);
-        nonTeachingStaff.setId(null);
-        nonTeachingStaff.setSchool(school);
-        nonTeachingStaff.setStatus(UserStatus.ACTIVE);
+        // Fetch the User entity
+        User user = null;
+        if (feeStaffDto.getUserId() != null) {
+            user = userRepository.findById(feeStaffDto.getUserId())
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found with Id: " + feeStaffDto.getUserId()));
+        }
+
+        // Manually create NonTeachingStaff to avoid ModelMapper ambiguity
+        NonTeachingStaff nonTeachingStaff = NonTeachingStaff.builder()
+                .name(feeStaffDto.getName())
+                .email(feeStaffDto.getEmail())
+                .designation(feeStaffDto.getDesignation())
+                .contactNumber(feeStaffDto.getContactNumber())
+                .qualification(feeStaffDto.getQualification())
+                .joiningDate(feeStaffDto.getJoiningDate())
+                .status(UserStatus.ACTIVE)
+                .user(user)
+                .school(school)
+                .build();
 
         NonTeachingStaff saved = nonTeachingStaffRepository.save(nonTeachingStaff);
 
         Staff staff = new Staff();
-        staff.setStaffType(RoleEnum.ROLE_TEACHER);
+        staff.setStaffType(RoleEnum.ROLE_NON_TEACHING_STAFF);
         staff.setSchool(school);
         staff.setEmail(saved.getEmail());
         staffRepository.save(staff);
@@ -178,6 +193,8 @@ public class NonTeachingStaffServiceImpl implements NonTeachingStaffService
     private UserRequest convertToDto(NonTeachingStaff nts)
     {
         UserRequest dto = modelMapper.map(nts, UserRequest.class);
+        dto.setId(nts.getId()); // Set the NonTeachingStaff entity ID
+        dto.setUserId(nts.getUser() != null ? nts.getUser().getId() : null);
         dto.setCreatedAt(nts.getCreatedAt());
         dto.setUpdatedAt(nts.getUpdatedAt());
         dto.setDeletedAt(nts.getDeletedAt());

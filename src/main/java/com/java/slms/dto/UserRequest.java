@@ -15,6 +15,7 @@ import java.util.Date;
 @NoArgsConstructor
 public class UserRequest
 {
+    private Long id; // NonTeachingStaff/Teacher entity ID
     private String name;
     private String email;
     private String qualification;

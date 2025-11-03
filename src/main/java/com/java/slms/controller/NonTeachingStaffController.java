@@ -102,4 +102,22 @@ public class NonTeachingStaffController
                         .build()
         );
     }
+
+    // Update Non-Teaching Staff
+    @PutMapping("/update/{id}")
+    public ResponseEntity<RestResponse<UserRequest>> updateFeeStaff(
+            @PathVariable Long id,
+            @RequestBody UserRequest feeStaffDto,
+            @RequestAttribute("schoolId") Long schoolId)
+    {
+        UserRequest updated = nonTeachingStaffService.updateFeeStaff(id, feeStaffDto, schoolId);
+
+        return ResponseEntity.ok(
+                RestResponse.<UserRequest>builder()
+                        .data(updated)
+                        .message("Non Teaching Staff updated successfully")
+                        .status(HttpStatus.OK.value())
+                        .build()
+        );
+    }
 }

@@ -15,6 +15,9 @@ public class StudentLeaveResponse
 {
     private Long id;
 
+    private String studentPan;
+    private String studentName;
+
     private LocalDate startDate;
     private LocalDate endDate;
     private int daysRequested;

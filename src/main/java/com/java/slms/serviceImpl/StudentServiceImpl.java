@@ -812,13 +812,23 @@ public class StudentServiceImpl implements StudentService
         // Get all scores for this student
         List<Score> allScores = scoreRepository.findByStudentPanNumber(student.getPanNumber());
         
+        // Filter scores for THIS SPECIFIC SESSION ONLY (not current session)
+        // We need to check if the exam's classExam's classEntity's session matches this enrollment's session
+        List<Score> sessionScores = allScores.stream()
+                .filter(score -> score.getExam() != null 
+                        && score.getExam().getClassExam() != null
+                        && score.getExam().getClassExam().getClassEntity() != null
+                        && score.getExam().getClassExam().getClassEntity().getSession() != null
+                        && score.getExam().getClassExam().getClassEntity().getSession().getId().equals(session.getId()))
+                .collect(Collectors.toList());
+        
         // Filter scores for this session (simple approach - get all scores and calculate)
         List<PreviousSchoolingRecordDto.ExamResultSummary> examResults = new ArrayList<>();
         double totalPercentage = 0.0;
         int examCount = 0;
         
         // Group scores by exam
-        Map<Long, List<Score>> scoresByExam = allScores.stream()
+        Map<Long, List<Score>> scoresByExam = sessionScores.stream()
                 .filter(score -> score.getExam() != null)
                 .collect(Collectors.groupingBy(score -> score.getExam().getId()));
         
@@ -834,6 +844,11 @@ public class StudentServiceImpl implements StudentService
             int totalMarks = 0;
             int subjectCount = 0;
             
+            // Get the maximum marks from ClassExam
+            Double maxMarksPerSubject = exam.getClassExam() != null && exam.getClassExam().getMaxMarks() != null 
+                ? exam.getClassExam().getMaxMarks().doubleValue()
+                : (exam.getMaximumMarks() != null ? exam.getMaximumMarks() : 100.0);
+            
             for (Score score : examScores)
             {
                 if (score.getMarks() != null)
@@ -843,8 +858,8 @@ public class StudentServiceImpl implements StudentService
                 }
             }
             
-            // Assume each subject is out of 100 marks (standard)
-            totalMarks = subjectCount * 100;
+            // Calculate total marks based on actual max marks per subject
+            totalMarks = (int) (subjectCount * maxMarksPerSubject);
             
             if (totalMarks > 0)
             {
